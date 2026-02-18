@@ -1,0 +1,333 @@
+/* Schedule Views */
+
+/* ── Grid Schedule View ─────────────────────────────────────────────────────── */
+.grid-schedule {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: 0;
+    border: 1px solid var(--border);
+    overflow-x: auto;
+    overflow-y: visible;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ── Grid Header Row ────────────────────────────────────────────────────────── */
+.grid-header-cell {
+    padding: 16px 8px 14px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    background: var(--bg-secondary);
+    border-bottom: 1.5px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    transition: color 0.2s;
+    user-select: none;
+}
+
+/* "Hora" column header */
+.grid-header-cell:first-child {
+    text-align: right;
+    padding-right: 14px;
+    font-size: 10px;
+    color: var(--text-tertiary);
+    border-right: 1px solid var(--border);
+}
+
+/* Today column highlight */
+.grid-header-cell[style*="color:var(--accent)"] {
+    color: var(--accent) !important;
+    background: rgba(0, 122, 255, 0.04);
+}
+
+/* ── Hour Labels (left column) ──────────────────────────────────────────────── */
+.grid-hour-label {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    padding-right: 14px;
+    padding-top: 0px;
+    font-size: 10px;
+    font-weight: 500;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-tertiary);
+    letter-spacing: 0.03em;
+    transform: translateY(-7px);   /* nudge label up so it sits ON the line */
+    pointer-events: none;
+    user-select: none;
+    border-right: 1px solid var(--border);
+    z-index: 5;
+}
+
+/* ── Hour Separator Lines ───────────────────────────────────────────────────── */
+.grid-hour-line {
+    pointer-events: none;
+    border-top: 1px solid var(--border);
+    z-index: 3;
+    opacity: 0.7;
+}
+
+/* Every other hour gets a slightly more visible line */
+.grid-hour-line.major {
+    border-top-color: var(--text-tertiary);
+    opacity: 0.2;
+}
+
+/* 30-min sub-lines (if used) */
+.grid-half-line {
+    pointer-events: none;
+    border-top: 1px dashed var(--border);
+    z-index: 2;
+    opacity: 0.4;
+}
+
+/* ── Vertical Day Separator Lines ───────────────────────────────────────────── */
+.grid-day-separator {
+    pointer-events: none;
+    border-left: 1px solid var(--border);
+    z-index: 4;
+}
+
+/* ── Today Column Background ────────────────────────────────────────────────── */
+.grid-today-bg {
+    background: rgba(0, 122, 255, 0.03);
+    pointer-events: none;
+    z-index: 1;
+    border-left: 1px solid rgba(0, 122, 255, 0.15);
+}
+
+[data-theme="dark"] .grid-today-bg {
+    background: rgba(0, 122, 255, 0.06);
+    border-left-color: rgba(0, 122, 255, 0.2);
+}
+
+/* ── Class Cell in Grid ─────────────────────────────────────────────────────── */
+.class-cell {
+    border-radius: 8px;
+    padding: 9px 10px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+    border: 1px solid;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 10;
+
+    /* subtle inner gradient depth */
+    background-image: linear-gradient(160deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+}
+
+.class-cell::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 8px 0 0 8px;
+    background: currentColor;
+    opacity: 0.45;
+}
+
+.class-cell:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: var(--shadow-md);
+    opacity: 0.95;
+    z-index: 15;
+}
+
+.class-cell:active {
+    transform: scale(0.98);
+}
+
+.class-cell-code {
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    line-height: 1.2;
+}
+
+.class-cell-name {
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.9;
+    line-height: 1.3;
+    flex: 1;
+}
+
+.class-cell-room {
+    font-size: 9.5px;
+    opacity: 0.6;
+    font-family: 'IBM Plex Mono', monospace;
+    margin-top: auto;
+}
+
+.class-cell-professor {
+    font-size: 9.5px;
+    opacity: 0.6;
+    margin-top: 2px;
+}
+
+/* ── Week Cards View ────────────────────────────────────────────────────────── */
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.day-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+.day-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.day-header {
+    padding: 20px;
+    background: var(--bg-tertiary);
+    border-bottom: 1px solid var(--border);
+}
+
+.day-name {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.day-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.day-classes {
+    padding: 16px;
+}
+
+.class-item {
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    border: 1px solid;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.class-item:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-sm);
+}
+
+.class-item:last-child {
+    margin-bottom: 0;
+}
+
+.class-time {
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    opacity: 0.8;
+}
+
+.class-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.class-details {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* List View */
+.course-list {
+    display: grid;
+    gap: 16px;
+}
+
+.course-card {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-left: 4px solid;
+    transition: var(--transition);
+}
+
+.course-card:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 16px;
+    gap: 16px;
+}
+
+.course-name {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.course-code {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.course-credits {
+    background: var(--bg-tertiary);
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.course-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.course-schedule {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.schedule-tag {
+    background: var(--bg-tertiary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.course-professor {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+}

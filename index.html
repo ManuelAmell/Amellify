@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amellify | University</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="src/css/variables.css">
+    <link rel="stylesheet" href="src/css/base.css">
+    <link rel="stylesheet" href="src/css/layout.css">
+    <link rel="stylesheet" href="src/css/components.css">
+    <link rel="stylesheet" href="src/css/schedule.css">
+    <link rel="stylesheet" href="src/css/colors.css">
+</head>
+<body>
+
+    <!-- ── Header ─────────────────────────────────────────────────────────── -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">📚 Amellify</div>
+            <div class="header-actions">
+                <button class="btn btn-success" onclick="app.openAddCourseModal()">
+                    ➕ Nueva Materia
+                </button>
+                <button class="btn btn-icon btn-secondary" onclick="app.toggleTheme()" title="Cambiar tema">
+                    <span id="theme-icon">🌙</span>
+                </button>
+                <button class="btn btn-secondary" onclick="app.showDataMenu()" title="Gestión de datos">
+                    ⚙️
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- ── Next Class Hero ──────────────────────────────────────────────── -->
+        <section id="next-class-hero"></section>
+
+        <!-- ── Stats ────────────────────────────────────────────────────────── -->
+        <div class="stats-grid fade-in stagger-1">
+            <div class="stat-card" onclick="app.switchView('list')" style="cursor:pointer;" title="Ver lista de materias">
+                <div class="stat-label">Total Materias</div>
+                <div class="stat-value" id="total-courses">0</div>
+                <div class="stat-detail">Click para ver lista</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Créditos Activos</div>
+                <div class="stat-value" id="total-credits">0</div>
+                <div class="stat-detail">Carga académica</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Horas / Semana</div>
+                <div class="stat-value" id="total-hours">0</div>
+                <div class="stat-detail">Tiempo en clase</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Día Actual</div>
+                <div class="stat-value" id="current-day-stat">—</div>
+                <div class="stat-detail" id="current-date"></div>
+            </div>
+        </div>
+
+        <!-- ── View Tabs ─────────────────────────────────────────────────────── -->
+        <div class="view-tabs fade-in stagger-2">
+            <button class="view-tab active" data-view="grid">📊 Vista Grid</button>
+            <button class="view-tab"        data-view="week">📅 Vista Semanal</button>
+            <button class="view-tab"        data-view="list">📝 Lista de Materias</button>
+        </div>
+
+        <!-- ── Content ──────────────────────────────────────────────────────── -->
+        <section id="view-content" class="fade-in stagger-3"></section>
+
+    </main>
+
+    <!-- ── Class Details Modal ──────────────────────────────────────────────── -->
+    <div class="modal" id="class-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Detalles de la Clase</div>
+                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')">✕</button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- ── Course Form Modal ────────────────────────────────────────────────── -->
+    <div class="modal" id="course-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="course-modal-title">Nueva Materia</div>
+                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="course-form">
+                    <input type="hidden" id="edit-course-code">
+
+                    <!-- Información Básica -->
+                    <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
+                            📋 Información Básica
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Código de la Materia *</label>
+                                <input type="text" class="form-input" id="course-code" required placeholder="Ej: CFB0221">
+                                <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">Código único de la materia</div>
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Créditos *</label>
+                                <input type="number" class="form-input" id="course-credits" required min="1" max="20" placeholder="Ej: 3">
+                                <div style="font-size:12px;color:var(--text-tertiary);margin-top:4px;">Número de créditos académicos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Nombre de la Materia *</label>
+                        <input type="text" class="form-input" id="course-name" required placeholder="Ej: CÁLCULO INTEGRAL">
+                    </div>
+
+                    <!-- Información del Profesor -->
+                    <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
+                            👨‍🏫 Información del Profesor
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Nombre del Profesor</label>
+                                <input type="text" class="form-input" id="course-professor" placeholder="Ej: Dr. Juan Pérez">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Email del Profesor</label>
+                                <input type="email" class="form-input" id="course-email" placeholder="profesor@universidad.edu">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detalles Adicionales -->
+                    <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
+                            📚 Detalles de la Materia
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Facultad / Carrera</label>
+                                <input type="text" class="form-input" id="course-faculty" placeholder="Ej: Ingeniería">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Semestre</label>
+                                <select class="form-select" id="course-semester">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="2024-1">2024-1</option>
+                                    <option value="2024-2">2024-2</option>
+                                    <option value="2025-1">2025-1</option>
+                                    <option value="2025-2">2025-2</option>
+                                    <option value="2026-1" selected>2026-1</option>
+                                    <option value="2026-2">2026-2</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;margin-top:16px;">
+                            <label class="form-label">Estado</label>
+                            <select class="form-select" id="course-status">
+                                <option value="active">🟢 Activa</option>
+                                <option value="paused">🟡 En pausa</option>
+                                <option value="completed">🔵 Completada</option>
+                                <option value="dropped">🔴 Retirada</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Notas -->
+                    <div class="form-group">
+                        <label class="form-label">📝 Notas / Descripción</label>
+                        <textarea class="form-input" id="course-notes" placeholder="Agrega notas importantes, requisitos, objetivos de la materia..." style="min-height:80px;"></textarea>
+                    </div>
+
+                    <!-- Horarios -->
+                    <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
+                            📅 Horarios de Clase
+                        </div>
+                        <div id="schedule-list" style="margin-bottom:16px;"></div>
+                        <button type="button" class="btn btn-secondary" onclick="app.addScheduleSlot()" style="width:100%;">
+                            ➕ Agregar Horario
+                        </button>
+                    </div>
+
+                    <!-- Color -->
+                    <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
+                            🎨 Color de la Materia
+                        </div>
+                        <div class="color-picker">
+                            <div class="color-option color-picker-red"    data-color="red"></div>
+                            <div class="color-option color-picker-blue"   data-color="blue"></div>
+                            <div class="color-option color-picker-green"  data-color="green"></div>
+                            <div class="color-option color-picker-orange" data-color="orange"></div>
+                            <div class="color-option color-picker-purple" data-color="purple"></div>
+                            <div class="color-option color-picker-teal"   data-color="teal"></div>
+                        </div>
+                        <input type="hidden" id="course-color" value="blue">
+                        <div id="color-preview" style="margin-top:12px;padding:12px;border-radius:var(--radius-sm);background:#e3f2fd;border:1px solid #42a5f5;color:#1565c0;font-size:13px;text-align:center;">
+                            Vista previa del color seleccionado
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-primary" style="flex:1;min-width:140px;">
+                            💾 Guardar Materia
+                        </button>
+                        <button type="button" class="btn btn-danger" id="btn-delete-course" style="display:none;" onclick="app.deleteCurrentCourse()">
+                            🗑️ Eliminar
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('active')">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Alert Container ──────────────────────────────────────────────────── -->
+    <div id="alert-container"></div>
+
+    <!-- ── App Script ───────────────────────────────────────────────────────── -->
+    <script src="src/js/app.js"></script>
+</body>
+</html>

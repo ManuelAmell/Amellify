@@ -1,0 +1,101 @@
+{
+  "name": "amellify",
+  "version": "1.0.0",
+  "description": "Gestor de horarios universitarios",
+  "author": "Amellify",
+  "main": "electron-main.js",
+  "scripts": {
+    "web":         "node server.js",
+    "start":       "electron .",
+    "build:linux": "electron-builder --linux",
+    "build:win":   "electron-builder --win",
+    "build:mac":   "electron-builder --mac",
+    "build:all":   "electron-builder -mwl"
+  },
+  "dependencies": {
+    "cors":    "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "electron":         "^31.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId":       "com.amellify.university",
+    "productName": "Amellify",
+    "copyright":   "© 2026 Amellify",
+    "asar": true,
+    "compression": "maximum",
+    "files": [
+      "electron-main.js",
+      "index.html",
+      "src/**/*",
+      "node_modules/**/*",
+      "!node_modules/.cache/**/*",
+      "!node_modules/electron/**/*",
+      "!node_modules/electron-builder/**/*"
+    ],
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64", "arm64"] },
+        { "target": "deb",      "arch": ["x64"] },
+        { "target": "rpm",      "arch": ["x64"] }
+      ],
+      "category": "Education",
+      "icon": "build/icon.png",
+      "synopsis": "Gestor de horarios universitarios",
+      "description": "Gestiona tus materias, horarios y clases universitarias de forma visual e intuitiva.",
+      "desktop": {
+        "Name": "Amellify",
+        "GenericName": "Gestor de Horarios",
+        "Keywords": "universidad;horario;materias;clases;educacion",
+        "StartupWMClass": "amellify"
+      }
+    },
+    "win": {
+      "target": [
+        { "target": "nsis",    "arch": ["x64"] },
+        { "target": "portable","arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "publisherName": "Amellify"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Amellify",
+      "installerLanguages": ["es_MX", "en_US"],
+      "language": "3082",
+      "welcomeTitle": "Instalador de Amellify",
+      "runAfterFinish": true
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.education",
+      "darkModeSupport": true,
+      "minimumSystemVersion": "10.13.0"
+    },
+    "dmg": {
+      "title": "Instalar Amellify",
+      "background": null,
+      "icon": "build/icon.icns",
+      "iconSize": 100,
+      "window": { "width": 540, "height": 380 },
+      "contents": [
+        { "x": 140, "y": 190, "type": "file" },
+        { "x": 400, "y": 190, "type": "link", "path": "/Applications" }
+      ]
+    }
+  }
+}

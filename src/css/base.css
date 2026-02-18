@@ -1,0 +1,19 @@
+/* Base & Reset */
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Epilogue', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    transition: background 0.3s, color 0.3s;
+    overflow-x: hidden;
+}
+
+.mono { font-family: 'IBM Plex Mono', 'SF Mono', Monaco, monospace; }
+
+.container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+@media (max-width: 768px) { .container { padding: 16px; } }
