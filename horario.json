@@ -1,0 +1,140 @@
+[
+  {
+    "code": "CFBD221",
+    "name": "CÁLCULO INTEGRAL",
+    "professor": "",
+    "email": "",
+    "faculty": "Ciencias Económicas",
+    "semester": "2026-1",
+    "credits": 3,
+    "status": "active",
+    "notes": "",
+    "color": "blue",
+    "schedules": [
+      {
+        "day": "Lunes",
+        "start_time": "08:40",
+        "end_time": "10:20",
+        "room": "B104"
+      },
+      {
+        "day": "Jueves",
+        "start_time": "08:40",
+        "end_time": "10:20",
+        "room": "Decanatura Ciencias Económicas"
+      }
+    ]
+  },
+  {
+    "code": "CFBD222",
+    "name": "ÁLGEBRA LINEAL",
+    "professor": "",
+    "email": "",
+    "faculty": "Ciencias Económicas",
+    "semester": "2026-1",
+    "credits": 3,
+    "status": "active",
+    "notes": "",
+    "color": "green",
+    "schedules": [
+      {
+        "day": "Lunes",
+        "start_time": "10:20",
+        "end_time": "12:00",
+        "room": "Sala de Juntas Decanatura"
+      },
+      {
+        "day": "Viernes",
+        "start_time": "10:20",
+        "end_time": "12:00",
+        "room": "B205"
+      }
+    ]
+  },
+  {
+    "code": "CFP2204",
+    "name": "PROGRAMACIÓN ORIENTADA A OBJETOS",
+    "professor": "",
+    "email": "",
+    "faculty": "Ciencias Económicas",
+    "semester": "2026-1",
+    "credits": 3,
+    "status": "active",
+    "notes": "",
+    "color": "purple",
+    "schedules": [
+      {
+        "day": "Martes",
+        "start_time": "14:40",
+        "end_time": "16:20",
+        "room": "No especificado"
+      },
+      {
+        "day": "Jueves",
+        "start_time": "14:40",
+        "end_time": "16:20",
+        "room": "No especificado"
+      }
+    ]
+  },
+  {
+    "code": "CFP2209",
+    "name": "ADMINISTRACIÓN",
+    "professor": "",
+    "email": "",
+    "faculty": "Ciencias Económicas",
+    "semester": "2026-1",
+    "credits": 2,
+    "status": "active",
+    "notes": "",
+    "color": "orange",
+    "schedules": [
+      {
+        "day": "Miércoles",
+        "start_time": "09:30",
+        "end_time": "12:00",
+        "room": "No especificado"
+      }
+    ]
+  },
+  {
+    "code": "CFP2214",
+    "name": "CONTABILIDAD Y COSTOS",
+    "professor": "",
+    "email": "",
+    "faculty": "Ciencias Económicas",
+    "semester": "2026-1",
+    "credits": 2,
+    "status": "active",
+    "notes": "",
+    "color": "red",
+    "schedules": [
+      {
+        "day": "Viernes",
+        "start_time": "07:00",
+        "end_time": "09:30",
+        "room": "No especificado"
+      }
+    ]
+  },
+  {
+    "code": "FN24035",
+    "name": "INGLÉS III",
+    "professor": "",
+    "email": "",
+    "faculty": "Idiomas",
+    "semester": "2026-1",
+    "credits": 2,
+    "status": "active",
+    "notes": "",
+    "color": "teal",
+    "schedules": [
+      {
+        "day": "Viernes",
+        "start_time": "13:00",
+        "end_time": "16:20",
+        "room": "No especificado"
+      }
+    ]
+  }
+]

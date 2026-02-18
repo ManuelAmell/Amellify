@@ -256,11 +256,17 @@ class AmellifyApp {
 
     // Build hour labels (placed in column 1)
     let hourLabels = '';
-    for (let h = startHour; h <= endHour; h++) {
-      const row = Math.round((h * 60 - originMin) / SLOT_MIN) + 2;
+    const slotsPerHour = 60 / SLOT_MIN; // 6 slots per hour
+    for (let h = startHour; h < endHour; h++) {
+      const rowStart = Math.round((h * 60 - originMin) / SLOT_MIN) + 2;
+      const rowEnd = rowStart + slotsPerHour;
       const label = `${String(h).padStart(2, '0')}:00`;
-      hourLabels += `<div class="grid-hour-label" style="grid-column:1; grid-row:${row};">${label}</div>`;
+      hourLabels += `<div class="grid-hour-label" style="grid-column:1; grid-row:${rowStart} / ${rowEnd};">${label}</div>`;
     }
+    // Add last hour label
+    const lastRowStart = Math.round((endHour * 60 - originMin) / SLOT_MIN) + 2;
+    const lastLabel = `${String(endHour).padStart(2, '0')}:00`;
+    hourLabels += `<div class="grid-hour-label" style="grid-column:1; grid-row:${lastRowStart};">${lastLabel}</div>`;
 
     // Build hour gridlines (span all columns)
     let hourLines = '';
@@ -283,28 +289,6 @@ class AmellifyApp {
         daySeparators += `<div class="grid-today-bg" style="grid-column:${di + 2}; grid-row:1 / ${totalSlots + 2};"></div>`;
       }
       daySeparators += `<div class="grid-day-separator" style="grid-column:${di + 2}; grid-row:2 / ${totalSlots + 2};"></div>`;
-    }
-
-    // Build current-time indicator
-    let nowIndicator = '';
-    if (nowMin >= originMin && nowMin <= endHour * 60) {
-      const nowRow = Math.round((nowMin - originMin) / SLOT_MIN) + 2;
-      nowIndicator = `<div style="
-        grid-column: 1 / -1;
-        grid-row: ${nowRow};
-        border-top: 2px solid #ff3b30;
-        z-index: 6;
-        pointer-events: none;
-        position: relative;
-      "><div style="
-        position: absolute;
-        left: 48px;
-        top: -5px;
-        width: 8px;
-        height: 8px;
-        background: #ff3b30;
-        border-radius: 50%;
-      "></div></div>`;
     }
 
     // Build class blocks
@@ -353,7 +337,6 @@ class AmellifyApp {
           ${daySeparators}
           ${hourLines}
           ${hourLabels}
-          ${nowIndicator}
           ${classBlocks}
         </div>
       </div>`;

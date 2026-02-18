@@ -47,20 +47,18 @@
 /* ── Hour Labels (left column) ──────────────────────────────────────────────── */
 .grid-hour-label {
     display: flex;
-    align-items: flex-start;
-    justify-content: flex-end;
-    padding-right: 14px;
-    padding-top: 0px;
+    align-items: center;
+    justify-content: center;
     font-size: 10px;
     font-weight: 500;
     font-family: 'IBM Plex Mono', monospace;
     color: var(--text-tertiary);
     letter-spacing: 0.03em;
-    transform: translateY(-7px);   /* nudge label up so it sits ON the line */
     pointer-events: none;
     user-select: none;
     border-right: 1px solid var(--border);
     z-index: 5;
+    line-height: 1;
 }
 
 /* ── Hour Separator Lines ───────────────────────────────────────────────────── */
