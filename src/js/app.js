@@ -791,7 +791,11 @@ class AmellifyApp {
   updateSlot(index, field, value) {
     if (this.scheduleSlots[index]) {
       this.scheduleSlots[index][field] = value;
-      this.renderScheduleSlots();
+      // Only re-render for fields that affect conflicts (day, start_time, end_time)
+      // Don't re-render for room field to avoid losing focus
+      if (field !== 'room') {
+        this.renderScheduleSlots();
+      }
     }
   }
 
