@@ -19,15 +19,41 @@
 
 ## 📸 Vista Previa
 
-> **Nota**: Agrega tus capturas de pantalla en `.github/images/` para mostrar la interfaz aquí.
-
 <div align="center">
 
 ### Interfaz Principal
-*Modo Claro y Modo Oscuro disponibles*
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src=".github/images/light.png" alt="Interfaz Principal - Modo Claro" />
+      <br />
+      <b>Modo Claro</b>
+    </td>
+    <td width="50%" align="center">
+      <img src=".github/images/dark.png" alt="Interfaz Principal - Modo Oscuro" />
+      <br />
+      <b>Modo Oscuro</b>
+    </td>
+  </tr>
+</table>
 
 ### Vista de Horario Grid
-*Visualización completa de 24 horas con indicador en tiempo real*
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src=".github/images/hlight.png" alt="Vista Horario Grid - Modo Claro" />
+      <br />
+      <b>Grid 24h - Modo Claro</b>
+    </td>
+    <td width="50%" align="center">
+      <img src=".github/images/hdark.png" alt="Vista Horario Grid - Modo Oscuro" />
+      <br />
+      <b>Grid 24h - Modo Oscuro</b>
+    </td>
+  </tr>
+</table>
 
 </div>
 
