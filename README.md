@@ -10,13 +10,18 @@ Gestiona tus materias, horarios, profesores y aulas en una app de escritorio ele
 
 ## ✨ Características
 
-- 📅 **Tres vistas**: Grid semanal, vista por día, lista completa
+- 📅 **Tres vistas**: Grid semanal (24h completas), vista por día, lista completa
 - ⏰ **Temporizador**: Cuenta regresiva hasta tu próxima clase
+- 🔴 **Indicador en tiempo real**: Línea roja estilo Google Calendar
+- 🎯 **Auto-scroll inteligente**: Enfoque automático en clases relevantes
 - 🎨 **Temas**: Modo claro y oscuro
+- 📏 **Tamaño de texto configurable**: Pequeño, Normal, Grande
 - 📊 **Estadísticas**: Créditos, horas semanales, carga académica
 - 🔔 **Detección de conflictos**: Alerta automática de horarios superpuestos
 - 💾 **Exportar/Importar**: Respaldo de datos en JSON
 - 🗑️ **Gestión completa**: Agregar, editar, eliminar materias
+- ⌨️ **Atajos de teclado**: Control completo desde el teclado
+- 🔍 **Zoom**: Control de zoom con atajos (Ctrl/Cmd + +/-)
 - 🚀 **Offline**: Funciona sin conexión a internet
 
 ---
@@ -81,13 +86,21 @@ npm start
 
 | Atajo | Acción |
 |-------|--------|
-| `Ctrl+N` | Nueva materia |
-| `Ctrl+1` | Vista Grid |
-| `Ctrl+2` | Vista Semanal |
-| `Ctrl+3` | Vista Lista |
-| `Ctrl+Shift+T` | Cambiar tema |
+| `Ctrl/Cmd + N` | Nueva materia |
+| `Ctrl/Cmd + 1` | Vista Grid |
+| `Ctrl/Cmd + 2` | Vista Semana |
+| `Ctrl/Cmd + 3` | Vista Lista |
+| `Ctrl/Cmd + H` | Ir al horario (Grid + enfoque) |
+| `Ctrl/Cmd + Shift + T` | Cambiar tema |
+| `Ctrl/Cmd + R` | Recargar |
+| `Ctrl/Cmd + +/=` | Acercar zoom |
+| `Ctrl/Cmd + -` | Alejar zoom |
+| `Ctrl/Cmd + 0` | Restablecer zoom |
 | `F11` | Pantalla completa |
 | `Esc` | Cerrar modal |
+| `?` | Mostrar todos los atajos |
+
+> **Nota**: En Mac usa `Cmd`, en Windows/Linux usa `Ctrl`
 
 ---
 
@@ -118,6 +131,17 @@ amellify/
 ## 💡 Ideas y Mejoras
 
 Revisa [IDEAS-MEJORAS.md](IDEAS-MEJORAS.md) para ver funcionalidades planeadas y sugerencias de mejora.
+
+---
+
+## 🎯 Funcionalidades Detalladas
+
+Consulta [FUNCIONALIDADES.md](FUNCIONALIDADES.md) para una descripción completa de todas las características implementadas, incluyendo:
+- Vista Grid completa (24 horas)
+- Indicador de hora actual en tiempo real
+- Auto-scroll inteligente
+- Sistema de configuración de tamaño de texto
+- Y mucho más...
 
 ---
 

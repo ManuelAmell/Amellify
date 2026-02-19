@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, shell, Menu, Tray, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 
 // ─── Keep reference so it's not garbage collected ─────────────────────────────
@@ -160,6 +160,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      zoomFactor: 1.0, // Ensure zoom is enabled
     },
     // Frameless feel on Mac
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
@@ -179,6 +180,45 @@ function createWindow() {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // Register zoom shortcuts
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.control || input.meta) {
+      // Zoom in: Ctrl/Cmd + "+" or Ctrl/Cmd + "="
+      if (input.key === '+' || input.key === '=') {
+        mainWindow.webContents.setZoomLevel(mainWindow.webContents.getZoomLevel() + 0.5);
+        // Send notification to renderer
+        mainWindow.webContents.executeJavaScript(`
+          if (window.app && window.app.showSilentNotification) {
+            window.app.showSilentNotification('⌨️ Ctrl+Plus: Acercar Zoom');
+          }
+        `);
+        event.preventDefault();
+      }
+      // Zoom out: Ctrl/Cmd + "-"
+      else if (input.key === '-') {
+        mainWindow.webContents.setZoomLevel(mainWindow.webContents.getZoomLevel() - 0.5);
+        // Send notification to renderer
+        mainWindow.webContents.executeJavaScript(`
+          if (window.app && window.app.showSilentNotification) {
+            window.app.showSilentNotification('⌨️ Ctrl+Minus: Alejar Zoom');
+          }
+        `);
+        event.preventDefault();
+      }
+      // Reset zoom: Ctrl/Cmd + "0"
+      else if (input.key === '0') {
+        mainWindow.webContents.setZoomLevel(0);
+        // Send notification to renderer
+        mainWindow.webContents.executeJavaScript(`
+          if (window.app && window.app.showSilentNotification) {
+            window.app.showSilentNotification('⌨️ Ctrl+0: Zoom Normal');
+          }
+        `);
+        event.preventDefault();
+      }
+    }
   });
 
   mainWindow.on('closed', () => { mainWindow = null; });

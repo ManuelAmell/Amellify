@@ -365,3 +365,65 @@ textarea.form-input {
     margin-bottom: 12px;
     line-height: 1.6;
 }
+
+/* Shortcuts Modal */
+#shortcuts-modal .modal-content {
+    max-width: 800px;
+}
+
+#shortcuts-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+#shortcuts-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#shortcuts-body::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+}
+
+#shortcuts-body::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+#shortcuts-body::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
+/* Keyboard key styling */
+kbd {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 2px 0 var(--border);
+    margin: 0 2px;
+    color: var(--text-primary);
+}
+
+/* Help button pulse animation */
+.btn-icon[title="Atajos de teclado"] {
+    position: relative;
+}
+
+.btn-icon[title="Atajos de teclado"]:hover {
+    animation: pulse-help 0.6s ease-in-out;
+}
+
+@keyframes pulse-help {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}

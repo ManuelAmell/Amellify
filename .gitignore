@@ -25,3 +25,4 @@ amellify-data.json
 # Environment
 .env
 .env.local
+horario.json

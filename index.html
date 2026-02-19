@@ -26,6 +26,9 @@
                 <button class="btn btn-icon btn-secondary" onclick="app.toggleTheme()" title="Cambiar tema">
                     <span id="theme-icon">🌙</span>
                 </button>
+                <button class="btn btn-icon btn-secondary" onclick="app.showShortcutsModal()" title="Atajos de teclado">
+                    <span style="font-size: 18px; font-weight: 600;">?</span>
+                </button>
                 <button class="btn btn-secondary" onclick="app.showDataMenu()" title="Gestión de datos">
                     ⚙️
                 </button>
@@ -226,6 +229,19 @@
 
     <!-- ── Alert Container ──────────────────────────────────────────────────── -->
     <div id="alert-container"></div>
+
+    <!-- ── Shortcuts Modal ──────────────────────────────────────────────────── -->
+    <div class="modal" id="shortcuts-modal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <div class="modal-title">⌨️ Atajos de Teclado</div>
+                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')">✕</button>
+            </div>
+            <div class="modal-body" id="shortcuts-body" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Content will be injected by JavaScript -->
+            </div>
+        </div>
+    </div>
 
     <!-- ── App Script ───────────────────────────────────────────────────────── -->
     <script src="src/js/app.js"></script>

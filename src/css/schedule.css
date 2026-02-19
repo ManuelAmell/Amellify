@@ -7,17 +7,71 @@
     padding: 0;
     border: 1px solid var(--border);
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
+    max-height: 78vh;
     box-shadow: var(--shadow-sm);
+    position: relative;
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for grid schedule */
+.grid-schedule::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.grid-schedule::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 5px;
+}
+
+.grid-schedule::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 5px;
+    transition: background 0.2s;
+}
+
+.grid-schedule::-webkit-scrollbar-thumb:hover {
+    background: var(--text-tertiary);
+}
+
+/* Current time indicator */
+.current-time-indicator {
+    animation: pulse-time 2s ease-in-out infinite;
+}
+
+@keyframes pulse-time {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Current time circle indicator */
+.current-time-circle {
+    animation: pulse-circle 2s ease-in-out infinite;
+}
+
+@keyframes pulse-circle {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 0.9;
+    }
 }
 
 /* ── Grid Header Row ────────────────────────────────────────────────────────── */
 .grid-header-cell {
-    padding: 16px 8px 14px;
+    padding: 9px 6px 8px;
     text-align: center;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--text-tertiary);
     background: var(--bg-secondary);
@@ -32,8 +86,8 @@
 /* "Hora" column header */
 .grid-header-cell:first-child {
     text-align: right;
-    padding-right: 14px;
-    font-size: 10px;
+    padding-right: 9px;
+    font-size: 9px;
     color: var(--text-tertiary);
     border-right: 1px solid var(--border);
 }
@@ -50,10 +104,10 @@
     align-items: center;
     justify-content: center;
     font-size: 10px;
-    font-weight: 500;
+    font-weight: 600;
     font-family: 'IBM Plex Mono', monospace;
-    color: var(--text-tertiary);
-    letter-spacing: 0.03em;
+    color: var(--text-secondary);
+    letter-spacing: 0.02em;
     pointer-events: none;
     user-select: none;
     border-right: 1px solid var(--border);
@@ -105,9 +159,9 @@
 
 /* ── Class Cell in Grid ─────────────────────────────────────────────────────── */
 .class-cell {
-    border-radius: 8px;
-    padding: 9px 10px 8px;
-    font-size: 12px;
+    border-radius: 6px;
+    padding: var(--grid-cell-padding, 9px 10px 8px);
+    font-size: 11px;
     font-weight: 500;
     cursor: pointer;
     transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
@@ -119,7 +173,7 @@
     overflow-wrap: break-word;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--grid-cell-gap, 3px);
     z-index: 10;
 
     /* subtle inner gradient depth */
@@ -130,14 +184,14 @@
     content: '';
     position: absolute;
     left: 0; top: 0; bottom: 0;
-    width: 3px;
-    border-radius: 8px 0 0 8px;
+    width: 2px;
+    border-radius: 6px 0 0 6px;
     background: currentColor;
     opacity: 0.45;
 }
 
 .class-cell:hover {
-    transform: translateY(-2px) scale(1.01);
+    transform: translateY(-1px) scale(1.01);
     box-shadow: var(--shadow-md);
     opacity: 0.95;
     z-index: 15;
@@ -149,32 +203,32 @@
 
 .class-cell-code {
     font-weight: 700;
-    font-size: 10px;
-    letter-spacing: 0.06em;
+    font-size: var(--grid-cell-code-size, 13px);
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     opacity: 0.75;
-    line-height: 1.2;
+    line-height: 1.1;
 }
 
 .class-cell-name {
-    font-size: 11px;
+    font-size: var(--grid-cell-name-size, 15px);
     font-weight: 600;
     opacity: 0.9;
-    line-height: 1.3;
+    line-height: 1.2;
     flex: 1;
 }
 
 .class-cell-room {
-    font-size: 9.5px;
+    font-size: var(--grid-cell-room-size, 11px);
     opacity: 0.6;
     font-family: 'IBM Plex Mono', monospace;
     margin-top: auto;
 }
 
 .class-cell-professor {
-    font-size: 9.5px;
+    font-size: var(--grid-cell-professor-size, 11px);
     opacity: 0.6;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
 /* ── Week Cards View ────────────────────────────────────────────────────────── */

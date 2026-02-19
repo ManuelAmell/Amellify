@@ -8,7 +8,13 @@ class AmellifyApp {
     this.scheduleSlots = [];
     this.editingCode = null;
     this.countdownInterval = null;
+    this.currentTimeUpdateInterval = null;
     this._menuClickHandler = null;
+
+    // Settings with defaults
+    this.settings = {
+      fontSize: 'normal' // 'small', 'normal', 'large'
+    };
 
     this.init();
   }
@@ -20,6 +26,13 @@ class AmellifyApp {
     document.documentElement.setAttribute("data-theme", savedTheme);
     document.getElementById("theme-icon").textContent =
       savedTheme === "dark" ? "☀️" : "🌙";
+
+    // Restore settings
+    const savedSettings = localStorage.getItem("amellify-settings");
+    if (savedSettings) {
+      this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+    }
+    this.applyFontSize();
 
     // Load data
     await this.fetchCourses();
@@ -215,21 +228,9 @@ class AmellifyApp {
       }
     }
 
-    if (allSchedules.length === 0) {
-      container.innerHTML = `
-        <div class="grid-schedule">
-          <div class="empty-state">
-            <div class="empty-state-icon">📅</div>
-            <div class="empty-state-text">No hay materias con horarios asignados</div>
-            <button class="btn btn-primary" style="margin-top: 16px" onclick="app.openAddCourseModal()">➕ Agregar Materia</button>
-          </div>
-        </div>`;
-      return;
-    }
-
     // ── CSS Grid approach: each row = 10 minutes ──
     const SLOT_MIN = 10;   // minutes per grid row
-    const SLOT_H   = 14;   // pixels per grid row
+    const SLOT_H   = 12;   // pixels per grid row
 
     // Helper: "HH:MM" → total minutes from midnight
     const timeToMin = (t) => {
@@ -237,15 +238,10 @@ class AmellifyApp {
       return h * 60 + m;
     };
 
-    // Find range
-    let minMin = 1440, maxMin = 0;
-    for (const s of allSchedules) {
-      minMin = Math.min(minMin, timeToMin(s.start_time));
-      maxMin = Math.max(maxMin, timeToMin(s.end_time));
-    }
-    const startHour = Math.floor(minMin / 60);
-    const endHour   = Math.ceil(maxMin / 60);
-    const originMin = startHour * 60;
+    // ALWAYS show full day: 00:00 - 23:59
+    const startHour = 0;
+    const endHour   = 24;
+    const originMin = 0;
     const totalSlots = (endHour * 60 - originMin) / SLOT_MIN;
 
     // Convert time string to grid row number (1-indexed, row 1 = header)
@@ -263,10 +259,6 @@ class AmellifyApp {
       const label = `${String(h).padStart(2, '0')}:00`;
       hourLabels += `<div class="grid-hour-label" style="grid-column:1; grid-row:${rowStart} / ${rowEnd};">${label}</div>`;
     }
-    // Add last hour label
-    const lastRowStart = Math.round((endHour * 60 - originMin) / SLOT_MIN) + 2;
-    const lastLabel = `${String(endHour).padStart(2, '0')}:00`;
-    hourLabels += `<div class="grid-hour-label" style="grid-column:1; grid-row:${lastRowStart};">${lastLabel}</div>`;
 
     // Build hour gridlines (span all columns)
     let hourLines = '';
@@ -275,7 +267,7 @@ class AmellifyApp {
       hourLines += `<div class="grid-hour-line" style="grid-column:1 / -1; grid-row:${row};"></div>`;
     }
 
-    // Today info — must be declared before daySeparators loop
+    // Today info
     const now = new Date();
     const todayMap = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
     const todayName = todayMap[now.getDay()];
@@ -289,6 +281,57 @@ class AmellifyApp {
         daySeparators += `<div class="grid-today-bg" style="grid-column:${di + 2}; grid-row:1 / ${totalSlots + 2};"></div>`;
       }
       daySeparators += `<div class="grid-day-separator" style="grid-column:${di + 2}; grid-row:2 / ${totalSlots + 2};"></div>`;
+    }
+    // Add right border separator for the last column
+    daySeparators += `<div class="grid-day-separator" style="grid-column:${days.length + 2}; grid-row:2 / ${totalSlots + 2}; border-left:none; border-right:1px solid var(--border);"></div>`;
+
+    // Build current time indicator (Google Calendar style)
+    let currentTimeIndicator = '';
+    if (nowMin >= 0 && nowMin < 1440) {
+      const currentRow = Math.round((nowMin - originMin) / SLOT_MIN) + 2;
+      
+      // Find today's column index to position the circle
+      const todayColumnIndex = days.indexOf(todayName);
+      const circleColumn = todayColumnIndex >= 0 ? todayColumnIndex + 2 : 1;
+      
+      currentTimeIndicator = `
+        <div class="current-time-indicator" style="
+          grid-column: 1 / -1;
+          grid-row: ${currentRow};
+          position: relative;
+          z-index: 100;
+          pointer-events: none;
+        ">
+          <div style="
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 0;
+            height: 2px;
+            background: var(--danger);
+            box-shadow: 0 0 8px rgba(255, 59, 48, 0.5);
+          "></div>
+        </div>
+        <div class="current-time-circle" style="
+          grid-column: ${circleColumn};
+          grid-row: ${currentRow};
+          position: relative;
+          z-index: 101;
+          pointer-events: none;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+        ">
+          <div style="
+            width: 10px;
+            height: 10px;
+            background: var(--danger);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 59, 48, 0.7), 0 0 16px rgba(255, 59, 48, 0.4);
+            border: 2px solid var(--bg-secondary);
+            margin-top: -4px;
+          "></div>
+        </div>`;
     }
 
     // Build class blocks
@@ -306,11 +349,11 @@ class AmellifyApp {
         <div class="class-cell color-${s.course.color}"
              onclick="app.showClassDetails('${s.course.code}', ${s.id})"
              title="${s.course.name}"
-             style="grid-column:${col}; grid-row:${rowStart} / ${rowEnd}; margin:1px 4px;${isToday ? ' box-shadow: var(--shadow-sm);' : ''}">
+             style="grid-column:${col}; grid-row:${rowStart} / ${rowEnd}; margin:1px 2px;${isToday ? ' box-shadow: var(--shadow-sm);' : ''}">
           <div class="class-cell-code">${s.course.code}</div>
           <div class="class-cell-name">${s.course.name}</div>
           ${s.room ? `<div class="class-cell-room">🏫 ${s.room}</div>` : ''}
-          <div style="font-size:9px;margin-top:auto;opacity:0.55;font-family:'IBM Plex Mono',monospace;">${s.start_time}–${s.end_time}</div>
+          <div style="font-size:var(--grid-cell-time-size, 11px);margin-top:auto;opacity:0.5;font-family:'IBM Plex Mono',monospace;">${s.start_time}–${s.end_time}</div>
         </div>`;
     }
 
@@ -323,13 +366,91 @@ class AmellifyApp {
       return `<div class="grid-header-cell" style="${style}">${d}</div>`;
     }).join('');
 
+    // Empty state overlay (floating, outside grid)
+    const emptyOverlay = allSchedules.length === 0 ? `
+      <!-- Backdrop semi-transparente -->
+      <div id="empty-state-backdrop" onclick="this.nextElementSibling.remove(); this.remove();" style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(4px);
+        z-index: 199;
+        animation: fadeIn 0.3s ease-out;
+      "></div>
+      
+      <!-- Modal flotante -->
+      <div id="empty-state-overlay" style="
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 200;
+        background: var(--bg-secondary);
+        border-radius: 20px;
+        padding: 48px 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        border: 1px solid var(--border);
+        max-width: 480px;
+        text-align: center;
+        animation: fadeInScale 0.3s ease-out;
+      ">
+        <button onclick="document.getElementById('empty-state-overlay').remove(); document.getElementById('empty-state-backdrop').remove();" style="
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background: transparent;
+          border: none;
+          font-size: 28px;
+          color: var(--text-tertiary);
+          cursor: pointer;
+          opacity: 0.4;
+          transition: opacity 0.2s, transform 0.2s;
+          padding: 4px 8px;
+          line-height: 1;
+          font-weight: 300;
+        " onmouseover="this.style.opacity='0.8'; this.style.transform='rotate(90deg)';" onmouseout="this.style.opacity='0.4'; this.style.transform='rotate(0deg)';">×</button>
+        
+        <div style="font-size: 72px; margin-bottom: 20px; opacity: 0.6;">📅</div>
+        <div style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
+          No hay materias con horarios asignados
+        </div>
+        <div style="font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px;">
+          Comienza agregando tu primera materia para ver tu horario semanal
+        </div>
+        <button class="btn btn-primary" onclick="app.openAddCourseModal(); document.getElementById('empty-state-overlay').remove(); document.getElementById('empty-state-backdrop').remove();" style="
+          font-size: 16px;
+          padding: 14px 32px;
+          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+        ">
+          ➕ Agregar Primera Materia
+        </button>
+      </div>
+      
+      <style>
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.9);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+      </style>
+    ` : '';
+
     container.innerHTML = `
-      <div class="grid-schedule">
-        <div class="grid-timeline" style="
+      <div class="grid-schedule" id="grid-schedule-container">
+        <div class="grid-timeline" id="grid-timeline" style="
           display: grid;
-          grid-template-columns: 60px repeat(${days.length}, 1fr);
+          grid-template-columns: 48px repeat(${days.length}, 1fr);
           grid-template-rows: auto repeat(${totalSlots}, ${SLOT_H}px);
-          min-width: 800px;
+          min-width: 680px;
           position: relative;
         ">
           <div class="grid-header-cell" style="grid-column:1; grid-row:1;">Hora</div>
@@ -337,9 +458,106 @@ class AmellifyApp {
           ${daySeparators}
           ${hourLines}
           ${hourLabels}
+          ${currentTimeIndicator}
           ${classBlocks}
         </div>
-      </div>`;
+      </div>
+      ${emptyOverlay}
+    `;
+
+    // Auto-scroll: prioritize classes, fallback to current time
+    // Capture SLOT_H value for use in timeout
+    const slotHeight = SLOT_H;
+    setTimeout(() => {
+      const scheduleContainer = document.getElementById('grid-schedule-container');
+      if (!scheduleContainer) return;
+
+      // Get the header height to account for it in scroll calculation
+      const headerHeight = 40; // Approximate header height
+
+      if (allSchedules.length > 0) {
+        // WITH SCHEDULES: Focus on next/current class
+        const todaySchedules = allSchedules.filter(s => s.day === todayName);
+        
+        if (todaySchedules.length > 0) {
+          // Find next or current class today
+          let targetSchedule = null;
+          
+          // First, try to find current class (happening now)
+          for (const s of todaySchedules) {
+            const startMin = timeToMin(s.start_time);
+            const endMin = timeToMin(s.end_time);
+            if (nowMin >= startMin && nowMin <= endMin) {
+              targetSchedule = s;
+              break;
+            }
+          }
+          
+          // If no current class, find next class today
+          if (!targetSchedule) {
+            const futureClasses = todaySchedules
+              .filter(s => timeToMin(s.start_time) > nowMin)
+              .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time));
+            
+            if (futureClasses.length > 0) {
+              targetSchedule = futureClasses[0];
+            }
+          }
+          
+          // If still no target, use first class of the day
+          if (!targetSchedule) {
+            targetSchedule = todaySchedules.sort((a, b) => 
+              timeToMin(a.start_time) - timeToMin(b.start_time)
+            )[0];
+          }
+          
+          // Scroll to target class (center it in viewport)
+          if (targetSchedule) {
+            const classStartMin = timeToMin(targetSchedule.start_time);
+            const classEndMin = timeToMin(targetSchedule.end_time);
+            const classMidMin = (classStartMin + classEndMin) / 2;
+            
+            // Calculate pixel position from top (accounting for origin)
+            const pixelsFromOrigin = (classMidMin - originMin) * (slotHeight / SLOT_MIN);
+            
+            // Center in viewport
+            const scrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+            scheduleContainer.scrollTop = Math.max(0, scrollPosition);
+            return;
+          }
+        }
+        
+        // If no classes today, scroll to earliest class in the week
+        const earliestClass = allSchedules.sort((a, b) => 
+          timeToMin(a.start_time) - timeToMin(b.start_time)
+        )[0];
+        
+        if (earliestClass) {
+          const classStartMin = timeToMin(earliestClass.start_time);
+          const pixelsFromOrigin = (classStartMin - originMin) * (slotHeight / SLOT_MIN);
+          const scrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+          scheduleContainer.scrollTop = Math.max(0, scrollPosition);
+          return;
+        }
+      }
+      
+      // NO SCHEDULES: Focus on current time (red line)
+      if (nowMin >= 0 && nowMin < 1440) {
+        const pixelsFromOrigin = (nowMin - originMin) * (slotHeight / SLOT_MIN);
+        const scrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+        scheduleContainer.scrollTop = Math.max(0, scrollPosition);
+      }
+    }, 50);
+
+    // Update current time indicator every minute
+    if (this.currentTimeUpdateInterval) {
+      clearInterval(this.currentTimeUpdateInterval);
+    }
+    this.currentTimeUpdateInterval = setInterval(() => {
+      if (this.currentView === 'grid') {
+        this.renderGridView();
+      }
+    }, 60000); // Update every minute
   }
 
   // ─── Week View ───────────────────────────────────────────────────────────────
@@ -1055,6 +1273,189 @@ class AmellifyApp {
       next === "dark" ? "☀️" : "🌙";
   }
 
+  // ─── Font Size Settings ──────────────────────────────────────────────────────
+  setFontSize(size) {
+    this.settings.fontSize = size;
+    localStorage.setItem("amellify-settings", JSON.stringify(this.settings));
+    this.applyFontSize();
+    
+    // Close menu and show notification
+    const menu = document.getElementById("data-menu");
+    if (menu) menu.remove();
+    
+    const sizeNames = { small: 'Pequeño', normal: 'Normal', large: 'Grande' };
+    this.showSilentNotification(`📏 Tamaño: ${sizeNames[size]}`);
+    
+    // Re-render if in grid view to apply changes
+    if (this.currentView === 'grid') {
+      this.renderGridView();
+    }
+  }
+
+  applyFontSize() {
+    const root = document.documentElement;
+    
+    // Font size configurations (Grande anterior = Normal ahora)
+    const fontSizes = {
+      small: {
+        code: '11px',
+        name: '13px',
+        room: '10px',
+        professor: '10px',
+        time: '10px',
+        padding: '8px 9px 7px',
+        gap: '2px'
+      },
+      normal: {
+        code: '13px',
+        name: '15px',
+        room: '11px',
+        professor: '11px',
+        time: '11px',
+        padding: '9px 10px 8px',
+        gap: '3px'
+      },
+      large: {
+        code: '15px',
+        name: '17px',
+        room: '12px',
+        professor: '12px',
+        time: '12px',
+        padding: '10px 11px 9px',
+        gap: '3px'
+      }
+    };
+
+    const config = fontSizes[this.settings.fontSize];
+    
+    // Apply CSS variables
+    root.style.setProperty('--grid-cell-code-size', config.code);
+    root.style.setProperty('--grid-cell-name-size', config.name);
+    root.style.setProperty('--grid-cell-room-size', config.room);
+    root.style.setProperty('--grid-cell-professor-size', config.professor);
+    root.style.setProperty('--grid-cell-time-size', config.time);
+    root.style.setProperty('--grid-cell-padding', config.padding);
+    root.style.setProperty('--grid-cell-gap', config.gap);
+  }
+
+  // ─── Shortcuts Modal ─────────────────────────────────────────────────────────
+  showShortcutsModal() {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const modKey = isMac ? 'Cmd' : 'Ctrl';
+    
+    const shortcuts = [
+      {
+        category: '📅 Navegación',
+        items: [
+          { keys: [`${modKey}`, 'H'], desc: 'Ir a Grid y Enfocar Horario' }
+        ]
+      },
+      {
+        category: '🔍 Zoom',
+        items: [
+          { keys: [`${modKey}`, '+'], desc: 'Acercar (Zoom In)' },
+          { keys: [`${modKey}`, '-'], desc: 'Alejar (Zoom Out)' },
+          { keys: [`${modKey}`, '0'], desc: 'Zoom Normal (100%)' }
+        ]
+      },
+      {
+        category: '📝 Materias',
+        items: [
+          { keys: [`${modKey}`, 'N'], desc: 'Nueva Materia' }
+        ]
+      },
+      {
+        category: '👁️ Vistas',
+        items: [
+          { keys: [`${modKey}`, '1'], desc: 'Vista Grid' },
+          { keys: [`${modKey}`, '2'], desc: 'Vista Semanal' },
+          { keys: [`${modKey}`, '3'], desc: 'Lista de Materias' }
+        ]
+      },
+      {
+        category: '🎨 Apariencia',
+        items: [
+          { keys: [`${modKey}`, 'Shift', 'T'], desc: 'Cambiar Tema (Claro/Oscuro)' }
+        ]
+      },
+      {
+        category: '⌨️ General',
+        items: [
+          { keys: ['Esc'], desc: 'Cerrar Modal o Overlay' },
+          { keys: [`${modKey}`, 'R'], desc: 'Recargar Aplicación' }
+        ]
+      }
+    ];
+
+    let html = '<div style="display: grid; gap: 24px;">';
+    
+    for (const section of shortcuts) {
+      html += `
+        <div>
+          <div style="
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+          ">${section.category}</div>
+          <div style="display: grid; gap: 8px;">`;
+      
+      for (const item of section.items) {
+        const keysHtml = item.keys.map(key => 
+          `<kbd style="
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-shadow: 0 2px 0 var(--border);
+            margin: 0 2px;
+          ">${key}</kbd>`
+        ).join(' + ');
+        
+        html += `
+          <div style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            transition: var(--transition);
+          " onmouseover="this.style.background='var(--bg-primary)'" onmouseout="this.style.background='var(--bg-tertiary)'">
+            <span style="font-size: 14px; color: var(--text-secondary);">${item.desc}</span>
+            <span>${keysHtml}</span>
+          </div>`;
+      }
+      
+      html += `</div></div>`;
+    }
+    
+    html += `</div>
+      <div style="
+        margin-top: 24px;
+        padding: 16px;
+        background: var(--bg-tertiary);
+        border-radius: 12px;
+        border-left: 4px solid var(--accent);
+      ">
+        <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+          💡 Consejo
+        </div>
+        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+          Usa <kbd style="padding:2px 6px;background:var(--bg-primary);border-radius:4px;font-family:monospace;">${modKey}</kbd> + <kbd style="padding:2px 6px;background:var(--bg-primary);border-radius:4px;font-family:monospace;">H</kbd> para volver rápidamente a tu próxima clase o la hora actual.
+        </div>
+      </div>`;
+    
+    document.getElementById('shortcuts-body').innerHTML = html;
+    document.getElementById('shortcuts-modal').classList.add('active');
+  }
+
   // ─── Data Menu ───────────────────────────────────────────────────────────────
   showDataMenu() {
     const existing = document.getElementById("data-menu");
@@ -1071,11 +1472,30 @@ class AmellifyApp {
       border:1px solid var(--border);
       border-radius:var(--radius-md);
       box-shadow:var(--shadow-lg);
-      z-index:500;padding:8px;min-width:220px;
+      z-index:500;padding:8px;min-width:240px;
     `;
     menu.innerHTML = `
-      <div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;">⚙️ Gestión de Datos</div>
+      <div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px;">⚙️ Configuración</div>
       <hr style="border:none;border-top:1px solid var(--border);margin:4px 0;">
+      
+      <!-- Font Size Settings -->
+      <div style="padding:8px 12px;">
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Tamaño de Texto</div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn ${this.settings.fontSize === 'small' ? 'btn-primary' : 'btn-secondary'}" 
+                  style="flex:1;font-size:11px;padding:6px;" 
+                  onclick="app.setFontSize('small')">Pequeño</button>
+          <button class="btn ${this.settings.fontSize === 'normal' ? 'btn-primary' : 'btn-secondary'}" 
+                  style="flex:1;font-size:11px;padding:6px;" 
+                  onclick="app.setFontSize('normal')">Normal</button>
+          <button class="btn ${this.settings.fontSize === 'large' ? 'btn-primary' : 'btn-secondary'}" 
+                  style="flex:1;font-size:11px;padding:6px;" 
+                  onclick="app.setFontSize('large')">Grande</button>
+        </div>
+      </div>
+      
+      <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+      <div style="padding:4px 12px;font-size:11px;font-weight:600;color:var(--text-tertiary);">Gestión de Datos</div>
       <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.exportData()">📤 Exportar JSON</button>
       <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.triggerImport()">📥 Importar JSON</button>
       <button class="btn btn-danger" style="width:100%;justify-content:flex-start;border-radius:8px;" onclick="app.deleteAllCourses()">🗑️ Borrar Horario</button>
@@ -1220,15 +1640,235 @@ class AmellifyApp {
       });
     });
 
-    // Escape key
+    // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
+      // Escape key - close modals
       if (e.key === "Escape") {
         document
           .querySelectorAll(".modal.active")
           .forEach((m) => m.classList.remove("active"));
         document.getElementById("data-menu")?.remove();
       }
+      
+      // Ctrl/Cmd + H - Go to Grid view and focus on schedule
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
+        e.preventDefault();
+        this.showSilentNotification('⌨️ Ctrl+H: Ir a Horario');
+        this.goToSchedule();
+      }
+      
+      // Ctrl/Cmd + N - New course
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        this.showSilentNotification('⌨️ Ctrl+N: Nueva Materia');
+        this.openAddCourseModal();
+      }
+      
+      // Ctrl/Cmd + 1/2/3 - Switch views
+      if ((e.ctrlKey || e.metaKey) && ['1', '2', '3'].includes(e.key)) {
+        e.preventDefault();
+        const views = { '1': 'grid', '2': 'week', '3': 'list' };
+        const viewNames = { '1': 'Vista Grid', '2': 'Vista Semanal', '3': 'Lista' };
+        this.showSilentNotification(`⌨️ Ctrl+${e.key}: ${viewNames[e.key]}`);
+        this.switchView(views[e.key]);
+      }
+      
+      // Ctrl/Cmd + Shift + T - Toggle theme
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        this.showSilentNotification('⌨️ Ctrl+Shift+T: Cambiar Tema');
+        this.toggleTheme();
+      }
+      
+      // Ctrl/Cmd + R - Reload (show notification before reload)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        this.showSilentNotification('⌨️ Ctrl+R: Recargando...');
+        // Let the default reload happen
+      }
     });
+  }
+
+  // ─── Silent Notification ─────────────────────────────────────────────────────
+  showSilentNotification(message) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--border);
+      z-index: 1000;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+      font-family: 'IBM Plex Mono', monospace;
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Fade in
+    setTimeout(() => {
+      notification.style.opacity = '0.9';
+      notification.style.transform = 'translateY(0)';
+    }, 10);
+    
+    // Fade out and remove
+    setTimeout(() => {
+      notification.style.opacity = '0';
+      notification.style.transform = 'translateY(10px)';
+      setTimeout(() => notification.remove(), 300);
+    }, 1500);
+  }
+
+  // ─── Go to Schedule (Grid + Focus) ───────────────────────────────────────────
+  goToSchedule() {
+    // First, switch to Grid view if not already there
+    if (this.currentView !== 'grid') {
+      this.switchView('grid');
+      // Wait for view to render before focusing
+      setTimeout(() => {
+        this.focusOnSchedule();
+      }, 150);
+    } else {
+      // Already in grid, just focus
+      this.focusOnSchedule();
+    }
+  }
+
+  // ─── Focus on Schedule ───────────────────────────────────────────────────────
+  focusOnSchedule() {
+    const scheduleContainer = document.getElementById('grid-schedule-container');
+    if (!scheduleContainer) return;
+
+    // Get current time info
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const todayMap = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const todayName = todayMap[now.getDay()];
+    
+    const SLOT_MIN = 10;
+    const SLOT_H = 12; // Updated to match current grid size
+    const originMin = 0;
+    const headerHeight = 40; // Header height for accurate scroll calculation
+    
+    const timeToMin = (t) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    // Collect all schedules
+    const allSchedules = [];
+    for (const course of this.courses) {
+      for (const s of course.schedules || []) {
+        allSchedules.push({ ...s, course });
+      }
+    }
+
+    let targetScrollPosition = 0;
+    let targetMessage = '';
+
+    if (allSchedules.length > 0) {
+      // WITH SCHEDULES: Focus on next/current class
+      const todaySchedules = allSchedules.filter(s => s.day === todayName);
+      
+      if (todaySchedules.length > 0) {
+        let targetSchedule = null;
+        
+        // Find current class
+        for (const s of todaySchedules) {
+          const startMin = timeToMin(s.start_time);
+          const endMin = timeToMin(s.end_time);
+          if (nowMin >= startMin && nowMin <= endMin) {
+            targetSchedule = s;
+            break;
+          }
+        }
+        
+        // If no current class, find next class today
+        if (!targetSchedule) {
+          const futureClasses = todaySchedules
+            .filter(s => timeToMin(s.start_time) > nowMin)
+            .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time));
+          
+          if (futureClasses.length > 0) {
+            targetSchedule = futureClasses[0];
+          }
+        }
+        
+        // If still no target, use first class of the day
+        if (!targetSchedule) {
+          targetSchedule = todaySchedules.sort((a, b) => 
+            timeToMin(a.start_time) - timeToMin(b.start_time)
+          )[0];
+        }
+        
+        // Calculate scroll position for target class (center it in viewport)
+        if (targetSchedule) {
+          const classStartMin = timeToMin(targetSchedule.start_time);
+          const classEndMin = timeToMin(targetSchedule.end_time);
+          const classMidMin = (classStartMin + classEndMin) / 2;
+          
+          // Calculate pixel position from top
+          const pixelsFromOrigin = (classMidMin - originMin) * (SLOT_H / SLOT_MIN);
+          targetScrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+          targetMessage = '📍 ' + targetSchedule.course.name;
+        }
+      }
+      
+      // If no classes today, scroll to earliest class in the week
+      if (!targetMessage) {
+        const earliestClass = allSchedules.sort((a, b) => 
+          timeToMin(a.start_time) - timeToMin(b.start_time)
+        )[0];
+        
+        if (earliestClass) {
+          const classStartMin = timeToMin(earliestClass.start_time);
+          const pixelsFromOrigin = (classStartMin - originMin) * (SLOT_H / SLOT_MIN);
+          targetScrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+          targetMessage = '📍 ' + earliestClass.course.name + ' (' + earliestClass.day + ')';
+        }
+      }
+    }
+    
+    // NO SCHEDULES: Focus on current time (red line)
+    if (!targetMessage && nowMin >= 0 && nowMin < 1440) {
+      const pixelsFromOrigin = (nowMin - originMin) * (SLOT_H / SLOT_MIN);
+      targetScrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+      targetMessage = '📍 Hora actual';
+    }
+
+    // Perform smooth scroll on both page and container
+    if (targetMessage) {
+      // First, scroll the main page to bring the view-content into view
+      const viewContent = document.getElementById('view-content');
+      if (viewContent) {
+        // Scroll to the top of view-content with some offset for header
+        window.scrollTo({
+          top: viewContent.offsetTop - 80, // 80px offset for header
+          behavior: 'smooth'
+        });
+      }
+      
+      // Then scroll the grid container (with a small delay to let page scroll start)
+      setTimeout(() => {
+        scheduleContainer.scrollTo({
+          top: Math.max(0, targetScrollPosition),
+          behavior: 'smooth'
+        });
+      }, 100);
+      
+      // Show notification after scrolling starts
+      setTimeout(() => {
+        this.showSilentNotification(targetMessage);
+      }, 300);
+    }
   }
 }
 
