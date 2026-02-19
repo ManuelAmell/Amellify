@@ -8,21 +8,87 @@ Gestiona tus materias, horarios, profesores y aulas en una app de escritorio ele
 
 ---
 
+## 📸 Capturas de Pantalla
+
+### Interfaz Principal
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="imagenlight.png" alt="Interfaz Principal - Modo Claro" />
+      <p align="center"><b>Modo Claro</b></p>
+    </td>
+    <td width="50%">
+      <img src="imagedark.png" alt="Interfaz Principal - Modo Oscuro" />
+      <p align="center"><b>Modo Oscuro</b></p>
+    </td>
+  </tr>
+</table>
+
+### Vista de Horario Grid
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="hlight.png" alt="Vista Horario - Modo Claro" />
+      <p align="center"><b>Horario Grid - Modo Claro</b></p>
+    </td>
+    <td width="50%">
+      <img src="hdark.png" alt="Vista Horario - Modo Oscuro" />
+      <p align="center"><b>Horario Grid - Modo Oscuro</b></p>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🌟 Características Destacadas
+
+### 🎯 Vista Grid Completa (24 horas)
+Visualiza todo tu día de 00:00 a 23:59, no solo las horas con clases. Perfecto para planificar tu tiempo libre y ver el contexto completo de tu jornada.
+
+### 🔴 Indicador de Hora Actual
+Línea roja horizontal que atraviesa todas las columnas, con un círculo pulsante en el día actual. Se actualiza automáticamente cada minuto para que siempre sepas dónde estás en tu día.
+
+### 🎯 Auto-scroll Inteligente
+Al abrir la app, el horario se posiciona automáticamente en:
+1. Tu clase actual (si hay una en curso)
+2. Tu próxima clase del día
+3. La primera clase del día
+4. La hora actual (si no hay clases)
+
+### ⌨️ Atajos de Teclado Potentes
+Control total sin tocar el mouse:
+- `Ctrl/Cmd + H`: Volver al horario y enfocar tu próxima clase
+- `Ctrl/Cmd + 1/2/3`: Cambiar entre vistas
+- `Ctrl/Cmd + +/-/0`: Controlar zoom
+- `?`: Ver todos los atajos disponibles
+
+### 📏 Personalización de Texto
+Tres tamaños de texto configurables desde el menú de configuración (⚙️):
+- **Pequeño**: Para ver más información en pantalla
+- **Normal**: Tamaño por defecto, equilibrado
+- **Grande**: Para mejor legibilidad
+
+---
+
 ## ✨ Características
 
 - 📅 **Tres vistas**: Grid semanal (24h completas), vista por día, lista completa
-- ⏰ **Temporizador**: Cuenta regresiva hasta tu próxima clase
-- 🔴 **Indicador en tiempo real**: Línea roja estilo Google Calendar
-- 🎯 **Auto-scroll inteligente**: Enfoque automático en clases relevantes
-- 🎨 **Temas**: Modo claro y oscuro
-- 📏 **Tamaño de texto configurable**: Pequeño, Normal, Grande
-- 📊 **Estadísticas**: Créditos, horas semanales, carga académica
-- 🔔 **Detección de conflictos**: Alerta automática de horarios superpuestos
-- 💾 **Exportar/Importar**: Respaldo de datos en JSON
-- 🗑️ **Gestión completa**: Agregar, editar, eliminar materias
-- ⌨️ **Atajos de teclado**: Control completo desde el teclado
-- 🔍 **Zoom**: Control de zoom con atajos (Ctrl/Cmd + +/-)
-- 🚀 **Offline**: Funciona sin conexión a internet
+- ⏰ **Temporizador en tiempo real**: Cuenta regresiva hasta tu próxima clase
+- 🔴 **Indicador de hora actual**: Línea roja estilo Google Calendar que se actualiza cada minuto
+- 🎯 **Auto-scroll inteligente**: Enfoque automático en tu próxima clase o clase actual
+- 🎨 **Temas**: Modo claro y oscuro con transiciones suaves
+- 📏 **Tamaño de texto configurable**: Tres niveles (Pequeño, Normal, Grande)
+- 📊 **Estadísticas en tiempo real**: Créditos totales, horas semanales, carga académica
+- 🔔 **Detección de conflictos**: Alerta automática de horarios superpuestos al agregar materias
+- 💾 **Exportar/Importar**: Respaldo completo de datos en formato JSON
+- 🗑️ **Gestión completa**: Agregar, editar, eliminar materias con interfaz intuitiva
+- ⌨️ **Atajos de teclado**: Control total desde el teclado (13 atajos disponibles)
+- 🔍 **Zoom**: Control de zoom con atajos (Ctrl/Cmd + +/-/0)
+- 📭 **Estado vacío elegante**: Modal flotante cuando no hay materias
+- 🚀 **100% Offline**: Funciona sin conexión a internet, datos almacenados localmente
+- ⚡ **Rendimiento**: Carga instantánea, sin lag, optimizado para uso diario
 
 ---
 
@@ -148,6 +214,37 @@ Consulta [FUNCIONALIDADES.md](FUNCIONALIDADES.md) para una descripción completa
 ## 📝 Formato de Importación
 
 Consulta [FORMATO-IMPORTACION.md](FORMATO-IMPORTACION.md) para el esquema JSON de importación de materias.
+
+---
+
+## 🎥 Demo y Uso
+
+### Primer Uso
+1. Instala la aplicación usando los scripts de instalación
+2. Abre Amellify con `./abrir-amellify.sh` o `npm start`
+3. Haz clic en **➕ Nueva Materia** para agregar tu primera materia
+4. Completa la información: código, nombre, créditos, profesor
+5. Agrega horarios con **➕ Agregar Horario**
+6. Selecciona día, hora de inicio, hora de fin y aula
+7. Elige un color para identificar la materia
+8. Guarda y ¡listo! Tu horario aparecerá en el Grid
+
+### Navegación Rápida
+- **Vista Grid** (`Ctrl+1`): Horario semanal completo con todas las 24 horas
+- **Vista Semana** (`Ctrl+2`): Tarjetas por día con tus clases
+- **Vista Lista** (`Ctrl+3`): Lista completa de todas tus materias
+
+### Gestión de Datos
+- **Exportar**: Menú ⚙️ → 📤 Exportar JSON (crea un backup)
+- **Importar**: Menú ⚙️ → 📥 Importar JSON (restaura desde backup)
+- **Configurar**: Menú ⚙️ → Ajustar tamaño de texto
+- **Borrar**: Menú ⚙️ → 🗑️ Borrar Horario (elimina todo)
+
+### Atajos Útiles
+- `Ctrl/Cmd + H`: Volver rápidamente a tu próxima clase
+- `Ctrl/Cmd + N`: Agregar nueva materia
+- `Ctrl/Cmd + Shift + T`: Cambiar entre modo claro/oscuro
+- `?`: Ver modal con todos los atajos
 
 ---
 
