@@ -1,94 +1,139 @@
-# 📚 Amellify — Gestor de Horarios Universitarios v1.0
+# 📚 Amellify — Gestor de Horarios Universitarios
 
-Gestiona tus materias, horarios, profesores y aulas en una app de escritorio elegante y rápida. Sin internet, sin cuentas, tus datos son tuyos.
+<div align="center">
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Node](https://img.shields.io/badge/node-%3E%3D16-brightgreen)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
+
+**Gestiona tus materias, horarios, profesores y aulas en una app de escritorio elegante y rápida.**
+
+**Sin internet · Sin cuentas · Tus datos son tuyos**
+
+[Características](#-características) • [Instalación](#-instalación-rápida) • [Uso](#-uso) • [Atajos](#️-atajos-de-teclado) • [Contribuir](#-contribuir)
+
+</div>
 
 ---
 
-## 📸 Capturas de Pantalla
+## 📸 Vista Previa
+
+> **Nota**: Agrega tus capturas de pantalla en `.github/images/` para mostrar la interfaz aquí.
+
+<div align="center">
 
 ### Interfaz Principal
-
-<table>
-  <tr>
-    <td width="50%">
-      <img src="imagenlight.png" alt="Interfaz Principal - Modo Claro" />
-      <p align="center"><b>Modo Claro</b></p>
-    </td>
-    <td width="50%">
-      <img src="imagedark.png" alt="Interfaz Principal - Modo Oscuro" />
-      <p align="center"><b>Modo Oscuro</b></p>
-    </td>
-  </tr>
-</table>
+*Modo Claro y Modo Oscuro disponibles*
 
 ### Vista de Horario Grid
+*Visualización completa de 24 horas con indicador en tiempo real*
 
-<table>
-  <tr>
-    <td width="50%">
-      <img src="hlight.png" alt="Vista Horario - Modo Claro" />
-      <p align="center"><b>Horario Grid - Modo Claro</b></p>
-    </td>
-    <td width="50%">
-      <img src="hdark.png" alt="Vista Horario - Modo Oscuro" />
-      <p align="center"><b>Horario Grid - Modo Oscuro</b></p>
-    </td>
-  </tr>
-</table>
+</div>
 
 ---
 
 ## 🌟 Características Destacadas
 
-### 🎯 Vista Grid Completa (24 horas)
+<table>
+<tr>
+<td width="50%">
+
+### 🎯 Vista Grid Completa (24h)
 Visualiza todo tu día de 00:00 a 23:59, no solo las horas con clases. Perfecto para planificar tu tiempo libre y ver el contexto completo de tu jornada.
 
-### 🔴 Indicador de Hora Actual
-Línea roja horizontal que atraviesa todas las columnas, con un círculo pulsante en el día actual. Se actualiza automáticamente cada minuto para que siempre sepas dónde estás en tu día.
+</td>
+<td width="50%">
+
+### 🔴 Indicador en Tiempo Real
+Línea roja horizontal con círculo pulsante en el día actual. Se actualiza automáticamente cada minuto para que siempre sepas dónde estás.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 ### 🎯 Auto-scroll Inteligente
-Al abrir la app, el horario se posiciona automáticamente en:
-1. Tu clase actual (si hay una en curso)
-2. Tu próxima clase del día
-3. La primera clase del día
-4. La hora actual (si no hay clases)
+Al abrir la app, el horario se posiciona automáticamente en tu clase actual, próxima clase, o la hora actual si no hay clases.
 
-### ⌨️ Atajos de Teclado Potentes
-Control total sin tocar el mouse:
-- `Ctrl/Cmd + H`: Volver al horario y enfocar tu próxima clase
-- `Ctrl/Cmd + 1/2/3`: Cambiar entre vistas
-- `Ctrl/Cmd + +/-/0`: Controlar zoom
-- `?`: Ver todos los atajos disponibles
+</td>
+<td width="50%">
+
+### ⌨️ Atajos de Teclado
+Control total sin tocar el mouse. 13 atajos disponibles para navegación rápida, zoom, cambio de tema y más.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
 
 ### 📏 Personalización de Texto
-Tres tamaños de texto configurables desde el menú de configuración (⚙️):
-- **Pequeño**: Para ver más información en pantalla
-- **Normal**: Tamaño por defecto, equilibrado
-- **Grande**: Para mejor legibilidad
+Tres tamaños configurables (Pequeño, Normal, Grande) desde el menú de configuración. Ajusta según tu preferencia.
+
+</td>
+<td width="50%">
+
+### 🚀 100% Offline
+Sin internet, sin cuentas, sin servidores. Todos tus datos se almacenan localmente en tu computadora.
+
+</td>
+</tr>
+</table>
 
 ---
 
-## ✨ Características
+## ✨ Características Completas
 
-- 📅 **Tres vistas**: Grid semanal (24h completas), vista por día, lista completa
-- ⏰ **Temporizador en tiempo real**: Cuenta regresiva hasta tu próxima clase
-- 🔴 **Indicador de hora actual**: Línea roja estilo Google Calendar que se actualiza cada minuto
-- 🎯 **Auto-scroll inteligente**: Enfoque automático en tu próxima clase o clase actual
-- 🎨 **Temas**: Modo claro y oscuro con transiciones suaves
-- 📏 **Tamaño de texto configurable**: Tres niveles (Pequeño, Normal, Grande)
-- 📊 **Estadísticas en tiempo real**: Créditos totales, horas semanales, carga académica
-- 🔔 **Detección de conflictos**: Alerta automática de horarios superpuestos al agregar materias
-- 💾 **Exportar/Importar**: Respaldo completo de datos en formato JSON
-- 🗑️ **Gestión completa**: Agregar, editar, eliminar materias con interfaz intuitiva
-- ⌨️ **Atajos de teclado**: Control total desde el teclado (13 atajos disponibles)
-- 🔍 **Zoom**: Control de zoom con atajos (Ctrl/Cmd + +/-/0)
-- 📭 **Estado vacío elegante**: Modal flotante cuando no hay materias
-- 🚀 **100% Offline**: Funciona sin conexión a internet, datos almacenados localmente
-- ⚡ **Rendimiento**: Carga instantánea, sin lag, optimizado para uso diario
+<details open>
+<summary><b>📅 Vistas y Visualización</b></summary>
+
+- **Vista Grid**: Horario semanal completo con 24 horas visibles
+- **Vista Semana**: Tarjetas por día con tus clases organizadas
+- **Vista Lista**: Lista completa de todas tus materias con detalles
+- **Indicador en tiempo real**: Línea roja estilo Google Calendar
+- **Auto-scroll inteligente**: Enfoque automático en clases relevantes
+
+</details>
+
+<details>
+<summary><b>⚙️ Personalización</b></summary>
+
+- **Temas**: Modo claro y oscuro con transiciones suaves
+- **Tamaño de texto**: Tres niveles configurables (Pequeño, Normal, Grande)
+- **Colores por materia**: 8 colores para identificar fácilmente tus clases
+- **Zoom**: Control de zoom con atajos de teclado
+
+</details>
+
+<details>
+<summary><b>📊 Gestión y Estadísticas</b></summary>
+
+- **Temporizador**: Cuenta regresiva hasta tu próxima clase
+- **Estadísticas en tiempo real**: Créditos totales, horas semanales, carga académica
+- **Detección de conflictos**: Alerta automática de horarios superpuestos
+- **Gestión completa**: Agregar, editar, eliminar materias con interfaz intuitiva
+
+</details>
+
+<details>
+<summary><b>💾 Datos y Respaldo</b></summary>
+
+- **Exportar/Importar**: Respaldo completo de datos en formato JSON
+- **Almacenamiento local**: Datos guardados en tu computadora
+- **Sin internet**: Funciona 100% offline
+- **Sin cuentas**: No requiere registro ni login
+
+</details>
+
+<details>
+<summary><b>⌨️ Productividad</b></summary>
+
+- **13 atajos de teclado**: Control total desde el teclado
+- **Notificaciones silenciosas**: Feedback visual de cada acción
+- **Modal de ayuda**: Botón `?` para ver todos los atajos
+- **Navegación rápida**: Cambio instantáneo entre vistas
+
+</details>
 
 ---
 
