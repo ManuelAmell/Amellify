@@ -10,6 +10,7 @@ class AmellifyApp {
     this.countdownInterval = null;
     this.currentTimeUpdateInterval = null;
     this._menuClickHandler = null;
+    this._updateSlotTimeout = null; // For debouncing slot updates
 
     // Settings with defaults
     this.settings = {
@@ -791,11 +792,20 @@ class AmellifyApp {
   updateSlot(index, field, value) {
     if (this.scheduleSlots[index]) {
       this.scheduleSlots[index][field] = value;
-      // Only re-render for fields that affect conflicts (day, start_time, end_time)
-      // Don't re-render for room field to avoid losing focus
-      if (field !== 'room') {
-        this.renderScheduleSlots();
+      
+      // Clear existing timeout
+      if (this._updateSlotTimeout) {
+        clearTimeout(this._updateSlotTimeout);
       }
+      
+      // Only re-render for fields that affect conflicts
+      // Use debounce to avoid losing focus while typing
+      if (field === 'day' || field === 'start_time' || field === 'end_time') {
+        this._updateSlotTimeout = setTimeout(() => {
+          this.renderScheduleSlots();
+        }, 800); // Wait 800ms after user stops typing
+      }
+      // For room field, never re-render (no conflicts to check)
     }
   }
 
@@ -863,11 +873,11 @@ class AmellifyApp {
           </div>
           <div>
             <div class="form-label" style="margin-bottom:4px;">Inicio</div>
-            <input type="time" class="form-input" value="${slot.start_time}" onchange="app.updateSlot(${i},'start_time',this.value)">
+            <input type="time" class="form-input" value="${slot.start_time}" oninput="app.updateSlot(${i},'start_time',this.value)">
           </div>
           <div>
             <div class="form-label" style="margin-bottom:4px;">Fin</div>
-            <input type="time" class="form-input" value="${slot.end_time}" onchange="app.updateSlot(${i},'end_time',this.value)">
+            <input type="time" class="form-input" value="${slot.end_time}" oninput="app.updateSlot(${i},'end_time',this.value)">
           </div>
           <div>
             <div class="form-label" style="margin-bottom:4px;">Aula</div>
