@@ -127,13 +127,13 @@ class AmellifyApp {
 
   getNextClass() {
     const dayMap = {
+      Domingo: 0,
       Lunes: 1,
       Martes: 2,
       Miércoles: 3,
       Jueves: 4,
       Viernes: 5,
       Sábado: 6,
-      Domingo: 0,
     };
 
     const now = new Date();
@@ -148,20 +148,32 @@ class AmellifyApp {
         if (targetDay === undefined) continue;
 
         const [sh, sm] = s.start_time.split(":").map(Number);
-
-        for (let ahead = 0; ahead <= 7; ahead++) {
-          const candidate = new Date(now);
-          candidate.setDate(candidate.getDate() + ahead);
-          candidate.setHours(sh, sm, 0, 0);
-
-          if (candidate.getDay() === targetDay && candidate > now) {
-            const diff = candidate - now;
-            if (diff < nearestMs) {
-              nearestMs = diff;
-              nearest = { course, schedule: s, msUntil: diff };
-            }
-            break;
-          }
+        
+        // Calculate next occurrence of this class
+        const currentDay = now.getDay();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const targetTime = sh * 60 + sm;
+        
+        let daysUntil = targetDay - currentDay;
+        
+        // If it's today but the class already started/passed, look for next week
+        if (daysUntil === 0 && currentTime >= targetTime) {
+          daysUntil = 7;
+        }
+        // If target day is before current day, add days to get to next week
+        else if (daysUntil < 0) {
+          daysUntil += 7;
+        }
+        
+        const candidate = new Date(now);
+        candidate.setDate(candidate.getDate() + daysUntil);
+        candidate.setHours(sh, sm, 0, 0);
+        
+        const diff = candidate - now;
+        
+        if (diff > 0 && diff < nearestMs) {
+          nearestMs = diff;
+          nearest = { course, schedule: s, msUntil: diff };
         }
       }
     }
