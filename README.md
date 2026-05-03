@@ -175,33 +175,37 @@ Sin internet, sin cuentas, sin servidores. Todos tus datos se almacenan localmen
 
 ## ⚡ Instalación Rápida
 
-### 🐧 Linux
+### Requisitos
+- Node.js v16+ → [Descargar aquí](https://nodejs.org)
+
+### Instalación
 ```bash
-chmod +x instalar-linux.sh && ./instalar-linux.sh
+npm install
 ```
 
-### 🪟 Windows
-```cmd
-instalar-windows.bat
-```
-
-### 🍎 macOS
+### Iniciar la aplicación (Electron)
 ```bash
-chmod +x instalar-macos.sh && ./instalar-macos.sh
+npm start
 ```
 
-**Requisito**: Node.js v16+ → [Descargar aquí](https://nodejs.org)
+### Iniciar versión web
+```bash
+npm run web
+```
+Luego abre http://localhost:3000
+
+### Construir ejecutable
+```bash
+npm run build:win   # Windows
+npm run build:mac  # macOS
+npm run build:linux # Linux
+```
 
 ---
 
 ## 🚀 Uso
 
 ### Iniciar la aplicación
-```bash
-./abrir-amellify.sh    # Linux/macOS
-```
-
-O ejecuta directamente:
 ```bash
 npm start
 ```

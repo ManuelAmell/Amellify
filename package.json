@@ -5,12 +5,16 @@
   "author": "Amellify",
   "main": "electron-main.js",
   "scripts": {
-    "web":         "node server.js",
-    "start":       "electron .",
+    "start": "electron .",
+    "dev": "electron .",
+    "web": "node server.js",
+    "server": "node server.js",
+    "install:electron": "npm install --save-dev electron",
+    "postinstall": "electron-builder install-app-deps",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
-    "build:win":   "electron-builder --win",
-    "build:mac":   "electron-builder --mac",
-    "build:all":   "electron-builder -mwl"
+    "build:all": "electron-builder -mwl"
   },
   "dependencies": {
     "cors":    "^2.8.5",
