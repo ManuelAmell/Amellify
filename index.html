@@ -12,25 +12,102 @@
     <link rel="stylesheet" href="src/css/components.css">
     <link rel="stylesheet" href="src/css/schedule.css">
     <link rel="stylesheet" href="src/css/colors.css">
-</head>
+
+    <!-- SVG Icons - Lucide Style -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon-sprite" style="display:none;">
+        <!-- Book/University -->
+        <symbol id="icon-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </symbol>
+        <!-- Plus -->
+        <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+        </symbol>
+        <!-- Moon/Dark Mode -->
+        <symbol id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </symbol>
+        <!-- Sun/Light Mode -->
+        <symbol id="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </symbol>
+        <!-- Settings -->
+        <symbol id="icon-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </symbol>
+        <!-- Grid -->
+        <symbol id="icon-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+        </symbol>
+        <!-- Calendar -->
+        <symbol id="icon-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+        </symbol>
+        <!-- List -->
+        <symbol id="icon-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </symbol>
+        <!-- Help/Circle Question -->
+        <symbol id="icon-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </symbol>
+        <!-- Check -->
+        <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </symbol>
+        <!-- Clock -->
+        <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+        </symbol>
+        <!-- Map Pin -->
+        <symbol id="icon-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 9-9 9s-9-2-9-9"></path><path d="M12 10c0 7-9 9-9 9s-9-2-9-9"></path><circle cx="12" cy="10" r="2"></circle>
+        </symbol>
+        <!-- X/Close -->
+        <symbol id="icon-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+        </symbol>
+        <!-- Chevron Down -->
+        <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+        </symbol>
+        <!-- Trash -->
+        <symbol id="icon-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </symbol>
+    </svg>
 <body>
 
     <!-- ── Header ─────────────────────────────────────────────────────────── -->
     <header class="header">
         <div class="header-content">
-            <div class="logo">📚 Amellify</div>
+            <div class="logo">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span>Amellify</span>
+            </div>
             <div class="header-actions">
-                <button class="btn btn-success" onclick="app.openAddCourseModal()">
-                    ➕ Nueva Materia
+                <button class="btn btn-primary" onclick="app.openAddCourseModal()">
+                    <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Nueva Materia
                 </button>
-                <button class="btn btn-icon btn-secondary" onclick="app.toggleTheme()" title="Cambiar tema">
-                    <span id="theme-icon">🌙</span>
+                <button class="btn btn-icon btn-secondary" onclick="app.toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">
+                    <svg class="icon" id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
                 </button>
-                <button class="btn btn-icon btn-secondary" onclick="app.showShortcutsModal()" title="Atajos de teclado">
-                    <span style="font-size: 18px; font-weight: 600;">?</span>
+                <button class="btn btn-icon btn-secondary" onclick="app.showShortcutsModal()" title="Atajos de teclado" aria-label="Atajos de teclado">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
                 </button>
-                <button class="btn btn-secondary" onclick="app.showDataMenu()" title="Gestión de datos">
-                    ⚙️
+                <button class="btn btn-icon btn-secondary" onclick="app.showDataMenu()" title="Gestión de datos" aria-label="Gestión de datos">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
                 </button>
             </div>
         </div>
@@ -67,9 +144,30 @@
 
         <!-- ── View Tabs ─────────────────────────────────────────────────────── -->
         <div class="view-tabs fade-in stagger-2">
-            <button class="view-tab active" data-view="grid">📊 Vista Grid</button>
-            <button class="view-tab"        data-view="week">📅 Vista Semanal</button>
-            <button class="view-tab"        data-view="list">📝 Lista de Materias</button>
+            <button class="view-tab active" data-view="grid">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                Vista Grid
+            </button>
+            <button class="view-tab" data-view="week">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                Vista Semanal
+            </button>
+            <button class="view-tab" data-view="list">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+                Lista de Materias
+            </button>
+            <button class="view-tab" data-view="calc">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="12" y2="14"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="16" y1="14" x2="16" y2="18"></line>
+                </svg>
+                Calculadora
+            </button>
         </div>
 
         <!-- ── Content ──────────────────────────────────────────────────────── -->
@@ -82,7 +180,11 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">Detalles de la Clase</div>
-                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')">✕</button>
+                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')" aria-label="Cerrar">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </div>
             <div class="modal-body" id="modal-body"></div>
         </div>
@@ -93,7 +195,11 @@
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="course-modal-title">Nueva Materia</div>
-                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')">✕</button>
+                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')" aria-label="Cerrar">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </div>
             <div class="modal-body">
                 <form id="course-form">
@@ -102,7 +208,10 @@
                     <!-- Información Básica -->
                     <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
                         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
-                            📋 Información Básica
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Información Básica
                         </div>
                         <div class="form-row">
                             <div class="form-group" style="margin-bottom:0;">
@@ -126,7 +235,10 @@
                     <!-- Información del Profesor -->
                     <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
                         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
-                            👨‍🏫 Información del Profesor
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            Información del Profesor
                         </div>
                         <div class="form-row">
                             <div class="form-group" style="margin-bottom:0;">
@@ -143,7 +255,10 @@
                     <!-- Detalles Adicionales -->
                     <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
                         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
-                            📚 Detalles de la Materia
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            Detalles de la Materia
                         </div>
                         <div class="form-row">
                             <div class="form-group" style="margin-bottom:0;">
@@ -166,35 +281,72 @@
                         <div class="form-group" style="margin-bottom:0;margin-top:16px;">
                             <label class="form-label">Estado</label>
                             <select class="form-select" id="course-status">
-                                <option value="active">🟢 Activa</option>
-                                <option value="paused">🟡 En pausa</option>
-                                <option value="completed">🔵 Completada</option>
-                                <option value="dropped">🔴 Retirada</option>
+                                <option value="active">Activa</option>
+                                <option value="paused">En pausa</option>
+                                <option value="completed">Completada</option>
+                                <option value="dropped">Retirada</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Notas -->
+                    <!-- notas -->
                     <div class="form-group">
-                        <label class="form-label">📝 Notas / Descripción</label>
+                        <label class="form-label">Notas / Descripción</label>
                         <textarea class="form-input" id="course-notes" placeholder="Agrega notas importantes, requisitos, objetivos de la materia..." style="min-height:80px;"></textarea>
+                    </div>
+
+                    <!-- Calculadora de Notas -->
+                    <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
+                        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;">
+                                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                            </svg>
+                            Calculadora de Notas
+                        </div>
+                        <div id="partials-container" style="margin-bottom:12px;min-height:60px;display:flex;flex-direction:column;gap:8px;"></div>
+                        <button type="button" class="btn btn-secondary" onclick="app.addPartial()" style="width:100%;margin-bottom:12px;">
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar Parcial
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="app.calculateGrade()" style="width:100%;margin-bottom:12px;">
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Calcular Nota Final
+                        </button>
+                        <div id="grade-result" style="margin-top:16px;padding:16px;border-radius:var(--radius-sm);display:none;background:rgba(52,199,89,0.1);border:2px solid var(--success);">
+                            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;">Nota Final Ponderada</div>
+                            <div style="font-size:32px;font-weight:700;" id="final-grade">0.00</div>
+                            <div style="font-size:14px;font-weight:600;" id="grade-status">Aprobado</div>
+                        </div>
                     </div>
 
                     <!-- Horarios -->
                     <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
                         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
-                            📅 Horarios de Clase
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            Horarios de Clase
                         </div>
                         <div id="schedule-list" style="margin-bottom:16px;"></div>
                         <button type="button" class="btn btn-secondary" onclick="app.addScheduleSlot()" style="width:100%;">
-                            ➕ Agregar Horario
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Agregar Horario
                         </button>
                     </div>
 
                     <!-- Color -->
                     <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:20px;">
                         <div style="font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">
-                            🎨 Color de la Materia
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;">
+                                <circle cx="13.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="10.5" r="2.5"></circle><circle cx="8.5" cy="10.5" r="2.5"></circle><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"></path>
+                            </svg>
+                            Color de la Materia
                         </div>
                         <div class="color-picker">
                             <div class="color-option color-picker-red"    data-color="red"></div>
@@ -213,10 +365,16 @@
                     <!-- Botones -->
                     <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
                         <button type="submit" class="btn btn-primary" style="flex:1;min-width:140px;">
-                            💾 Guardar Materia
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            Guardar Materia
                         </button>
                         <button type="button" class="btn btn-danger" id="btn-delete-course" style="display:none;" onclick="app.deleteCurrentCourse()">
-                            🗑️ Eliminar
+                            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Eliminar
                         </button>
                         <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').classList.remove('active')">
                             Cancelar
@@ -234,8 +392,12 @@
     <div class="modal" id="shortcuts-modal">
         <div class="modal-content" style="max-width: 800px;">
             <div class="modal-header">
-                <div class="modal-title">⌨️ Atajos de Teclado</div>
-                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')">✕</button>
+                <div class="modal-title">Atajos de Teclado</div>
+                <button class="modal-close" onclick="this.closest('.modal').classList.remove('active')" aria-label="Cerrar">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             </div>
             <div class="modal-body" id="shortcuts-body" style="max-height: 70vh; overflow-y: auto;">
                 <!-- Content will be injected by JavaScript -->

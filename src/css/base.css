@@ -1,19 +1,61 @@
-/* Base & Reset */
-@import url('https://fonts.googleapis.com/css2?family=Epilogue:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+/* Base & Reset - Apple + Notion Style */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-    font-family: 'Epilogue', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    line-height: 1.6;
-    transition: background 0.3s, color 0.3s;
-    overflow-x: hidden;
+html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
 }
 
-.mono { font-family: 'IBM Plex Mono', 'SF Mono', Monaco, monospace; }
+body {
+    font-family: var(--font-family);
+    background: 
+        radial-gradient(ellipse at 20% 0%, rgba(0, 122, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(88, 86, 214, 0.06) 0%, transparent 50%),
+        linear-gradient(180deg, #f5f5f7 0%, #fafafa 100%);
+    color: var(--text-primary);
+    line-height: 1.5;
+    transition: background 0.5s ease;
+    overflow-x: hidden;
+    min-height: 100vh;
+}
 
-.container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+[data-theme="dark"] body {
+    background: 
+        radial-gradient(ellipse at 20% 0%, rgba(0, 122, 255, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 100%, rgba(88, 86, 214, 0.04) 0%, transparent 50%),
+        linear-gradient(180deg, #000000 0%, #0a0a0a 100%);
+}
 
-@media (max-width: 768px) { .container { padding: 16px; } }
+.mono { font-family: var(--font-mono); }
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-5);
+}
+
+/* Page load animation */
+@keyframes pageLoad {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.container {
+    animation: pageLoad 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: var(--space-4);
+    }
+}

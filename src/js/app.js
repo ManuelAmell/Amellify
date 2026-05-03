@@ -25,8 +25,7 @@ class AmellifyApp {
     // Restore theme
     const savedTheme = localStorage.getItem("amellify-theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
-    document.getElementById("theme-icon").textContent =
-      savedTheme === "dark" ? "☀️" : "🌙";
+    this.updateThemeIcon(savedTheme);
 
     // Restore settings
     const savedSettings = localStorage.getItem("amellify-settings");
@@ -42,6 +41,7 @@ class AmellifyApp {
     this.setupEventListeners();
     this.renderAll();
     this.startCountdown();
+    this.initPartialInputs();
   }
 
   // ─── Data Fetching ───────────────────────────────────────────────────────────
@@ -224,8 +224,164 @@ class AmellifyApp {
       grid: () => this.renderGridView(),
       week: () => this.renderWeekView(),
       list: () => this.renderListView(),
+      calc: () => this.renderCalcView(),
     };
     (views[this.currentView] || views.grid)();
+  }
+
+  // Calculate final grade from partials
+  calculateFinalGrade(partials) {
+    if (!partials || partials.length === 0) return null;
+    let totalPercent = 0;
+    let weightedSum = 0;
+    for (const p of partials) {
+      const grade = parseFloat(p.grade) || 0;
+      const percent = parseFloat(p.percent) || 0;
+      weightedSum += grade * percent;
+      totalPercent += percent;
+    }
+    if (totalPercent !== 100) return null;
+    return weightedSum / totalPercent;
+  }
+
+  // Initialize partial inputs
+  initPartialInputs() {
+    const container = document.getElementById("partials-container");
+    if (container && container.children.length === 0) {
+      this.addPartial("P1", "", 30);
+      this.addPartial("P2", "", 30);
+      this.addPartial("P3", "", 40);
+    }
+  }
+
+  // Add partial to course form
+  addPartial(name, grade, percent) {
+    const container = document.getElementById("partials-container");
+    if (!container) return;
+    const count = container.children.length;
+    const partialName = name || "P" + (count + 1);
+    const html = '<div class="partial-item" style="display:flex;align-items:center;gap:8px;background:var(--bg-secondary);padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="width:50px;font-weight:600;color:var(--text-secondary);font-size:13px;text-align:center;">' + partialName + '</div><input type="number" class="partial-grade" value="' + (grade !== null ? grade : '') + '" placeholder="0.0" min="0" max="5" step="0.01" style="flex:1;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-primary);text-align:center;"><input type="number" class="partial-percent" value="' + (percent !== null ? percent : '') + '" placeholder="%" min="0" max="100" step="1" style="width:60px;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-primary);text-align:center;"><span style="color:var(--text-tertiary);font-size:13px;">%</span><button type="button" class="btn-remove" onclick="this.parentElement.remove()" style="width:28px;height:28px;padding:0;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;">✕</button></div>';
+    container.insertAdjacentHTML("beforeend", html);
+  }
+
+  // Calculate grade from course form
+  calculateGrade() {
+    const items = document.querySelectorAll("#partials-container .partial-item");
+    const result = document.getElementById("grade-result");
+    const finalEl = document.getElementById("final-grade");
+    const statusEl = document.getElementById("grade-status");
+    let totalPercent = 0;
+    let weightedSum = 0;
+    items.forEach(item => {
+      const gradeInput = item.querySelector(".partial-grade");
+      const percentInput = item.querySelector(".partial-percent");
+      if (gradeInput && percentInput) {
+        const grade = parseFloat(gradeInput.value) || 0;
+        const percent = parseFloat(percentInput.value) || 0;
+        weightedSum += grade * percent;
+        totalPercent += percent;
+      }
+    });
+    
+    if (totalPercent !== 100) {
+      result.style.display = "block";
+      result.style.background = "rgba(255,59,48,0.1)";
+      result.style.borderColor = "var(--error)";
+      finalEl.textContent = "—";
+      finalEl.style.color = "var(--error)";
+      statusEl.textContent = "⚠️ Los porcentajes deben sumar 100% (actual: " + totalPercent + "%)";
+      statusEl.style.color = "var(--error)";
+      return;
+    }
+    
+    const finalGrade = (weightedSum / totalPercent).toFixed(2);
+    const passed = finalGrade >= 2.96;
+    finalEl.textContent = finalGrade;
+    finalEl.style.color = passed ? "var(--success)" : "var(--error)";
+    statusEl.textContent = passed ? "✓ Aprobado" : "✗ Reprobado";
+    statusEl.style.color = passed ? "var(--success)" : "var(--error)";
+    result.style.display = "block";
+  }
+
+  // Get partials from form
+  getPartialsFromForm() {
+    const items = document.querySelectorAll("#partials-container .partial-item");
+    const partials = [];
+    items.forEach(item => {
+      const gradeInput = item.querySelector(".partial-grade");
+      const percentInput = item.querySelector(".partial-percent");
+      if (gradeInput && percentInput) {
+        partials.push({
+          name: item.querySelector("div").textContent,
+          grade: parseFloat(gradeInput.value) || 0,
+          percent: parseFloat(percentInput.value) || 0
+        });
+      }
+    });
+    return partials;
+  }
+
+  // ─── Calculator View ─────────────────────────────────────────────────
+  renderCalcView() {
+    const container = document.getElementById("view-content");
+    container.innerHTML = '<div style="max-width:600px;margin:0 auto;"><div style="background:var(--bg-tertiary);padding:24px;border-radius:var(--radius);margin-bottom:20px;"><div style="font-size:18px;font-weight:700;margin-bottom:20px;color:var(--text-primary);">Calculadora de Notas</div><div id="calc-partials-container" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;"></div><button type="button" class="btn btn-secondary" onclick="app.addCalcPartial()" style="width:100%;margin-bottom:16px;">Agregar Parcial</button><button type="button" class="btn btn-primary" onclick="app.calculateCalcGrade()" style="width:100%;margin-bottom:16px;">Calcular Nota Final</button><div id="calc-grade-result" style="display:none;padding:20px;border-radius:var(--radius);background:rgba(52,199,89,0.1);border:2px solid var(--success);"><div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">Nota Final Ponderada</div><div style="font-size:40px;font-weight:700;" id="calc-final-grade">0.00</div><div style="font-size:16px;font-weight:600;margin-top:8px;" id="calc-grade-status">Aprobado</div></div></div></div>';
+    this.initCalcPartials();
+  }
+
+  addCalcPartial(name, grade, percent) {
+    const container = document.getElementById("calc-partials-container");
+    const count = container ? container.children.length : 0;
+    const partialName = name || "P" + (count + 1);
+    const gradeVal = (grade !== null && grade !== "") ? grade : "";
+    const percentVal = (percent !== null && percent !== "") ? percent : "";
+    const html = '<div class="calc-partial-item" style="display:flex;align-items:center;gap:12px;background:var(--bg-secondary);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="width:50px;font-weight:600;color:var(--text-secondary);font-size:13px;text-align:center;">' + partialName + '</div><input type="number" class="calc-grade-input" value="' + gradeVal + '" placeholder="0.0" min="0" max="5" step="0.01" style="flex:1;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-primary);text-align:center;font-size:15px;color:var(--text-primary);"><input type="number" class="calc-percent-input" value="' + percentVal + '" placeholder="%" min="0" max="100" step="1" style="width:70px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-primary);text-align:center;font-size:15px;color:var(--text-primary);"><span style="color:var(--text-tertiary);font-size:14px;">%</span><button type="button" class="btn-remove" onclick="this.closest(\'.calc-partial-item\').remove()" style="width:36px;height:36px;padding:0;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;">✕</button></div>';
+    if (container) container.insertAdjacentHTML("beforeend", html);
+  }
+
+  initCalcPartials() {
+    const container = document.getElementById("calc-partials-container");
+    if (container && container.children.length === 0) {
+      this.addCalcPartial("P1", "", 30);
+      this.addCalcPartial("P2", "", 30);
+      this.addCalcPartial("P3", "", 40);
+    }
+  }
+
+  calculateCalcGrade() {
+    const items = document.querySelectorAll(".calc-partial-item");
+    const result = document.getElementById("calc-grade-result");
+    const finalEl = document.getElementById("calc-final-grade");
+    const statusEl = document.getElementById("calc-grade-status");
+    let totalPercent = 0;
+    let weightedSum = 0;
+    
+    items.forEach(item => {
+      const grade = parseFloat(item.querySelector(".calc-grade-input").value) || 0;
+      const percent = parseFloat(item.querySelector(".calc-percent-input").value) || 0;
+      weightedSum += grade * percent;
+      totalPercent += percent;
+    });
+    
+    if (totalPercent !== 100) {
+      result.style.display = "block";
+      result.style.background = "rgba(255,59,48,0.1)";
+      result.style.borderColor = "var(--error)";
+      finalEl.textContent = "—";
+      finalEl.style.color = "var(--error)";
+      statusEl.textContent = "⚠️ Los porcentajes deben sumar 100% (actual: " + totalPercent + "%)";
+      statusEl.style.color = "var(--error)";
+      return;
+    }
+    
+    const finalGrade = (weightedSum / totalPercent).toFixed(2);
+    const passed = finalGrade >= 2.96;
+    finalEl.textContent = finalGrade;
+    finalEl.style.color = passed ? "var(--success)" : "var(--error)";
+    statusEl.textContent = passed ? "✓ Aprobado" : "✗ Reprobado";
+    statusEl.style.color = passed ? "var(--success)" : "var(--error)";
+    result.style.display = "block";
+    result.style.background = passed ? "rgba(52,199,89,0.1)" : "rgba(255,59,48,0.1)";
+    result.style.borderColor = passed ? "var(--success)" : "var(--error)";
   }
 
   // ─── Grid View ───────────────────────────────────────────────────────────────
@@ -358,6 +514,17 @@ class AmellifyApp {
       const col = dayIdx + 2;
       const isToday = s.day === todayName;
 
+      const partials = s.course.partials || [];
+      let gradeHtml = '';
+      if (partials.length > 0) {
+        const finalGrade = this.calculateFinalGrade(partials);
+        if (finalGrade !== null) {
+          const passed = finalGrade >= 2.96;
+          const gradeColor = passed ? 'var(--success)' : 'var(--error)';
+          gradeHtml = '<div class="class-cell-grade" style="font-size:11px;font-weight:700;margin-top:4px;padding:2px 6px;border-radius:4px;background:' + gradeColor + ';color:#fff;">' + finalGrade.toFixed(2) + '</div>';
+        }
+      }
+
       classBlocks += `
         <div class="class-cell color-${s.course.color}"
              onclick="app.showClassDetails('${s.course.code}', ${s.id})"
@@ -365,6 +532,7 @@ class AmellifyApp {
              style="grid-column:${col}; grid-row:${rowStart} / ${rowEnd}; margin:1px 2px;${isToday ? ' box-shadow: var(--shadow-sm);' : ''}">
           <div class="class-cell-code">${s.course.code}</div>
           <div class="class-cell-name">${s.course.name}</div>
+          ${gradeHtml}
           ${s.room ? `<div class="class-cell-room">🏫 ${s.room}</div>` : ''}
           <div style="font-size:var(--grid-cell-time-size, 11px);margin-top:auto;opacity:0.5;font-family:'IBM Plex Mono',monospace;">${s.start_time}–${s.end_time}</div>
         </div>`;
@@ -1104,6 +1272,7 @@ class AmellifyApp {
       status: document.getElementById("course-status").value,
       notes: document.getElementById("course-notes").value.trim(),
       color: document.getElementById("course-color").value || "blue",
+      partials: this.getPartialsFromForm(),
       schedules: this.scheduleSlots.filter(
         (s) => s.day && s.start_time && s.end_time,
       ),
@@ -1257,6 +1426,21 @@ class AmellifyApp {
         </div>
       </div>
 
+      ${(function() {
+        var partials = course.partials || [];
+        if (partials.length > 0) {
+          var finalGrade = app.calculateFinalGrade(partials);
+          if (finalGrade !== null) {
+            var passed = finalGrade >= 2.96;
+            var bgColor = passed ? 'rgba(52,199,89,0.1)' : 'rgba(255,59,48,0.1)';
+            var borderColor = passed ? 'var(--success)' : 'var(--error)';
+            var textColor = passed ? 'var(--success)' : 'var(--error)';
+            return '<div style="background:' + bgColor + ';padding:12px;border-radius:var(--radius-sm);text-align:center;margin-bottom:12px;border:2px solid ' + borderColor + ';"><div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">NOTA FINAL</div><div style="font-size:28px;font-weight:800;color:' + textColor + ';">' + finalGrade.toFixed(2) + '</div><div style="font-size:12px;color:' + textColor + ';">' + (passed ? '✓ Aprobado' : '✗ Reprobado') + '</div></div>';
+          }
+        }
+        return '';
+      })()}
+
       ${
         course.professor
           ? `
@@ -1295,8 +1479,16 @@ class AmellifyApp {
     const next = current === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("amellify-theme", next);
-    document.getElementById("theme-icon").textContent =
-      next === "dark" ? "☀️" : "🌙";
+    this.updateThemeIcon(next);
+  }
+
+  updateThemeIcon(theme) {
+    const icon = document.getElementById("theme-icon");
+    if (icon) {
+      icon.innerHTML = theme === "dark"
+        ? '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>'
+        : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+    }
   }
 
   // ─── Font Size Settings ──────────────────────────────────────────────────────

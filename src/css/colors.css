@@ -1,81 +1,82 @@
-/* Color Themes */
+/* Color Themes - Apple + Notion Style */
 
 /* Red */
-.color-red { 
-    background-color: #ffebee;
-    border-color: #ef5350;
-    color: #c62828;
+.color-red {
+    background-color: #fff1f0;
+    border-color: #ffcec9;
+    color: #c82524;
 }
-[data-theme="dark"] .color-red { 
-    background-color: rgba(239, 83, 80, 0.15);
-    border-color: #ef5350;
-    color: #ef9a9a;
+[data-theme="dark"] .color-red {
+    background-color: rgba(255, 107, 103, 0.12);
+    border-color: #ff6b67;
+    color: #ff9995;
 }
 
 /* Blue */
-.color-blue { 
-    background-color: #e3f2fd;
-    border-color: #42a5f5;
-    color: #1565c0;
+.color-blue {
+    background-color: #eef6ff;
+    border-color: #cce5ff;
+    color: #0553a8;
 }
-[data-theme="dark"] .color-blue { 
-    background-color: rgba(66, 165, 245, 0.15);
-    border-color: #42a5f5;
-    color: #90caf9;
+[data-theme="dark"] .color-blue {
+    background-color: rgba(0, 122, 255, 0.12);
+    border-color: #4d9aff;
+    color: #8ec3ff;
 }
 
 /* Green */
-.color-green { 
-    background-color: #e8f5e9;
-    border-color: #66bb6a;
-    color: #2e7d32;
+.color-green {
+    background-color: #edfcef;
+    border-color: #c5ecc8;
+    color: #176428;
 }
-[data-theme="dark"] .color-green { 
-    background-color: rgba(102, 187, 106, 0.15);
-    border-color: #66bb6a;
-    color: #a5d6a7;
+[data-theme="dark"] .color-green {
+    background-color: rgba(52, 199, 89, 0.12);
+    border-color: #4ec97d;
+    color: #6ddb95;
 }
 
 /* Orange */
-.color-orange { 
-    background-color: #fff3e0;
-    border-color: #ffa726;
-    color: #e65100;
+.color-orange {
+    background-color: #fff5eb;
+    border-color: #ffe0c2;
+    color: #8a4a14;
 }
-[data-theme="dark"] .color-orange { 
-    background-color: rgba(255, 167, 38, 0.15);
-    border-color: #ffa726;
-    color: #ffcc80;
+[data-theme="dark"] .color-orange {
+    background-color: rgba(255, 159, 10, 0.12);
+    border-color: #ffa54d;
+    color: #ffbd70;
 }
 
 /* Purple */
-.color-purple { 
-    background-color: #f3e5f5;
-    border-color: #ab47bc;
-    color: #6a1b9a;
+.color-purple {
+    background-color: #f5edfa;
+    border-color: #ddd2ed;
+    color: #5f3a8a;
 }
-[data-theme="dark"] .color-purple { 
-    background-color: rgba(171, 71, 188, 0.15);
-    border-color: #ab47bc;
-    color: #ce93d8;
+[data-theme="dark"] .color-purple {
+    background-color: rgba(142, 71, 200, 0.12);
+    border-color: #a86ad4;
+    color: #bd84e3;
 }
 
 /* Teal */
-.color-teal { 
-    background-color: #e0f2f1;
-    border-color: #26a69a;
-    color: #00695c;
+.color-teal {
+    background-color: #edf7f6;
+    border-color: #c5e9e7;
+    color: #0d6059;
 }
-[data-theme="dark"] .color-teal { 
-    background-color: rgba(38, 166, 154, 0.15);
-    border-color: #26a69a;
-    color: #80cbc4;
+[data-theme="dark"] .color-teal {
+    background-color: rgba(38, 166, 154, 0.12);
+    border-color: #4dbfbb;
+    color: #6fd4cf;
 }
 
-/* Color Picker Options */
-.color-picker-red { background-color: #ef5350; }
-.color-picker-blue { background-color: #42a5f5; }
-.color-picker-green { background-color: #66bb6a; }
-.color-picker-orange { background-color: #ffa726; }
-.color-picker-purple { background-color: #ab47bc; }
-.color-picker-teal { background-color: #26a69a; }
+/* Color Picker Options - Apple style */
+.color-picker { gap: 10px; }
+.color-picker-red { background-color: #ff6b67; }
+.color-picker-blue { background-color: #4d9aff; }
+.color-picker-green { background-color: #34c759; }
+.color-picker-orange { background-color: #ffa54d; }
+.color-picker-purple { background-color: #8e47c8; }
+.color-picker-teal { background-color: #26bfb4; }
