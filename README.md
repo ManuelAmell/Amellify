@@ -65,28 +65,38 @@
 <tr>
 <td width="50%">
 
-### 🎯 Vista Grid Completa (24h)
-Visualiza todo tu día de 00:00 a 23:59, no solo las horas con clases. Perfecto para planificar tu tiempo libre y ver el contexto completo de tu jornada.
+### 🧮 Calculadora de Notas
+Calcula tu nota final ponderada. Los porcentajes deben sumar 100%. Escala 0-5, passing >= 2.96.
 
 </td>
 <td width="50%">
 
-### 🔴 Indicador en Tiempo Real
-Línea roja horizontal con círculo pulsante en el día actual. Se actualiza automáticamente cada minuto para que siempre sepas dónde estás.
+### 🎯 Vista Grid Completa (24h)
+Visualiza todo tu día de 00:00 a 23:59, no solo las horas con clases. Perfecto para planificar tu tiempo libre y ver el contexto completo de tu jornada.
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-### 🎯 Auto-scroll Inteligente
-Al abrir la app, el horario se posiciona automáticamente en tu clase actual, próxima clase, o la hora actual si no hay clases.
+### 🔴 Indicador en Tiempo Real
+Línea roja horizontal con círculo pulsante en el día actual. Se actualiza automáticamente cada minuto para que siempre sepas dónde estás.
 
 </td>
 <td width="50%">
 
+### 🎯 Auto-scroll Inteligente
+Al abrir la app, el horario se posiciona automáticamente en tu clase actual, próxima clase, o la hora actual si no hay clases.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
 ### ⌨️ Atajos de Teclado
 Control total sin tocar el mouse. 13 atajos disponibles para navegación rápida, zoom, cambio de tema y más.
+
+</td>
 
 </td>
 </tr>

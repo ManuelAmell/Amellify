@@ -1,6 +1,23 @@
-# � Funcionalidades de Amellify
+# Funcionalidades de Amellify
 
-## 🎯 Vista Grid Completa (24 horas)
+## Calculadora de Notas
+
+Calculadora standalone para calcular notas ponderadas de materias.
+
+### Características:
+- **Vista Calculadora**: Nuevo tab en la barra de vistas
+- **Parciales dinámicos**: Agregar/eliminar parciales
+- **Validación 100%**: Los porcentajes deben sumar exactamente 100%
+- **Indicador visual**: Muestra error si no suma 100%
+- **Escala 0-5**: Passing >= 2.96 (aprox. 2.96)
+
+### Calculadora en formulario de materia:
+- **Dentro del modal**: Integrated en el formulario de matéria
+- **3 parciales por defecto**: P1: 30%, P2: 30%, P3: 40%
+- **Cálculo en tiempo real**: Botón para calcular
+- **Estados**: Verde (aprobado), Rojo (reprobado)
+
+## Vista Grid Completa (24 horas)
 
 La vista Grid muestra todas las horas del día (00:00 - 23:59) en lugar de solo las horas con clases programadas. Esto proporciona una visión completa del día y permite ver mejor el contexto temporal.
 

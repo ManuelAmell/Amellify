@@ -1,6 +1,12 @@
-# 💡 Ideas y Mejoras para Amellify
+# Ideas y Mejoras para Amellify
 
-## � Escalabilidad y Expansión Multiplataforma
+## Calculadora de Notas (IMPLEMENTADO)
+
+- [x] Vista standalone "Calculadora"
+- [x] Validacion 100% de porcentajes  
+- [x] Escala 0-5 con passing >= 2.96
+
+## Escalabilidad y Expansión Multiplataforma
 
 ### � Versión Móvil (iOS & Android)
 
