@@ -1,5 +1,4 @@
 // ─── Amellify App ─────────────────────────────────────────────────────────────
-const API = "/api";
 
 class AmellifyApp {
   constructor() {
@@ -10,11 +9,12 @@ class AmellifyApp {
     this.countdownInterval = null;
     this.currentTimeUpdateInterval = null;
     this._menuClickHandler = null;
-    this._updateSlotTimeout = null; // For debouncing slot updates
+    this._updateSlotTimeout = null;
 
-    // Settings with defaults
+    this.ws = null;
+
     this.settings = {
-      fontSize: 'normal' // 'small', 'normal', 'large'
+      fontSize: 'normal'
     };
 
     this.init();
@@ -42,21 +42,146 @@ class AmellifyApp {
     this.renderAll();
     this.startCountdown();
     this.initPartialInputs();
+
+    // WebSocket sync
+    this.initWebSocket();
+  }
+
+  // ─── WebSocket ───────────────────────────────────────────────────────────────
+  initWebSocket() {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${proto}//${window.location.host}/ws`;
+
+    this.ws = new WebSocketManager();
+    this.ws.connect(wsUrl);
+
+    this.ws.on('open', () => {
+      this._updateWsStatus('connected');
+    });
+
+    this.ws.on('close', () => {
+      this._updateWsStatus('disconnected');
+    });
+
+    this.ws.on('reconnecting', ({ attempt, delay }) => {
+      this._updateWsStatus('reconnecting', attempt);
+    });
+
+    this.ws.on('course:created', (course) => {
+      const exists = this.courses.find(c => c.code === course.code);
+      if (!exists) {
+        this.courses.push(course);
+        this.saveCoursesLocal();
+        this.renderAll();
+        this._showSyncToast('sync-create', course);
+      }
+    });
+
+    this.ws.on('course:updated', (course) => {
+      const idx = this.courses.findIndex(c => c.code === course.code);
+      if (idx !== -1) {
+        this.courses[idx] = course;
+        this.saveCoursesLocal();
+        this.renderAll();
+        this._showSyncToast('sync-update', course);
+      }
+    });
+
+    this.ws.on('course:deleted', ({ code }) => {
+      const course = this.courses.find(c => c.code === code);
+      if (course) {
+        this.courses = this.courses.filter(c => c.code !== code);
+        this.saveCoursesLocal();
+        this.renderAll();
+        this._showSyncToast('sync-delete', course);
+      }
+    });
+
+    this.ws.on('stats:updated', () => {
+      this.updateStats();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (this.ws) this.ws.disconnect();
+    });
+  }
+
+  _updateWsStatus(state, attempt) {
+    const indicator = document.getElementById('ws-status-indicator');
+    if (!indicator) return;
+    const dot = indicator.querySelector('.ws-status-dot');
+    const text = indicator.querySelector('.ws-status-text');
+    if (state === 'connected') {
+      dot.style.background = 'var(--success)';
+      dot.title = 'Conectado';
+      if (text) text.textContent = '';
+    } else if (state === 'reconnecting') {
+      dot.style.background = 'var(--warning)';
+      dot.title = `Reconectando (intento ${attempt})`;
+      if (text) text.textContent = ` reconectando...`;
+    } else {
+      dot.style.background = 'var(--text-tertiary)';
+      dot.title = 'Desconectado';
+      if (text) text.textContent = '';
+    }
+  }
+
+  _showSyncToast(type, course) {
+    const messages = {
+      'sync-create': { icon: '➕', text: `Nueva materia: ${course.name}` },
+      'sync-update': { icon: '✏️', text: `Editado: ${course.name}` },
+      'sync-delete': { icon: '🗑️', text: `Eliminado: ${course.name}` }
+    };
+    const msg = messages[type];
+    if (!msg) return;
+
+    const container = document.getElementById('sync-toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'sync-toast';
+    toast.innerHTML = `
+      <span class="sync-toast-icon">${msg.icon}</span>
+      <span class="sync-toast-text">${msg.text}</span>
+    `;
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.classList.add('visible');
+    });
+
+    setTimeout(() => {
+      toast.classList.remove('visible');
+      toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+    }, 4000);
   }
 
   // ─── Data Fetching ───────────────────────────────────────────────────────────
   async fetchCourses() {
+    const savedLocal = localStorage.getItem("amellify-courses");
+    if (savedLocal) {
+      try {
+        this.courses = JSON.parse(savedLocal);
+      } catch (e) {
+        this.courses = [];
+      }
+    }
     try {
       const res = await fetch(`${API}/courses`);
-      if (!res.ok) throw new Error("Server error");
-      this.courses = await res.json();
+      if (res.ok) {
+        const serverCourses = await res.json();
+        if (serverCourses && serverCourses.length > 0) {
+          this.courses = serverCourses;
+          this.saveCoursesLocal();
+        }
+      }
     } catch (e) {
-      this.courses = [];
-      this.showAlert(
-        "⚠️ No se pudo conectar con el servidor. ¿Está corriendo server.js?",
-        "error",
-      );
+      console.log("Server unavailable, using local data:", this.courses.length, "courses");
     }
+  }
+
+  saveCoursesLocal() {
+    localStorage.setItem("amellify-courses", JSON.stringify(this.courses));
   }
 
   // ─── Render All ──────────────────────────────────────────────────────────────
@@ -324,8 +449,15 @@ class AmellifyApp {
   // ─── Calculator View ─────────────────────────────────────────────────
   renderCalcView() {
     const container = document.getElementById("view-content");
-    container.innerHTML = '<div style="max-width:600px;margin:0 auto;"><div style="background:var(--bg-tertiary);padding:24px;border-radius:var(--radius);margin-bottom:20px;"><div style="font-size:18px;font-weight:700;margin-bottom:20px;color:var(--text-primary);">Calculadora de Notas</div><div id="calc-partials-container" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;"></div><button type="button" class="btn btn-secondary" onclick="app.addCalcPartial()" style="width:100%;margin-bottom:16px;">Agregar Parcial</button><button type="button" class="btn btn-primary" onclick="app.calculateCalcGrade()" style="width:100%;margin-bottom:16px;">Calcular Nota Final</button><div id="calc-grade-result" style="display:none;padding:20px;border-radius:var(--radius);background:rgba(52,199,89,0.1);border:2px solid var(--success);"><div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">Nota Final Ponderada</div><div style="font-size:40px;font-weight:700;" id="calc-final-grade">0.00</div><div style="font-size:16px;font-weight:600;margin-top:8px;" id="calc-grade-status">Aprobado</div></div></div></div>';
+    container.innerHTML = '<div style="max-width:600px;margin:0 auto;"><div style="background:var(--bg-tertiary);padding:24px;border-radius:var(--radius);margin-bottom:20px;"><div style="font-size:18px;font-weight:700;margin-bottom:20px;color:var(--text-primary);">Calculadora de Notas</div><div style="display:flex;gap:8px;margin-bottom:16px;"><button type="button" class="btn btn-secondary" onclick="app.addCalcPartial()" style="flex:1;">Agregar Parcial</button></div><div id="calc-partials-container" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;"></div><div style="display:flex;gap:8px;margin-bottom:16px;"><button type="button" class="btn btn-secondary" onclick="app.exportCalcMarkdown()" style="flex:1;">Exportar MD</button><button type="button" class="btn btn-secondary" onclick="app.exportCalcTxt()" style="flex:1;">Exportar TXT</button><button type="button" class="btn btn-secondary" onclick="app.triggerCalcImport()" style="flex:1;">Importar</button></div><input type="file" id="calc-import-file" accept=".md,.txt,.markdown,.text" style="display:none;" onchange="app.importCalcData(this)"><div id="calc-grade-result" style="display:none;padding:20px;border-radius:var(--radius);background:rgba(52,199,89,0.1);border:2px solid var(--success);"><div style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">Nota Actual Ponderada</div><div style="font-size:40px;font-weight:700;" id="calc-final-grade">0.00</div><div style="font-size:16px;font-weight:600;margin-top:8px;" id="calc-grade-status">Aprobado</div><div style="font-size:14px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);" id="calc-pending-grade"></div></div></div></div>';
     this.initCalcPartials();
+    this.setupCalcAutoCalc();
+  }
+
+  setupCalcAutoCalc() {
+    const container = document.getElementById("calc-partials-container");
+    if (!container) return;
+    container.addEventListener("input", () => this.calculateCalcGrade());
   }
 
   addCalcPartial(name, grade, percent) {
@@ -352,24 +484,65 @@ class AmellifyApp {
     const result = document.getElementById("calc-grade-result");
     const finalEl = document.getElementById("calc-final-grade");
     const statusEl = document.getElementById("calc-grade-status");
+    const pendingEl = document.getElementById("calc-pending-grade");
     let totalPercent = 0;
     let weightedSum = 0;
+    let enteredCount = 0;
     
     items.forEach(item => {
-      const grade = parseFloat(item.querySelector(".calc-grade-input").value) || 0;
-      const percent = parseFloat(item.querySelector(".calc-percent-input").value) || 0;
+      const gradeInput = item.querySelector(".calc-grade-input");
+      const percentInput = item.querySelector(".calc-percent-input");
+      const grade = parseFloat(gradeInput?.value) || 0;
+      const percent = parseFloat(percentInput?.value) || 0;
+      if (gradeInput?.value !== "" && gradeInput?.value !== null) enteredCount++;
       weightedSum += grade * percent;
       totalPercent += percent;
     });
     
-    if (totalPercent !== 100) {
-      result.style.display = "block";
-      result.style.background = "rgba(255,59,48,0.1)";
-      result.style.borderColor = "var(--error)";
+    if (totalPercent === 0) {
+      result.style.display = "none";
+      return;
+    }
+    
+    result.style.display = "block";
+    
+    if (enteredCount === 0) {
+      result.style.background = "rgba(255,255,255,0.05)";
+      result.style.borderColor = "var(--border)";
       finalEl.textContent = "—";
-      finalEl.style.color = "var(--error)";
-      statusEl.textContent = "⚠️ Los porcentajes deben sumar 100% (actual: " + totalPercent + "%)";
-      statusEl.style.color = "var(--error)";
+      finalEl.style.color = "var(--text-secondary)";
+      statusEl.textContent = "Ingresa las notas de tus parciales";
+      statusEl.style.color = "var(--text-tertiary)";
+      if (pendingEl) pendingEl.style.display = "none";
+      return;
+    }
+    
+    if (totalPercent !== 100) {
+      const currentGrade = (weightedSum / totalPercent).toFixed(2);
+      const remainingPercent = 100 - totalPercent;
+      const neededGrade = ((2.96 * 100 - weightedSum) / remainingPercent);
+      const passed = currentGrade >= 2.96;
+      
+      result.style.background = passed ? "rgba(52,199,89,0.1)" : "rgba(255,59,48,0.1)";
+      result.style.borderColor = passed ? "var(--success)" : "var(--error)";
+      finalEl.textContent = currentGrade;
+      finalEl.style.color = passed ? "var(--success)" : "var(--error)";
+      statusEl.textContent = passed ? "✓ Aprobado hasta ahora" : "✗ Reprobado hasta ahora";
+      statusEl.style.color = passed ? "var(--success)" : "var(--error)";
+      
+      if (pendingEl) {
+        pendingEl.style.display = "block";
+        if (neededGrade > 5) {
+          pendingEl.textContent = "Necesitas 5.00 en lo restante (" + remainingPercent + "%) para aprobar";
+          pendingEl.style.color = "var(--error)";
+        } else if (neededGrade < 0) {
+          pendingEl.textContent = "Ya estás aprobado sin importar lo restante";
+          pendingEl.style.color = "var(--success)";
+        } else {
+          pendingEl.textContent = "Necesitas " + neededGrade.toFixed(2) + " en lo restante (" + remainingPercent + "%) para aprobar";
+          pendingEl.style.color = neededGrade >= 2.96 ? "var(--success)" : "var(--error)";
+        }
+      }
       return;
     }
     
@@ -379,9 +552,107 @@ class AmellifyApp {
     finalEl.style.color = passed ? "var(--success)" : "var(--error)";
     statusEl.textContent = passed ? "✓ Aprobado" : "✗ Reprobado";
     statusEl.style.color = passed ? "var(--success)" : "var(--error)";
-    result.style.display = "block";
     result.style.background = passed ? "rgba(52,199,89,0.1)" : "rgba(255,59,48,0.1)";
     result.style.borderColor = passed ? "var(--success)" : "var(--error)";
+    if (pendingEl) pendingEl.style.display = "none";
+  }
+
+  exportCalcMarkdown() {
+    const items = document.querySelectorAll(".calc-partial-item");
+    let md = "# Calculadora de Notas\n\n## Parciales\n\n| Parcial | Nota | Porcentaje |\n|--------|------|------------|\n";
+    items.forEach(item => {
+      const name = item.querySelector("div").textContent;
+      const grade = item.querySelector(".calc-grade-input").value || "—";
+      const percent = item.querySelector(".calc-percent-input").value || "—";
+      md += `| ${name} | ${grade} | ${percent}% |\n`;
+    });
+    
+    const finalEl = document.getElementById("calc-final-grade");
+    const statusEl = document.getElementById("calc-grade-status");
+    if (finalEl && finalEl.textContent !== "—") {
+      md += `\n## Resultado\n\n- **Nota Final**: ${finalEl.textContent}\n- **Estado**: ${statusEl.textContent}\n`;
+    }
+    
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `notas-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showAlert("📤 Exportado a Markdown", "success");
+  }
+
+  exportCalcTxt() {
+    const items = document.querySelectorAll(".calc-partial-item");
+    let txt = "=== CALCULADORA DE NOTAS ===\n\n";
+    items.forEach(item => {
+      const name = item.querySelector("div").textContent;
+      const grade = item.querySelector(".calc-grade-input").value || "—";
+      const percent = item.querySelector(".calc-percent-input").value || "—";
+      txt += `${name}: Nota=${grade} | Porcentaje=${percent}%\n`;
+    });
+    
+    const finalEl = document.getElementById("calc-final-grade");
+    const statusEl = document.getElementById("calc-grade-status");
+    if (finalEl && finalEl.textContent !== "—") {
+      txt += `\n--- RESULTADO ---\nNota Final: ${finalEl.textContent}\nEstado: ${statusEl.textContent}\n`;
+    }
+    
+    const blob = new Blob([txt], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `notas-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showAlert("📤 Exportado a TXT", "success");
+  }
+
+  triggerCalcImport() {
+    const fileEl = document.getElementById("calc-import-file") || document.getElementById("calc-import-file-conf");
+    if (fileEl) fileEl.click();
+  }
+
+  async importCalcData(input) {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const container = document.getElementById("calc-partials-container");
+      container.innerHTML = "";
+      
+      const lines = text.split("\n").filter(l => l.trim());
+      let idx = 1;
+      for (const line of lines) {
+        if (line.startsWith("===") || line.startsWith("---") || line.startsWith("#") || line.startsWith("|") || line.startsWith("*")) continue;
+        
+        const matchGrade = line.match(/Nota[=:]?\s*([\d.]+)/);
+        const matchPercent = line.match(/Porcentaje[=:]?\s*(\d+)/);
+        const matchP = line.match(/^P(\d+)/);
+        
+        if (matchGrade || matchPercent || matchP) {
+          const name = matchP ? `P${matchP[1]}` : `P${idx}`;
+          const grade = matchGrade ? matchGrade[1] : "";
+          const percent = matchPercent ? matchPercent[1] : "";
+          this.addCalcPartial(name, grade, percent);
+          if (!matchGrade && !matchPercent) idx++;
+          else idx++;
+        }
+      }
+      
+      if (container.children.length === 0) {
+        this.addCalcPartial("P1", "", 30);
+        this.addCalcPartial("P2", "", 30);
+        this.addCalcPartial("P3", "", 40);
+      }
+      
+      this.calculateCalcGrade();
+      this.showAlert("📥 Datos importados", "success");
+    } catch (e) {
+      this.showAlert("❌ Error al importar", "error");
+    }
+    input.value = "";
   }
 
   // ─── Grid View ───────────────────────────────────────────────────────────────
@@ -521,7 +792,10 @@ class AmellifyApp {
         if (finalGrade !== null) {
           const passed = finalGrade >= 2.96;
           const gradeColor = passed ? 'var(--success)' : 'var(--error)';
-          gradeHtml = '<div class="class-cell-grade" style="font-size:11px;font-weight:700;margin-top:4px;padding:2px 6px;border-radius:4px;background:' + gradeColor + ';color:#fff;">' + finalGrade.toFixed(2) + '</div>';
+          gradeHtml = `<div class="class-cell-grade" style="font-size:11px;font-weight:700;margin-top:4px;padding:2px 6px;border-radius:4px;background:${gradeColor};color:#fff;">${finalGrade.toFixed(2)}</div>`;
+        } else {
+          const avg = partials.reduce((s, p) => s + (parseFloat(p.grade) || 0), 0) / partials.length;
+          gradeHtml = `<div class="class-cell-grade" style="font-size:11px;font-weight:700;margin-top:4px;padding:2px 6px;border-radius:4px;background:var(--accent);color:#fff;">Ø ${avg.toFixed(1)}</div>`;
         }
       }
 
@@ -913,6 +1187,11 @@ class AmellifyApp {
   openAddCourseModal() {
     this.editingCode = null;
     this.scheduleSlots = [];
+    this.editingPartials = [
+      { name: "P1", grade: null, percent: 30 },
+      { name: "P2", grade: null, percent: 30 },
+      { name: "P3", grade: null, percent: 40 }
+    ];
 
     document.getElementById("course-modal-title").textContent =
       "➕ Nueva Materia";
@@ -921,7 +1200,65 @@ class AmellifyApp {
     document.getElementById("btn-delete-course").style.display = "none";
     this.renderScheduleSlots();
     this.setColor("blue");
+    this.renderPartialsForm();
+    this.setupPartialsAutoCalc();
     document.getElementById("course-modal").classList.add("active");
+  }
+
+  setupPartialsAutoCalc() {
+    const container = document.getElementById("partials-container");
+    if (!container) return;
+    const calc = () => this.calculateFormGrade();
+    container.oninput = calc;
+  }
+
+  calculateFormGrade() {
+    this.updateEditingPartials();
+    const items = document.querySelectorAll("#partials-container .partial-item");
+    const result = document.getElementById("grade-result");
+    const finalEl = document.getElementById("final-grade");
+    const statusEl = document.getElementById("grade-status");
+    let totalPercent = 0;
+    let weightedSum = 0;
+    let enteredCount = 0;
+    
+    items.forEach(item => {
+      const gradeInput = item.querySelector(".partial-grade");
+      const percentInput = item.querySelector(".partial-percent");
+      const grade = parseFloat(gradeInput?.value) || 0;
+      const percent = parseFloat(percentInput?.value) || 0;
+      if (gradeInput?.value !== "" && gradeInput?.value !== null) enteredCount++;
+      weightedSum += grade * percent;
+      totalPercent += percent;
+    });
+    
+    if (enteredCount === 0) {
+      result.style.display = "none";
+      return;
+    }
+    
+    result.style.display = "block";
+    
+    if (totalPercent !== 100) {
+      const currentGrade = (weightedSum / totalPercent).toFixed(2);
+      const passed = !isNaN(currentGrade) && currentGrade >= 2.96;
+      result.style.background = passed ? "rgba(52,199,89,0.1)" : "rgba(255,59,48,0.1)";
+      result.style.borderColor = passed ? "var(--success)" : "var(--error)";
+      finalEl.textContent = currentGrade;
+      finalEl.style.color = passed ? "var(--success)" : "var(--error)";
+      statusEl.textContent = passed ? "✓ Aprobado hasta ahora" : "✗ Reprobado hasta ahora";
+      statusEl.style.color = passed ? "var(--success)" : "var(--error)";
+      return;
+    }
+    
+    const finalGrade = (weightedSum / totalPercent).toFixed(2);
+    const passed = finalGrade >= 2.96;
+    finalEl.textContent = finalGrade;
+    finalEl.style.color = passed ? "var(--success)" : "var(--error)";
+    statusEl.textContent = passed ? "✓ Aprobado" : "✗ Reprobado";
+    statusEl.style.color = passed ? "var(--success)" : "var(--error)";
+    result.style.background = passed ? "rgba(52,199,89,0.1)" : "rgba(255,59,48,0.1)";
+    result.style.borderColor = passed ? "var(--success)" : "var(--error)";
   }
 
   openEditCourseModal(code) {
@@ -930,6 +1267,7 @@ class AmellifyApp {
 
     this.editingCode = code;
     this.scheduleSlots = (course.schedules || []).map((s) => ({ ...s }));
+    this.editingPartials = (course.partials || []).map((p) => ({ ...p }));
 
     document.getElementById("course-modal-title").textContent =
       "✏️ Editar Materia";
@@ -945,12 +1283,70 @@ class AmellifyApp {
     document.getElementById("course-notes").value = course.notes || "";
     document.getElementById("btn-delete-course").style.display = "inline-flex";
 
-    this.setColor(course.color || "blue");
+this.setColor(course.color || "blue");
     this.renderScheduleSlots();
+    this.renderPartialsForm();
+    this.setupPartialsAutoCalc();
 
     // Close class modal if open
     document.getElementById("class-modal").classList.remove("active");
     document.getElementById("course-modal").classList.add("active");
+  }
+
+  renderPartialsForm() {
+    const container = document.getElementById("partials-container");
+    if (!container) return;
+    container.innerHTML = "";
+    
+    const partials = this.editingPartials || [];
+    if (partials.length === 0) {
+      partials.push({ name: "P1", grade: "", percent: 30 });
+      partials.push({ name: "P2", grade: "", percent: 30 });
+      partials.push({ name: "P3", grade: "", percent: 40 });
+    }
+    
+    partials.forEach((p, idx) => {
+      this.addPartialFormItem(p.name, p.grade, p.percent, idx);
+    });
+  }
+
+  addPartialFormItem(name, grade, percent, idx) {
+    const container = document.getElementById("partials-container");
+    if (!container) return;
+    
+    const gradeVal = grade !== null && grade !== "" ? grade : "";
+    const percentVal = percent !== null && percent !== "" ? percent : "";
+    
+    const html = `<div class="partial-item" style="display:flex;align-items:center;gap:8px;background:var(--bg-secondary);padding:8px;border-radius:var(--radius-sm);border:1px solid var(--border);"><div style="width:50px;font-weight:600;color:var(--text-secondary);font-size:13px;text-align:center;">${name}</div><input type="number" class="partial-grade" data-idx="${idx}" value="${gradeVal}" placeholder="0.0" min="0" max="5" step="0.01" style="flex:1;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-primary);text-align:center;"><input type="number" class="partial-percent" data-idx="${idx}" value="${percentVal}" placeholder="%" min="0" max="100" step="1" style="width:60px;padding:8px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg-primary);text-align:center;"><span style="color:var(--text-tertiary);font-size:13px;">%</span><button type="button" class="btn-remove-partial" onclick="app.removePartialFormItem(this)" style="width:28px;height:28px;padding:0;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;">✕</button></div>`;
+    container.insertAdjacentHTML("beforeend", html);
+  }
+
+  removePartialFormItem(btn) {
+    btn.closest(".partial-item").remove();
+    this.updateEditingPartials();
+  }
+
+  addPartialToForm() {
+    const container = document.getElementById("partials-container");
+    if (!container) return;
+    const idx = container.children.length;
+    const name = "P" + (idx + 1);
+    this.addPartialFormItem(name, "", 0, idx);
+  }
+
+  updateEditingPartials() {
+    const items = document.querySelectorAll("#partials-container .partial-item");
+    this.editingPartials = [];
+    items.forEach((item, idx) => {
+      const nameDiv = item.querySelector("div");
+      const gradeInput = item.querySelector(".partial-grade");
+      const percentInput = item.querySelector(".partial-percent");
+      this.editingPartials.push({
+        name: nameDiv.textContent,
+        grade: parseFloat(gradeInput?.value) || null,
+        percent: parseFloat(percentInput?.value) || null
+      });
+    });
   }
 
   // ─── Schedule Slots ──────────────────────────────────────────────────────────
@@ -1104,27 +1500,37 @@ class AmellifyApp {
   }
 
   slotsOverlap(a, b) {
-    if (a.day !== b.day) return false;
+    console.log("DEBUG slotsOverlap - a:", a, "b:", b);
+    if (a.day !== b.day) {
+      console.log("DEBUG slotsOverlap - different days, no overlap");
+      return false;
+    }
     const aStart = this.timeToMin(a.start_time);
     const aEnd   = this.timeToMin(a.end_time);
     const bStart = this.timeToMin(b.start_time);
     const bEnd   = this.timeToMin(b.end_time);
-    return aStart < bEnd && bStart < aEnd;
+    const result = aStart < bEnd && bStart < aEnd;
+    console.log("DEBUG slotsOverlap - times:", aStart, aEnd, bStart, bEnd, "result:", result);
+    return result;
   }
 
   getConflicts(newSlots, excludeCode = null) {
+    console.log("DEBUG getConflicts - newSlots:", JSON.stringify(newSlots));
+    console.log("DEBUG getConflicts - this.courses:", this.courses.map(c => ({ code: c.code, name: c.name, schedules: c.schedules })));
     const conflicts = [];
     for (const newSlot of newSlots) {
       for (const course of this.courses) {
         if (excludeCode && course.code === excludeCode) continue;
-        if (course.status === 'dropped') continue;
+        console.log("DEBUG checking course:", course.code, "schedules:", course.schedules);
         for (const existing of (course.schedules || [])) {
+          console.log("DEBUG comparing newSlot:", newSlot, "with existing:", existing, "overlap:", this.slotsOverlap(newSlot, existing));
           if (this.slotsOverlap(newSlot, existing)) {
             conflicts.push({ newSlot, existing, course });
           }
         }
       }
     }
+    console.log("DEBUG getConflicts - returning conflicts:", conflicts.length);
     return conflicts;
   }
 
@@ -1260,6 +1666,7 @@ class AmellifyApp {
   // ─── Save Course ─────────────────────────────────────────────────────────────
   async saveCourse(e) {
     e.preventDefault();
+    this.updateEditingPartials();
     const isEdit = !!this.editingCode;
     const data = {
       code: document.getElementById("course-code").value.trim().toUpperCase(),
@@ -1272,20 +1679,23 @@ class AmellifyApp {
       status: document.getElementById("course-status").value,
       notes: document.getElementById("course-notes").value.trim(),
       color: document.getElementById("course-color").value || "blue",
-      partials: this.getPartialsFromForm(),
+      partials: this.editingPartials || this.getPartialsFromForm(),
       schedules: this.scheduleSlots.filter(
         (s) => s.day && s.start_time && s.end_time,
       ),
     };
 
     // ── Conflict check ────────────────────────────────────────────────────────
-    const status = data.status;
-    if (status !== 'dropped' && status !== 'completed') {
-      const conflicts = this.getConflicts(data.schedules, isEdit ? this.editingCode : null);
-      if (conflicts.length > 0) {
-        this.showConflictModal(conflicts);
-        return;
-      }
+    console.log("DEBUG saveCourse - status:", data.status, "schedules:", JSON.stringify(data.schedules), "courses count:", this.courses.length);
+    const conflicts = this.getConflicts(data.schedules, isEdit ? this.editingCode : null);
+    console.log("DEBUG saveCourse - conflicts:", conflicts.length);
+    if (conflicts.length > 0) {
+      const conflict = conflicts[0];
+      this.showAlert(
+        `⚠️ Conflicto de horario: La materia "${conflict.course.name}" (${conflict.existing.day} ${conflict.existing.start_time}–${conflict.existing.end_time}) ya ocupa ese horario.`,
+        "error"
+      );
+      return;
     }
 
     const url = isEdit
@@ -1308,6 +1718,7 @@ class AmellifyApp {
 
       document.getElementById("course-modal").classList.remove("active");
       await this.fetchCourses();
+      this.saveCoursesLocal();
       this.renderAll();
       this.showAlert(
         isEdit ? "✅ Materia actualizada" : "✅ Materia creada",
@@ -1351,6 +1762,7 @@ class AmellifyApp {
         return;
       }
       await this.fetchCourses();
+      this.saveCoursesLocal();
       this.renderAll();
       this.showAlert("🗑️ Materia eliminada", "success");
     } catch (e) {
@@ -1713,11 +2125,21 @@ class AmellifyApp {
       </div>
       
       <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
+      <div style="padding:4px 12px;font-size:11px;font-weight:600;color:var(--text-tertiary);">Calculadora</div>
+      <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.exportCalcMarkdown()">📤 Exportar MD</button>
+      <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.exportCalcTxt()">📤 Exportar TXT</button>
+      <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;border-radius:8px;" onclick="app.triggerCalcImport()">📥 Importar</button>
+      <input type="file" id="calc-import-file-conf" accept=".md,.txt,.markdown,.text" style="display:none;" onchange="app.importCalcData(this)">
+      
+      <hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">
       <div style="padding:4px 12px;font-size:11px;font-weight:600;color:var(--text-tertiary);">Gestión de Datos</div>
       <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.exportData()">📤 Exportar JSON</button>
+      <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.exportCoursesCSV()">📤 Exportar Horario (CSV)</button>
       <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.triggerImport()">📥 Importar JSON</button>
+      <button class="btn btn-secondary" style="width:100%;justify-content:flex-start;margin-bottom:4px;border-radius:8px;" onclick="app.triggerCoursesImport()">📥 Importar Horario (CSV)</button>
       <button class="btn btn-danger" style="width:100%;justify-content:flex-start;border-radius:8px;" onclick="app.deleteAllCourses()">🗑️ Borrar Horario</button>
       <input type="file" id="import-file" accept=".json" style="display:none" onchange="app.importData(this)">
+      <input type="file" id="courses-import-file" accept=".csv" style="display:none" onchange="app.importCoursesCSV(this)">
       <hr style="border:none;border-top:1px solid var(--border);margin:8px 0 4px;">
       <div style="padding:4px 12px;font-size:12px;color:var(--text-tertiary);">${this.courses.length} materias · ${this.courses.reduce((s, c) => s + (c.credits || 0), 0)} créditos</div>
     `;
@@ -1748,6 +2170,76 @@ class AmellifyApp {
     document.getElementById("data-menu")?.remove();
   }
 
+  exportCoursesCSV() {
+    let csv = "code,name,credits,professor,email,faculty,semester,P1_grade,P1_percent,P2_grade,P2_percent,P3_grade,P3_percent\n";
+    for (const c of this.courses) {
+      const p = c.partials || [];
+      const p1 = p.find(x => x.name === "P1") || {};
+      const p2 = p.find(x => x.name === "P2") || {};
+      const p3 = p.find(x => x.name === "P3") || {};
+      csv += `"${c.code}","${c.name}",${c.credits || 0},"${c.professor || ""}","${c.email || ""}","${c.faculty || ""}","${c.semester || ""}",${p1.grade || ""},${p1.percent || ""},${p2.grade || ""},${p2.percent || ""},${p3.grade || ""},${p3.percent || ""}\n`;
+    }
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `amellify-horario-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.showAlert("📤 Horario exportado (CSV)", "success");
+  }
+
+  triggerCoursesImport() {
+    document.getElementById("courses-import-file")?.click();
+  }
+
+  async importCoursesCSV(input) {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter(l => l.trim());
+      const header = lines[0].toLowerCase();
+      if (!header.includes("code") || !header.includes("name")) {
+        this.showAlert("❌ CSV inválido", "error");
+        return;
+      }
+      
+      let imported = 0;
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",");
+        if (cols.length < 2) continue;
+        
+        const code = cols[0].replace(/"/g, "").trim();
+        const name = cols[1].replace(/"/g, "").trim();
+        const credits = parseInt(cols[2]) || 3;
+        const professor = cols[3]?.replace(/"/g, "").trim() || "";
+        const email = cols[4]?.replace(/"/g, "").trim() || "";
+        const faculty = cols[5]?.replace(/"/g, "").trim() || "";
+        const semester = cols[6]?.replace(/"/g, "").trim() || "";
+        
+        const partials = [];
+        if (cols[7]?.trim() && cols[8]?.trim()) partials.push({ name: "P1", grade: parseFloat(cols[7]), percent: parseFloat(cols[8]) });
+        if (cols[9]?.trim() && cols[10]?.trim()) partials.push({ name: "P2", grade: parseFloat(cols[9]), percent: parseFloat(cols[10]) });
+        if (cols[11]?.trim() && cols[12]?.trim()) partials.push({ name: "P3", grade: parseFloat(cols[11]), percent: parseFloat(cols[12]) });
+        
+        const course = { code, name, credits, professor, email, faculty, semester, status: "active", partials, schedules: [] };
+        
+        const existing = this.courses.find(c => c.code === code);
+        if (existing) Object.assign(existing, course);
+        else this.courses.push(course);
+        imported++;
+      }
+      
+      this.saveCoursesLocal();
+      this.renderAll();
+      this.showAlert(`📥 ${imported} materias importadas`, "success");
+    } catch (e) {
+      this.showAlert("❌ Error al importar CSV", "error");
+    }
+    input.value = "";
+  }
+
   triggerImport() {
     document.getElementById("import-file")?.click();
   }
@@ -1775,6 +2267,7 @@ class AmellifyApp {
       }
 
       await this.fetchCourses();
+      this.saveCoursesLocal();
       this.renderAll();
       this.showAlert(
         `✅ ${imported} importadas${skipped > 0 ? ` · ${skipped} ya existían` : ""}`,
@@ -1812,6 +2305,7 @@ class AmellifyApp {
       }
 
       await this.fetchCourses();
+      this.saveCoursesLocal();
       this.renderAll();
       this.showAlert(`🗑️ ${deleted} materias eliminadas`, "success");
     } catch (e) {

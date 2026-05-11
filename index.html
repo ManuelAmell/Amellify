@@ -388,6 +388,30 @@
     <!-- ── Alert Container ──────────────────────────────────────────────────── -->
     <div id="alert-container"></div>
 
+    <!-- ── Sync Toast Container ─────────────────────────────────────────────── -->
+    <div id="sync-toast-container"></div>
+
+    <!-- ── WS Status Indicator ─────────────────────────────────────────────── -->
+    <div id="ws-status-indicator" style="
+      position:fixed;bottom:24px;left:24px;
+      display:flex;align-items:center;gap:6px;
+      background:var(--bg-secondary);
+      border:1px solid var(--border);
+      border-radius:20px;
+      padding:6px 12px;
+      font-size:12px;
+      color:var(--text-secondary);
+      z-index:400;
+      box-shadow:var(--shadow-sm);
+    ">
+      <div class="ws-status-dot" style="
+        width:8px;height:8px;border-radius:50%;
+        background:var(--text-tertiary);
+        transition:background 0.3s;
+      "></div>
+      <span class="ws-status-text"></span>
+    </div>
+
     <!-- ── Shortcuts Modal ──────────────────────────────────────────────────── -->
     <div class="modal" id="shortcuts-modal">
         <div class="modal-content" style="max-width: 800px;">
@@ -405,7 +429,8 @@
         </div>
     </div>
 
-    <!-- ── App Script ───────────────────────────────────────────────────────── -->
+    <!-- ── App Scripts ─────────────────────────────────────────────────────── -->
+    <script src="src/js/websocket.js"></script>
     <script src="src/js/app.js"></script>
 </body>
 </html>

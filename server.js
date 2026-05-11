@@ -2,10 +2,42 @@ const express = require('express');
 const path    = require('path');
 const cors    = require('cors');
 const fs      = require('fs');
+const http    = require('http');
+const { WebSocketServer } = require('ws');
 
 const app  = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5051;
 const DB_FILE = path.join(__dirname, 'amellify-data.json');
+
+// ─── HTTP Server + WebSocket ───────────────────────────────────────────────────
+const httpServer = http.createServer(app);
+const wss = new WebSocketServer({ server: httpServer });
+
+const wsClients = new Set();
+
+wss.on('connection', (ws) => {
+  wsClients.add(ws);
+  ws.on('close', () => wsClients.delete(ws));
+  ws.on('error', () => wsClients.delete(ws));
+  ws.on('pong', () => {});
+});
+
+setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) { wsClients.delete(ws); return ws.terminate(); }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+function broadcast(type, data) {
+  const msg = JSON.stringify({ type, data });
+  for (const client of wsClients) {
+    if (client.readyState === 1) {
+      try { client.send(msg); } catch {}
+    }
+  }
+}
 
 // ─── JSON "database" ──────────────────────────────────────────────────────────
 function readDB() {
@@ -77,12 +109,15 @@ app.post('/api/courses', (req, res) => {
     status:    body.status    || 'active',
     notes:     body.notes     || '',
     color:     body.color     || 'blue',
+    partials:  body.partials  || [],
     created_at: new Date().toISOString(),
     schedules
   };
 
   db.courses.push(course);
   writeDB(db);
+  broadcast('course:created', course);
+  broadcast('stats:updated', null);
   res.status(201).json(course);
 });
 
@@ -118,10 +153,13 @@ app.put('/api/courses/:code', (req, res) => {
     status:    body.status     || old.status,
     notes:     body.notes      !== undefined ? body.notes      : old.notes,
     color:     body.color      || old.color,
+    partials:  body.partials  !== undefined ? body.partials  : (old.partials || []),
     schedules
   };
 
   writeDB(db);
+  broadcast('course:updated', db.courses[idx]);
+  broadcast('stats:updated', null);
   res.json(db.courses[idx]);
 });
 
@@ -133,6 +171,8 @@ app.delete('/api/courses/:code', (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Materia no encontrada' });
   db.courses.splice(idx, 1);
   writeDB(db);
+  broadcast('course:deleted', { code });
+  broadcast('stats:updated', null);
   res.json({ success: true, deleted: code });
 });
 
@@ -158,12 +198,13 @@ app.get('*', (req, res) => {
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log('\n╔══════════════════════════════════════════╗');
   console.log(`║  📚 Amellify corriendo en puerto ${PORT}     ║`);
   console.log('╠══════════════════════════════════════════╣');
   console.log(`║  → Abre: http://localhost:${PORT}            ║`);
   console.log(`║  → Datos: amellify-data.json             ║`);
+  console.log(`║  → WebSocket: ws://localhost:${PORT}          ║`);
   console.log('╚══════════════════════════════════════════╝\n');
   console.log('  Ctrl+C para detener\n');
 });

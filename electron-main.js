@@ -1,5 +1,7 @@
 const { app, BrowserWindow, shell, Menu, Tray, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
+const http = require('http');
+const { WebSocketServer } = require('ws');
 
 // ─── Keep reference so it's not garbage collected ─────────────────────────────
 let mainWindow = null;
@@ -9,13 +11,40 @@ const PORT     = 3000;
 
 // ─── Start the Express server ─────────────────────────────────────────────────
 function startServer() {
-  // Require the express app but don't call listen yet — we do it here
   const express = require('express');
   const cors    = require('cors');
   const fs      = require('fs');
 
   const expressApp = express();
-  const DB_FILE    = path.join(app.getPath('userData'), 'amellify-data.json');
+  const DB_FILE = path.join(__dirname, 'amellify-data.json');
+
+  const httpServer = http.createServer(expressApp);
+  const wss = new WebSocketServer({ server: httpServer });
+  const wsClients = new Set();
+
+  wss.on('connection', (ws) => {
+    wsClients.add(ws);
+    ws.on('close', () => wsClients.delete(ws));
+    ws.on('error', () => wsClients.delete(ws));
+    ws.on('pong', () => {});
+  });
+
+  setInterval(() => {
+    wss.clients.forEach((ws) => {
+      if (ws.isAlive === false) { wsClients.delete(ws); return ws.terminate(); }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  function broadcast(type, data) {
+    const msg = JSON.stringify({ type, data });
+    for (const client of wsClients) {
+      if (client.readyState === 1) {
+        try { client.send(msg); } catch {}
+      }
+    }
+  }
 
   function readDB() {
     try {
@@ -39,7 +68,6 @@ function startServer() {
   expressApp.use(cors());
   expressApp.use(express.json());
 
-  // Serve static files from the app directory
   const staticRoot = app.isPackaged
     ? path.join(process.resourcesPath, 'app')
     : path.join(__dirname);
@@ -73,10 +101,13 @@ function startServer() {
       faculty: body.faculty || '', semester: body.semester || '',
       credits: parseInt(body.credits) || 3, status: body.status || 'active',
       notes: body.notes || '', color: body.color || 'blue',
+      partials: body.partials || [],
       created_at: new Date().toISOString(), schedules
     };
     db.courses.push(course);
     writeDB(db);
+    broadcast('course:created', course);
+    broadcast('stats:updated', null);
     res.status(201).json(course);
   });
 
@@ -106,18 +137,24 @@ function startServer() {
       status:    body.status    || old.status,
       notes:     body.notes     !== undefined ? body.notes     : old.notes,
       color:     body.color     || old.color,
+      partials:  body.partials  !== undefined ? body.partials  : (old.partials || []),
       schedules
     };
     writeDB(db);
+    broadcast('course:updated', db.courses[idx]);
+    broadcast('stats:updated', null);
     res.json(db.courses[idx]);
   });
 
   expressApp.delete('/api/courses/:code', (req, res) => {
     const db  = readDB();
-    const idx = db.courses.findIndex(c => c.code === req.params.code.toUpperCase());
+    const code = req.params.code.toUpperCase();
+    const idx = db.courses.findIndex(c => c.code === code);
     if (idx === -1) return res.status(404).json({ error: 'No encontrada' });
     db.courses.splice(idx, 1);
     writeDB(db);
+    broadcast('course:deleted', { code });
+    broadcast('stats:updated', null);
     res.json({ success: true });
   });
 
@@ -142,8 +179,8 @@ function startServer() {
     res.sendFile(path.join(staticRoot, 'index.html'));
   });
 
-  server = expressApp.listen(PORT, '127.0.0.1', () => {
-    console.log(`Amellify server on http://localhost:${PORT}`);
+  server = httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Amellify server on http://0.0.0.0:${PORT}`);
     console.log(`Data stored at: ${DB_FILE}`);
   });
 }
