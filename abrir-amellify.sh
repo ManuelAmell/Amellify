@@ -1,4 +1,21 @@
 #!/bin/bash
-# Abre Amellify — lanzador rápido
-cd "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec npx electron . 2>/dev/null
+
+APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOST_IP="${HOST:-100.101.28.97}"
+
+echo ""
+echo "╔══════════════════════════════════════════╗"
+echo "║  📚 Amellify                              ║"
+echo "╠══════════════════════════════════════════╣"
+echo "║                                          ║"
+echo "║  Modo Web (acceso desde cualquier         ║"
+echo "║  dispositivo en la red):                  ║"
+echo "║                                          ║"
+echo "║  → http://$HOST_IP:3000             ║"
+echo "║                                          ║"
+echo "║  Para iniciar el servidor:                ║"
+echo "║    ./iniciar-web.sh                      ║"
+echo "║                                          ║"
+echo "║  Electron requiere entorno gráfico.      ║"
+echo "╚══════════════════════════════════════════╝"
+echo ""

@@ -155,9 +155,9 @@ echo "  Tus datos se guardan en:"
 echo -e "  ${CYAN}~/Library/Application Support/amellify/amellify-data.json${NC}"
 echo ""
 
-read -p "  ¿Abrir Amellify ahora? [S/n]: " OPEN_NOW
+read -p "  ¿Iniciar el servidor ahora? [S/n]: " OPEN_NOW
 if [[ ! "$OPEN_NOW" =~ ^[Nn]$ ]]; then
-    echo -e "  ${GREEN}Abriendo Amellify...${NC}"
-    cd "$APP_DIR" && npx electron . &
+    echo -e "  ${GREEN}Iniciando servidor...${NC}"
+    cd "$APP_DIR" && ./iniciar-web.sh &
 fi
 echo ""

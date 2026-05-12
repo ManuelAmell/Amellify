@@ -20,7 +20,9 @@ Thumbs.db
 *.swo
 
 # Data files (local user data)
-amellify-data.json
+amellify.db
+amellify.db.backup*
+*.log
 
 # Environment
 .env

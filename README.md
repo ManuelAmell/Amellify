@@ -11,7 +11,7 @@
 
 **Sin internet · Sin cuentas · Tus datos son tuyos**
 
-[Características](#-características) • [Instalación](#-instalación-rápida) • [Uso](#-uso) • [Atajos](#️-atajos-de-teclado) • [Contribuir](#-contribuir)
+[Características](#-características) • [Instalación](#-instalación-rápida) • [Uso](#-uso) • [Atajos](#️-atajos-de-teclado) • [WebSocket](#-websocket) • [Contribuir](#-contribuir)
 
 </div>
 
@@ -109,8 +109,8 @@ Tres tamaños configurables (Pequeño, Normal, Grande) desde el menú de configu
 </td>
 <td width="50%">
 
-### 🚀 100% Offline
-Sin internet, sin cuentas, sin servidores. Todos tus datos se almacenan localmente en tu computadora.
+### 🌐 Acceso Remoto
+Accede desde cualquier dispositivo. Sincronización en tiempo real via WebSocket.
 
 </td>
 </tr>
@@ -183,21 +183,19 @@ Sin internet, sin cuentas, sin servidores. Todos tus datos se almacenan localmen
 npm install
 ```
 
-### Iniciar la aplicación (Electron)
+### Iniciar la aplicación
 ```bash
+# Modo Web (acceso desde cualquier dispositivo)
+npm run web
+
+# Modo escritorio (requiere entorno gráfico)
 npm start
 ```
-
-### Iniciar versión web
-```bash
-npm run web
-```
-Luego abre http://localhost:3000
 
 ### Construir ejecutable
 ```bash
 npm run build:win   # Windows
-npm run build:mac  # macOS
+npm run build:mac   # macOS
 npm run build:linux # Linux
 ```
 
@@ -205,10 +203,25 @@ npm run build:linux # Linux
 
 ## 🚀 Uso
 
-### Iniciar la aplicación
+### Modo Web (recomendado)
+```bash
+npm run web
+```
+Luego abre en tu navegador: `http://localhost:3000`
+
+### Modo escritorio
 ```bash
 npm start
 ```
+*Requiere entorno gráfico (X11/Wayland)*
+
+### Scripts disponibles
+
+| Script | Descripción |
+|--------|-------------|
+| `./iniciar-web.sh` | Iniciar servidor web en segundo plano |
+| `./detener-web.sh` | Detener servidor web |
+| `./iniciar-back.sh` | Iniciar backend en terminal |
 
 ### Agregar una materia
 1. Click en **➕ Nueva Materia**
@@ -223,13 +236,39 @@ npm start
 
 ---
 
+## 🌐 Acceso Remoto
+
+Accede desde cualquier dispositivo en la red:
+
+```
+http://100.101.28.97:3000
+```
+
+### Características
+- 🔄 **Sincronización en tiempo real** - Cambios instantáneos en todos los dispositivos
+- 📡 **WebSocket** - Conexión persistente bidireccional
+- 🗄️ **SQLite** - Base de datos eficiente
+
+### Scripts
+```bash
+./iniciar-web.sh   # Iniciar en segundo plano
+./detener-web.sh   # Detener servidor
+tail -f /tmp/amellify.log  # Ver logs
+```
+
+Para más detalles consulta [ACCESO-REMOTO.md](ACCESO-REMOTO.md).
+
+---
+
 ## 🗄️ Ubicación de Datos
 
 | Sistema | Ruta |
 |---------|------|
-| Linux   | `~/.config/amellify/amellify-data.json` |
-| macOS   | `~/Library/Application Support/amellify/amellify-data.json` |
-| Windows | `%APPDATA%\amellify\amellify-data.json` |
+| Linux   | `amellify.db` (carpeta del proyecto) |
+| macOS   | `amellify.db` (carpeta del proyecto) |
+| Windows | `amellify.db` (carpeta del proyecto) |
+
+> **Nota**: A partir de v1.1, Amellify usa base de datos SQLite (`amellify.db`) en lugar del archivo JSON.
 
 ---
 
@@ -263,7 +302,7 @@ amellify/
 │   ├── css/          # Estilos
 │   └── js/           # Lógica de la app
 ├── electron-main.js  # Configuración Electron
-├── server.js         # API REST local
+├── server.js         # API REST + servidor web
 ├── index.html        # Interfaz principal
 └── package.json      # Dependencias
 ```
@@ -273,9 +312,32 @@ amellify/
 ## 🛠️ Tecnologías
 
 - **Electron** - Framework de escritorio
-- **Express** - API REST
+- **Express** - API REST y servidor web
+- **Socket.io** - WebSocket para sincronización en tiempo real
+- **sql.js** - Base de datos SQLite (pure JS)
 - **Vanilla JS** - Sin frameworks pesados
 - **CSS Variables** - Temas dinámicos
+
+---
+
+## 🔌 WebSocket
+
+Amellify usa WebSocket para mantener todos los dispositivos sincronizados en tiempo real.
+
+### Eventos
+
+| Evento | Descripción |
+|--------|-------------|
+| `courses:update` | Actualización de materias |
+| `stats:update` | Actualización de estadísticas |
+| `config:update` | Actualización de configuración |
+
+### Verificar conexión
+
+Abre la consola del navegador (F12) y verifica:
+```
+WebSocket conectado
+```
 
 ---
 
@@ -302,43 +364,12 @@ Consulta [FORMATO-IMPORTACION.md](FORMATO-IMPORTACION.md) para el esquema JSON d
 
 ---
 
-## 🎥 Demo y Uso
-
-### Primer Uso
-1. Instala la aplicación usando los scripts de instalación
-2. Abre Amellify con `./abrir-amellify.sh` o `npm start`
-3. Haz clic en **➕ Nueva Materia** para agregar tu primera materia
-4. Completa la información: código, nombre, créditos, profesor
-5. Agrega horarios con **➕ Agregar Horario**
-6. Selecciona día, hora de inicio, hora de fin y aula
-7. Elige un color para identificar la materia
-8. Guarda y ¡listo! Tu horario aparecerá en el Grid
-
-### Navegación Rápida
-- **Vista Grid** (`Ctrl+1`): Horario semanal completo con todas las 24 horas
-- **Vista Semana** (`Ctrl+2`): Tarjetas por día con tus clases
-- **Vista Lista** (`Ctrl+3`): Lista completa de todas tus materias
-
-### Gestión de Datos
-- **Exportar**: Menú ⚙️ → 📤 Exportar JSON (crea un backup)
-- **Importar**: Menú ⚙️ → 📥 Importar JSON (restaura desde backup)
-- **Configurar**: Menú ⚙️ → Ajustar tamaño de texto
-- **Borrar**: Menú ⚙️ → 🗑️ Borrar Horario (elimina todo)
-
-### Atajos Útiles
-- `Ctrl/Cmd + H`: Volver rápidamente a tu próxima clase
-- `Ctrl/Cmd + N`: Agregar nueva materia
-- `Ctrl/Cmd + Shift + T`: Cambiar entre modo claro/oscuro
-- `?`: Ver modal con todos los atajos
-
----
-
 ## 🤝 Contribuir
 
 1. Fork el proyecto
 2. Crea una rama (`git checkout -b feature/nueva-funcionalidad`)
 3. Commit tus cambios (`git commit -m 'Agregar nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+4. Push a la rama (`git push origin feature/nueva-funcionalidad'`)
 5. Abre un Pull Request
 
 ---

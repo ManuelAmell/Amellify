@@ -1,5 +1,6 @@
 // ─── Amellify App ─────────────────────────────────────────────────────────────
-const API = "/api";
+const API = "http://100.101.28.97:3000/api";
+const WS_URL = "http://100.101.28.97:3000";
 
 class AmellifyApp {
   constructor() {
@@ -11,6 +12,8 @@ class AmellifyApp {
     this.currentTimeUpdateInterval = null;
     this._menuClickHandler = null;
     this._updateSlotTimeout = null; // For debouncing slot updates
+    this.socket = null;
+    this._socketReconnectTimer = null;
 
     // Settings with defaults
     this.settings = {
@@ -34,29 +37,92 @@ class AmellifyApp {
     }
     this.applyFontSize();
 
-    // Load data
-    await this.fetchCourses();
+    // Setup WebSocket for real-time sync
+    this.setupSocket();
 
     // Setup UI
     this.setupEventListeners();
-    this.renderAll();
-    this.startCountdown();
-    this.initPartialInputs();
   }
 
-  // ─── Data Fetching ───────────────────────────────────────────────────────────
-  async fetchCourses() {
-    try {
-      const res = await fetch(`${API}/courses`);
-      if (!res.ok) throw new Error("Server error");
-      this.courses = await res.json();
-    } catch (e) {
-      this.courses = [];
-      this.showAlert(
-        "⚠️ No se pudo conectar con el servidor. ¿Está corriendo server.js?",
-        "error",
-      );
-    }
+  // ─── WebSocket Setup ───────────────────────────────────────────────────────────
+  setupSocket() {
+    this.socket = io(WS_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    });
+
+    this.socket.on('connect', () => {
+      console.log('WebSocket conectado');
+      this._socketReconnectTimer = null;
+    });
+
+    this.socket.on('disconnect', () => {
+      console.log('WebSocket desconectado');
+    });
+
+    this.socket.on('courses:update', (courses) => {
+      this.courses = courses;
+      this.renderAll();
+      this.showToast('Datos sincronizados', 'success');
+    });
+
+    this.socket.on('stats:update', (stats) => {
+      document.getElementById("total-courses").textContent = stats.totalCourses;
+      document.getElementById("total-credits").textContent = stats.totalCredits;
+      document.getElementById("total-hours").textContent = stats.totalHours;
+    });
+
+    this.socket.on('config:update', ({ key, value }) => {
+      // Handle config updates if needed
+    });
+
+    this.socket.on('connect_error', () => {
+      if (!this._socketReconnectTimer) {
+        this._socketReconnectTimer = setTimeout(() => {
+          this.showToast('Reconectando...', 'warning');
+        }, 3000);
+      }
+    });
+  }
+
+  // ─── Toast Notifications ──────────────────────────────────────────────────────
+  showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container') || (() => {
+      const div = document.createElement('div');
+      div.id = 'toast-container';
+      div.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
+      document.body.appendChild(div);
+      return div;
+    })();
+
+    const toast = document.createElement('div');
+    const colors = {
+      success: 'var(--success)',
+      error: 'var(--error)',
+      warning: '#f5a623',
+      info: 'var(--accent)'
+    };
+    toast.style.cssText = `
+      background: var(--bg-secondary);
+      border: 1px solid ${colors[type] || colors.info};
+      color: ${colors[type] || colors.info};
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: slideIn 0.3s ease-out;
+    `;
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'fadeOut 0.3s ease-out forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
   }
 
   // ─── Render All ──────────────────────────────────────────────────────────────

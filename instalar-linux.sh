@@ -130,10 +130,21 @@ echo "  Tus datos se guardan en:"
 echo -e "  ${CYAN}~/.config/amellify/amellify-data.json${NC}"
 echo ""
 
-read -p "  ¿Abrir Amellify ahora? [S/n]: " OPEN_NOW
+echo ""
+echo -e "  Puedes abrir Amellify desde:"
+echo -e "  ${BOLD}•${NC} El menú de aplicaciones (busca 'Amellify')"
+echo -e "  ${BOLD}•${NC} El acceso directo en el escritorio"
+echo -e "  ${BOLD}•${NC} Ejecutando: ${CYAN}./iniciar-web.sh${NC} (modo web)"
+echo -e "  ${BOLD}•${NC} Ejecutando: ${CYAN}./iniciar-back.sh${NC} (backend)"
+echo ""
+echo -e "  Para acceso desde otros dispositivos:"
+echo -e "  ${CYAN}http://100.101.28.97:3000${NC}"
+echo ""
+
+read -p "  ¿Iniciar el servidor ahora? [S/n]: " OPEN_NOW
 if [[ ! "$OPEN_NOW" =~ ^[Nn]$ ]]; then
     echo ""
-    echo -e "  ${GREEN}Abriendo Amellify...${NC}"
-    cd "$APP_DIR" && npx electron . &
+    echo -e "  ${GREEN}Iniciando servidor...${NC}"
+    cd "$APP_DIR" && ./iniciar-web.sh &
 fi
 echo ""
