@@ -1,7 +1,7 @@
 #!/bin/bash
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-HOST_IP="${HOST:-100.101.28.97}"
+HOST_IP="${HOST:-localhost}"
 
 echo ""
 echo "╔══════════════════════════════════════╗"

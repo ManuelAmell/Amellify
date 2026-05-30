@@ -21,6 +21,7 @@ Thumbs.db
 
 # Data files (local user data)
 amellify.db
+backups/
 amellify.db.backup*
 *.log
 
@@ -28,3 +29,5 @@ amellify.db.backup*
 .env
 .env.local
 horario.json
+# Credenciales de desarrollo (no versionar)
+CREDENCIALES-ADMIN-DEV.txt

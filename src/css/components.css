@@ -216,41 +216,6 @@ input:-moz-placeholder {
     font-size: 13px;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   VIEW TABS - Apple Animated Pills
-   ═══════════════════════════════════════════════════════════════ */
-    transform: scale(0.98);
-}
-
-.btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-    background: var(--border);
-}
-
-.btn-secondary:active {
-    transform: scale(0.98);
-}
-
-.btn-icon {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-}
-
-.btn-small {
-    padding: 6px 12px;
-    font-size: 13px;
-}
-
 /* View Tabs - Liquid Glass pill style */
 .view-tabs {
     display: inline-flex;
@@ -285,6 +250,9 @@ input:-moz-placeholder {
     font-family: var(--font-family);
     position: relative;
     overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 /* Apple active tab with glow */
@@ -627,8 +595,16 @@ textarea.form-input {
 }
 
 .empty-state-icon {
-    font-size: 64px;
     margin-bottom: 16px;
+    display: flex;
+    justify-content: center;
+    color: var(--text-tertiary);
+}
+
+.empty-state-icon svg {
+    width: 64px;
+    height: 64px;
+    opacity: 0.45;
 }
 
 .empty-state-text {

@@ -1,0 +1,31 @@
+{
+  "name": "Amellify — Gestor de Horarios",
+  "short_name": "Amellify",
+  "description": "Gestiona materias, horarios, tareas y exámenes universitarios",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#e8ecf4",
+  "theme_color": "#007aff",
+  "orientation": "any",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "build/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "build/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

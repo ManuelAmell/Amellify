@@ -1,426 +1,438 @@
 const express = require('express');
-const path    = require('path');
-const cors    = require('cors');
-const fs      = require('fs');
-const http    = require('http');
+const path = require('path');
+const cors = require('cors');
+const fs = require('fs');
+const http = require('http');
 const { Server } = require('socket.io');
-const initSqlJs = require('sql.js');
+const { generateIcsFromCourses } = require('./lib/ics-server');
+const academic = require('./lib/academic-db');
+const dbLayer = require('./lib/db');
+const { validateImportPayload, importSizeGuard } = require('./lib/import-validator');
+const { securityHeaders, apiRateLimit } = require('./lib/security');
+const auth = require('./lib/auth');
 
-const app  = express();
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '100.101.28.97';
-const DB_PATH = path.join(__dirname, 'amellify.db');
+const BACKUPS_DIR = path.join(__dirname, 'backups');
+const SOCKET_CLIENT = path.join(
+  __dirname,
+  'node_modules',
+  'socket.io',
+  'client-dist',
+  'socket.io.min.js'
+);
 
 let db = null;
 let io = null;
 
-const app2 = app;
-
 async function initDB() {
-  const SQL = await initSqlJs();
-
-  if (fs.existsSync(DB_PATH)) {
-    const buffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
-  }
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS courses (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      code TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL,
-      professor TEXT DEFAULT '',
-      email TEXT DEFAULT '',
-      faculty TEXT DEFAULT '',
-      semester TEXT DEFAULT '',
-      credits INTEGER DEFAULT 3,
-      status TEXT DEFAULT 'active',
-      notes TEXT DEFAULT '',
-      color TEXT DEFAULT 'blue',
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS schedules (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      course_code TEXT NOT NULL,
-      day TEXT NOT NULL,
-      start_time TEXT NOT NULL,
-      end_time TEXT NOT NULL,
-      room TEXT DEFAULT '',
-      FOREIGN KEY (course_code) REFERENCES courses(code) ON DELETE CASCADE
-    )
-  `);
-
-  db.run(`CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)`);
-
-  saveDB();
+  await dbLayer.initDatabase({
+    dbPath: process.env.AMELLIFY_DB_PATH || path.join(__dirname, 'amellify.db'),
+  });
+  db = dbLayer.getDatabase();
 }
 
 function saveDB() {
-  if (db) {
-    const data = db.export();
-    const buffer = Buffer.from(data);
-    fs.writeFileSync(DB_PATH, buffer);
+  dbLayer.saveDatabase();
+}
+
+function userBackupsDir(userId) {
+  const dir = path.join(BACKUPS_DIR, `user-${userId}`);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+const getCourses = (userId) => dbLayer.getCourses(userId);
+const getCourseByCode = (userId, code) => dbLayer.getCourseByCode(userId, code);
+const createCourse = (userId, body) => dbLayer.createCourse(userId, body);
+const updateCourse = (userId, oldCode, body) => dbLayer.updateCourse(userId, oldCode, body);
+const deleteCourse = (userId, code) => dbLayer.deleteCourse(userId, code);
+const getStats = (userId) => dbLayer.getStats(userId);
+const insertSchedules = (userId, code, schedules) =>
+  dbLayer.insertSchedules(userId, code, schedules);
+
+function pruneBackups(dir) {
+  if (!fs.existsSync(dir)) return;
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .reverse();
+  for (const old of files.slice(10)) {
+    fs.unlinkSync(path.join(dir, old));
   }
 }
 
-function getCourses() {
-  const stmt = db.prepare("SELECT * FROM courses ORDER BY code");
-  const courses = [];
+function createExpressApp() {
+  const app = express();
 
-  while (stmt.step()) {
-    const course = stmt.getAsObject();
-    const schedStmt = db.prepare("SELECT * FROM schedules WHERE course_code = ?");
-    schedStmt.bind([course.code]);
-    const schedules = [];
+  function broadcastCourses(userId) {
+    if (io) io.to(`user:${userId}`).emit('courses:update', getCourses(userId));
+  }
 
-    while (schedStmt.step()) {
-      schedules.push(schedStmt.getAsObject());
+  function broadcastStats(userId) {
+    if (io) io.to(`user:${userId}`).emit('stats:update', getStats(userId));
+  }
+
+  app.use(securityHeaders);
+  app.use(cors());
+  app.use(express.json({ limit: '2mb' }));
+  app.use('/api/auth', auth.createAuthRouter(db, saveDB));
+  app.use('/api/admin', auth.createAdminRouter(db, saveDB));
+
+  app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+  app.use('/api', (req, res, next) => {
+    if (
+      req.path.startsWith('/auth') ||
+      req.path.startsWith('/admin') ||
+      req.path === '/health'
+    ) {
+      return next();
     }
-    schedStmt.free();
+    return auth.requireAuth(db)(req, res, next);
+  });
+  app.use('/api', apiRateLimit);
+  app.use(express.static(path.join(__dirname)));
 
-    courses.push({ ...course, schedules });
-  }
-  stmt.free();
+  if (!fs.existsSync(BACKUPS_DIR)) fs.mkdirSync(BACKUPS_DIR, { recursive: true });
 
-  return courses;
-}
-
-function getCourseByCode(code) {
-  const stmt = db.prepare("SELECT * FROM courses WHERE code = ?");
-  stmt.bind([code.toUpperCase()]);
-
-  if (stmt.step()) {
-    const course = stmt.getAsObject();
-    stmt.free();
-
-    const schedStmt = db.prepare("SELECT * FROM schedules WHERE course_code = ?");
-    schedStmt.bind([code.toUpperCase()]);
-    const schedules = [];
-
-    while (schedStmt.step()) {
-      schedules.push(schedStmt.getAsObject());
-    }
-    schedStmt.free();
-
-    return { ...course, schedules };
-  }
-  stmt.free();
-  return null;
-}
-
-function createCourse(body) {
-  const code = (body.code || '').trim().toUpperCase();
-  const name = (body.name || '').trim().toUpperCase();
-
-  if (!code || !name) throw new Error('Código y nombre son obligatorios');
-
-  const checkStmt = db.prepare("SELECT code FROM courses WHERE code = ?");
-  checkStmt.bind([code]);
-  if (checkStmt.step()) {
-    checkStmt.free();
-    throw new Error(`Ya existe una materia con el código ${code}`);
-  }
-  checkStmt.free();
-
-  db.run(`
-    INSERT INTO courses (code, name, professor, email, faculty, semester, credits, status, notes, color)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `, [
-    code, name,
-    body.professor || '',
-    body.email || '',
-    body.faculty || '',
-    body.semester || '',
-    parseInt(body.credits) || 3,
-    body.status || 'active',
-    body.notes || '',
-    body.color || 'blue'
-  ]);
-
-  const schedules = (body.schedules || []).filter(s => s.day && s.start_time && s.end_time);
-  const newSchedules = [];
-
-  for (const s of schedules) {
-    db.run(`
-      INSERT INTO schedules (course_code, day, start_time, end_time, room)
-      VALUES (?, ?, ?, ?, ?)
-    `, [code, s.day, s.start_time, s.end_time, s.room || '']);
-
-    const idStmt = db.prepare("SELECT last_insert_rowid() as id");
-    idStmt.step();
-    const schedId = idStmt.getAsObject().id;
-    idStmt.free();
-
-    newSchedules.push({
-      id: schedId,
-      course_code: code,
-      day: s.day,
-      start_time: s.start_time,
-      end_time: s.end_time,
-      room: s.room || ''
+  if (fs.existsSync(SOCKET_CLIENT)) {
+    app.get('/vendor/socket.io.min.js', (_req, res) => {
+      res.sendFile(SOCKET_CLIENT);
     });
   }
 
-  saveDB();
-  return { code, name, professor: body.professor || '', email: body.email || '', faculty: body.faculty || '', semester: body.semester || '', credits: parseInt(body.credits) || 3, status: body.status || 'active', notes: body.notes || '', color: body.color || 'blue', schedules: newSchedules };
-}
+  app.get('/api/courses', (req, res) => res.json(getCourses(req.userId)));
 
-function updateCourse(oldCode, body) {
-  const newCode = (body.code || oldCode).trim().toUpperCase();
-
-  if (newCode !== oldCode) {
-    const checkStmt = db.prepare("SELECT code FROM courses WHERE code = ? AND code != ?");
-    checkStmt.bind([newCode, oldCode]);
-    if (checkStmt.step()) {
-      checkStmt.free();
-      throw new Error(`Ya existe una materia con el código ${newCode}`);
-    }
-    checkStmt.free();
-  }
-
-  db.run(`
-    UPDATE courses SET
-      code = ?,
-      name = ?,
-      professor = ?,
-      email = ?,
-      faculty = ?,
-      semester = ?,
-      credits = ?,
-      status = ?,
-      notes = ?,
-      color = ?
-    WHERE code = ?
-  `, [
-    newCode,
-    (body.name || '').trim().toUpperCase(),
-    body.professor !== undefined ? body.professor : '',
-    body.email !== undefined ? body.email : '',
-    body.faculty !== undefined ? body.faculty : '',
-    body.semester !== undefined ? body.semester : '',
-    parseInt(body.credits) || 3,
-    body.status || 'active',
-    body.notes !== undefined ? body.notes : '',
-    body.color || 'blue',
-    oldCode
-  ]);
-
-  db.run("DELETE FROM schedules WHERE course_code = ?", [newCode]);
-
-  const schedules = (body.schedules || []).filter(s => s.day && s.start_time && s.end_time);
-  const newSchedules = [];
-
-  for (const s of schedules) {
-    db.run(`
-      INSERT INTO schedules (course_code, day, start_time, end_time, room)
-      VALUES (?, ?, ?, ?, ?)
-    `, [newCode, s.day, s.start_time, s.end_time, s.room || '']);
-
-    const idStmt = db.prepare("SELECT last_insert_rowid() as id");
-    idStmt.step();
-    const schedId = idStmt.getAsObject().id;
-    idStmt.free();
-
-    newSchedules.push({
-      id: schedId,
-      course_code: newCode,
-      day: s.day,
-      start_time: s.start_time,
-      end_time: s.end_time,
-      room: s.room || ''
-    });
-  }
-
-  saveDB();
-  return { code: newCode, name: (body.name || '').trim().toUpperCase(), professor: body.professor !== undefined ? body.professor : '', email: body.email !== undefined ? body.email : '', faculty: body.faculty !== undefined ? body.faculty : '', semester: body.semester !== undefined ? body.semester : '', credits: parseInt(body.credits) || 3, status: body.status || 'active', notes: body.notes !== undefined ? body.notes : '', color: body.color || 'blue', schedules: newSchedules };
-}
-
-function deleteCourse(code) {
-  db.run("DELETE FROM schedules WHERE course_code = ?", [code.toUpperCase()]);
-  db.run("DELETE FROM courses WHERE code = ?", [code.toUpperCase()]);
-  saveDB();
-  return { success: true, deleted: code.toUpperCase() };
-}
-
-function getStats() {
-  const courses = getCourses();
-  const active = courses.filter(c => c.status === 'active');
-  const credits = active.reduce((s, c) => s + (c.credits || 0), 0);
-
-  let totalMins = 0;
-  for (const c of active) {
-    for (const s of (c.schedules || [])) {
-      const [sh, sm] = s.start_time.split(':').map(Number);
-      const [eh, em] = s.end_time.split(':').map(Number);
-      totalMins += Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
-    }
-  }
-
-  return { totalCourses: courses.length, totalCredits: credits, totalHours: Math.round(totalMins / 60) };
-}
-
-function broadcastCourses() {
-  if (io) io.emit('courses:update', getCourses());
-}
-
-function broadcastStats() {
-  if (io) io.emit('stats:update', getStats());
-}
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname)));
-
-app.get('/api/courses', (req, res) => {
-  res.json(getCourses());
-});
-
-app.get('/api/courses/:code', (req, res) => {
-  const course = getCourseByCode(req.params.code);
-  if (!course) return res.status(404).json({ error: 'Materia no encontrada' });
-  res.json(course);
-});
-
-app.post('/api/courses', (req, res) => {
-  try {
-    const course = createCourse(req.body);
-    broadcastCourses();
-    broadcastStats();
-    res.status(201).json(course);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-app.put('/api/courses/:code', (req, res) => {
-  try {
-    const course = updateCourse(req.params.code, req.body);
-    broadcastCourses();
-    broadcastStats();
+  app.get('/api/courses/:code', (req, res) => {
+    const course = getCourseByCode(req.userId, req.params.code);
+    if (!course) return res.status(404).json({ error: 'Materia no encontrada' });
     res.json(course);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  });
 
-app.delete('/api/courses/:code', (req, res) => {
-  try {
-    deleteCourse(req.params.code);
-    broadcastCourses();
-    broadcastStats();
-    res.json({ success: true, deleted: req.params.code });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-app.get('/api/stats', (req, res) => {
-  res.json(getStats());
-});
-
-app.get('/api/config/:key', (req, res) => {
-  const stmt = db.prepare("SELECT value FROM config WHERE key = ?");
-  stmt.bind([req.params.key]);
-  if (stmt.step()) {
-    const result = stmt.getAsObject();
-    stmt.free();
-    res.json({ key: req.params.key, value: result.value });
-  }
-  stmt.free();
-  res.json({ key: req.params.key, value: null });
-});
-
-app.post('/api/config/:key', (req, res) => {
-  const value = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-  db.run("INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)", [req.params.key, value]);
-  saveDB();
-  io.emit('config:update', { key: req.params.key, value });
-  res.json({ success: true });
-});
-
-app.post('/api/courses/:code/bulk-schedules', (req, res) => {
-  try {
-    const code = req.params.code.toUpperCase();
-    const schedules = req.body.schedules || [];
-
-    db.run("DELETE FROM schedules WHERE course_code = ?", [code]);
-
-    for (const s of schedules) {
-      db.run(`
-        INSERT INTO schedules (course_code, day, start_time, end_time, room)
-        VALUES (?, ?, ?, ?, ?)
-      `, [code, s.day, s.start_time, s.end_time, s.room || '']);
+  app.post('/api/courses', (req, res) => {
+    try {
+      const course = createCourse(req.userId, req.body);
+      broadcastCourses(req.userId);
+      broadcastStats(req.userId);
+      res.status(201).json(course);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
     }
+  });
 
-    saveDB();
-    broadcastCourses();
-    res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  app.put('/api/courses/:code', (req, res) => {
+    try {
+      const course = updateCourse(req.userId, req.params.code, req.body);
+      broadcastCourses(req.userId);
+      broadcastStats(req.userId);
+      res.json(course);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
-app.post('/api/import', (req, res) => {
-  try {
-    const courses = req.body.courses || [];
+  app.delete('/api/courses/:code', (req, res) => {
+    try {
+      deleteCourse(req.userId, req.params.code);
+      broadcastCourses(req.userId);
+      broadcastStats(req.userId);
+      res.json({ success: true, deleted: req.params.code });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
-    for (const c of courses) {
-      try {
-        createCourse(c);
-      } catch (e) {
-        // Skip duplicates
+  app.get('/api/stats', (req, res) => res.json(getStats(req.userId)));
+
+  app.get('/api/stats/extended', (req, res) => {
+    const uid = req.userId;
+    res.json(
+      academic.getExtendedStats(db, uid, () => getCourses(uid), () => getStats(uid))
+    );
+  });
+
+  app.get('/api/export/ics', (req, res) => {
+    const ics = generateIcsFromCourses(getCourses(req.userId));
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="amellify.ics"');
+    res.send(ics);
+  });
+
+  app.post('/api/backup', (req, res) => {
+    try {
+      const dir = userBackupsDir(req.userId);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const file = path.join(dir, `backup-${stamp}.json`);
+      fs.writeFileSync(file, JSON.stringify(getCourses(req.userId), null, 2));
+      pruneBackups(dir);
+      res.json({ success: true, file: path.basename(file) });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/backups', (req, res) => {
+    try {
+      const dir = userBackupsDir(req.userId);
+      if (!fs.existsSync(dir)) {
+        return res.json([]);
       }
+      const files = fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith('.json') && f.startsWith('backup-'))
+        .sort()
+        .reverse()
+        .map((f) => {
+          const stat = fs.statSync(path.join(dir, f));
+          return { file: f, size: stat.size, createdAt: stat.mtime.toISOString() };
+        });
+      res.json(files);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
+  });
 
-    broadcastCourses();
-    broadcastStats();
-    res.json({ success: true, imported: courses.length });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  app.post('/api/backups/:file/restore', (req, res) => {
+    try {
+      const file = path.basename(req.params.file);
+      if (!/^backup-[\dT-]+\.json$/.test(file)) {
+        return res.status(400).json({ error: 'Nombre de respaldo inválido' });
+      }
+      const dir = userBackupsDir(req.userId);
+      const fullPath = path.join(dir, file);
+      if (!fs.existsSync(fullPath)) {
+        return res.status(404).json({ error: 'Respaldo no encontrado' });
+      }
+      const raw = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+      const validation = validateImportPayload(raw);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.errors.join('; ') });
+      }
+      const uid = req.userId;
+      db.run(
+        'DELETE FROM schedules WHERE course_code IN (SELECT code FROM courses WHERE user_id = ?)',
+        [uid]
+      );
+      db.run('DELETE FROM courses WHERE user_id = ?', [uid]);
+      let imported = 0;
+      let skipped = 0;
+      for (const c of validation.courses) {
+        try {
+          createCourse(uid, c);
+          imported++;
+        } catch (_e) {
+          skipped++;
+        }
+      }
+      broadcastCourses(uid);
+      broadcastStats(uid);
+      res.json({ success: true, imported, skipped, file });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+  app.post('/api/courses/:code/duplicate', (req, res) => {
+    try {
+      const uid = req.userId;
+      const course = academic.duplicateCourse(
+        db,
+        () => getCourses(uid),
+        (body) => createCourse(uid, body),
+        req.params.code
+      );
+      broadcastCourses(uid);
+      broadcastStats(uid);
+      res.status(201).json(course);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
-async function start() {
+  app.get('/api/tasks', (req, res) => res.json(academic.getTasks(db, req.userId)));
+  app.post('/api/tasks', (req, res) => {
+    try {
+      res.status(201).json(academic.createTask(db, req.userId, req.body));
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+  app.put('/api/tasks/:id', (req, res) => {
+    try {
+      res.json(academic.updateTask(db, req.userId, Number(req.params.id), req.body));
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+  app.delete('/api/tasks/:id', (req, res) => {
+    academic.deleteTask(db, req.userId, Number(req.params.id));
+    res.json({ success: true });
+  });
+
+  app.get('/api/exams', (req, res) => res.json(academic.getExams(db, req.userId)));
+  app.post('/api/exams', (req, res) => {
+    try {
+      res.status(201).json(academic.createExam(db, req.userId, req.body));
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+  app.put('/api/exams/:id', (req, res) => {
+    try {
+      res.json(academic.updateExam(db, req.userId, Number(req.params.id), req.body));
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+  app.delete('/api/exams/:id', (req, res) => {
+    academic.deleteExam(db, req.userId, Number(req.params.id));
+    res.json({ success: true });
+  });
+
+  app.get('/api/config/:key', (req, res) => {
+    const stmt = db.prepare('SELECT value FROM config WHERE key = ? AND user_id = ?');
+    stmt.bind([req.params.key, req.userId]);
+    if (stmt.step()) {
+      const result = stmt.getAsObject();
+      stmt.free();
+      return res.json({ key: req.params.key, value: result.value });
+    }
+    stmt.free();
+    res.json({ key: req.params.key, value: null });
+  });
+
+  app.post('/api/config/:key', (req, res) => {
+    const value =
+      typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    db.run('INSERT OR REPLACE INTO config (user_id, key, value) VALUES (?, ?, ?)', [
+      req.userId,
+      req.params.key,
+      value,
+    ]);
+    saveDB();
+    io.to(`user:${req.userId}`).emit('config:update', { key: req.params.key, value });
+    res.json({ success: true });
+  });
+
+  app.post('/api/courses/:code/bulk-schedules', (req, res) => {
+    try {
+      const code = req.params.code.toUpperCase();
+      const course = getCourseByCode(req.userId, code);
+      if (!course) return res.status(404).json({ error: 'Materia no encontrada' });
+      db.run('DELETE FROM schedules WHERE course_code = ? AND user_id = ?', [code, req.userId]);
+      const schedules = (req.body.schedules || []).filter(
+        (s) => s.day && s.start_time && s.end_time
+      );
+      insertSchedules(req.userId, code, schedules);
+      saveDB();
+      broadcastCourses(req.userId);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/import', importSizeGuard, (req, res) => {
+    try {
+      const validation = validateImportPayload(req.body);
+      if (!validation.valid) {
+        return res.status(400).json({ error: validation.errors.join('; ') });
+      }
+      const uid = req.userId;
+      let imported = 0;
+      let skipped = 0;
+      for (const c of validation.courses) {
+        try {
+          createCourse(uid, c);
+          imported++;
+        } catch (_e) {
+          skipped++;
+        }
+      }
+      broadcastCourses(uid);
+      broadcastStats(uid);
+      res.json({ success: true, imported, skipped });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  });
+
+  return app;
+}
+
+async function startAmellifyServer(options = {}) {
+  const port = Number(options.port || process.env.PORT || 3000);
+  const host = options.host || process.env.HOST || '0.0.0.0';
+  const displayHost =
+    options.displayHost || process.env.DISPLAY_HOST || 'localhost';
+
   await initDB();
 
+  const app = createExpressApp();
   const server = http.createServer(app);
-  io = new Server(server);
-
-  io.on('connection', (socket) => {
-    console.log('Cliente conectado:', socket.id);
-    socket.emit('courses:update', getCourses());
-    socket.emit('stats:update', getStats());
+  io = new Server(server, {
+    cors: { origin: true },
   });
 
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log('\n╔══════════════════════════════════════════╗');
-    console.log(`║  📚 Amellify corriendo en puerto ${PORT}     ║`);
-    console.log('╠══════════════════════════════════════════╣');
-    console.log(`║  → Local:   http://localhost:${PORT}            ║`);
-    console.log(`║  → Red:     http://${HOST}:${PORT}      ║`);
-    console.log('║  → WebSocket: activo                       ║');
-    console.log(`║  → DB: amellify.db                         ║`);
-    console.log('╚══════════════════════════════════════════╝\n');
-    console.log('  Ctrl+C para detener\n');
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    const payload = auth.verifyToken(token);
+    if (!payload) return next(new Error('No autorizado'));
+    const user = auth.getUserById(db, payload.sub);
+    if (!user) return next(new Error('No autorizado'));
+    socket.userId = user.id;
+    socket.join(`user:${user.id}`);
+    next();
+  });
+
+  io.on('connection', (socket) => {
+    console.log('Cliente conectado:', socket.id, 'user:', socket.userId);
+    socket.emit('courses:update', getCourses(socket.userId));
+    socket.emit('stats:update', getStats(socket.userId));
+  });
+
+  return new Promise((resolve) => {
+    server.listen(port, host, () => {
+      console.log('\n╔══════════════════════════════════════════╗');
+      console.log(`║  📚 Amellify corriendo en puerto ${port}     ║`);
+      console.log('╠══════════════════════════════════════════╣');
+      console.log(`║  → Local:   http://${displayHost}:${port}            ║`);
+      if (host === '0.0.0.0') {
+        console.log(`║  → Red:     http://<tu-ip>:${port}              ║`);
+      }
+      console.log('║  → WebSocket: activo                       ║');
+      console.log('║  → DB: amellify.db                         ║');
+      console.log('╚══════════════════════════════════════════╝\n');
+      console.log('  Ctrl+C para detener\n');
+      resolve({ server, app, port, host });
+    });
   });
 }
 
-start().catch(err => {
-  console.error('Error al iniciar:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  startAmellifyServer().catch((err) => {
+    console.error('Error al iniciar:', err);
+    process.exit(1);
+  });
 
-process.on('SIGINT', () => {
-  console.log('\nGuardando datos...');
-  saveDB();
-  process.exit(0);
-});
+  process.on('SIGINT', () => {
+    console.log('\nGuardando datos...');
+    saveDB();
+    process.exit(0);
+  });
+}
+
+module.exports = {
+  startAmellifyServer,
+  initDB,
+  saveDB,
+  getCourses,
+  createCourse,
+  updateCourse,
+  deleteCourse,
+  getStats,
+};

@@ -1,0 +1,65 @@
+/* Temas adicionales: AMOLED y Alto contraste */
+
+[data-theme="amoled"] {
+  --bg-primary: #000000;
+  --bg-secondary: rgba(12, 12, 14, 0.92);
+  --bg-tertiary: rgba(20, 20, 24, 0.85);
+  --bg-elevated: #0c0c0e;
+
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b8;
+  --text-tertiary: #707078;
+
+  --glass-bg: rgba(18, 18, 20, 0.75);
+  --glass-bg-strong: rgba(24, 24, 28, 0.9);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-subtle: rgba(255, 255, 255, 0.04);
+  --glass-highlight: rgba(255, 255, 255, 0.06);
+
+  --orb-1: rgba(0, 122, 255, 0.2);
+  --orb-2: rgba(88, 86, 214, 0.15);
+  --orb-3: rgba(52, 199, 89, 0.1);
+}
+
+[data-theme="contrast"] {
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f0f0f0;
+  --bg-elevated: #ffffff;
+
+  --text-primary: #000000;
+  --text-secondary: #1a1a1a;
+  --text-tertiary: #333333;
+
+  --border: #000000;
+  --border-strong: #000000;
+  --accent: #0000cc;
+  --accent-hover: #000099;
+  --accent-light: rgba(0, 0, 204, 0.15);
+
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-bg-strong: #ffffff;
+  --glass-border: #000000;
+  --glass-border-subtle: #000000;
+  --glass-shadow: 0 0 0 2px #000000;
+
+  --success: #006600;
+  --danger: #cc0000;
+  --warning: #995500;
+}
+
+[data-theme="contrast"] .btn-primary {
+  background: #0000cc !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+[data-theme="contrast"] .class-cell,
+[data-theme="contrast"] .stat-card,
+[data-theme="contrast"] .view-tab.active {
+  outline: 1px solid #000;
+}
+
+[data-theme="amoled"] .ambient-orb {
+  opacity: 0.25;
+}
