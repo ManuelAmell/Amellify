@@ -4,6 +4,8 @@
 # ──────────────────────────────────────────────────────────────────────────────
 clear
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/amellify-common.sh
+source "$APP_DIR/scripts/amellify-common.sh"
 
 # Colores
 RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'
@@ -44,8 +46,8 @@ echo -e "  ${GREEN}✓${NC} Node.js $(node --version) instalado"
 # ── Paso 2: Instalar dependencias ─────────────────────────────────────────────
 echo ""
 echo -e "${CYAN}[2/4]${NC} Instalando dependencias..."
-if [ ! -d "$APP_DIR/node_modules/electron" ]; then
-    echo "  Descargando Electron (~150MB, solo esta vez)..."
+if [ ! -d "$APP_DIR/node_modules" ]; then
+    echo "  Instalando dependencias (npm install)..."
     cd "$APP_DIR" && npm install --progress=false 2>&1 | grep -E "added|error" | head -3
     if [ $? -ne 0 ]; then
         echo -e "  ${RED}✗${NC} Error al instalar. Verifica tu conexión a internet."
@@ -55,17 +57,18 @@ if [ ! -d "$APP_DIR/node_modules/electron" ]; then
 else
     echo -e "  ${GREEN}✓${NC} Dependencias ya instaladas"
 fi
+chmod_scripts
 
 # ── Paso 3: Crear app en /Applications ───────────────────────────────────────
 echo ""
 echo -e "${CYAN}[3/4]${NC} Integrando con macOS..."
 
-# Crear wrapper script que launch Electron
-LAUNCHER="$APP_DIR/abrir-amellify.sh"
+# Launcher Electron (no sobrescribe abrir-amellify.sh del repo)
+LAUNCHER="$APP_DIR/abrir-electron.sh"
 cat > "$LAUNCHER" << LAUNCHER_EOF
 #!/bin/bash
 cd "$APP_DIR"
-exec npx electron . 2>/dev/null
+exec npm start
 LAUNCHER_EOF
 chmod +x "$LAUNCHER"
 
@@ -105,7 +108,7 @@ PLIST
     cat > "$BUNDLE/Contents/MacOS/amellify-launcher" << APP_EXEC
 #!/bin/bash
 cd "$APP_DIR"
-exec "$(which npx)" electron . 2>/dev/null
+exec "$APP_DIR/abrir-electron.sh"
 APP_EXEC
     chmod +x "$BUNDLE/Contents/MacOS/amellify-launcher"
 }
@@ -149,10 +152,12 @@ echo "  Puedes abrir Amellify desde:"
 echo -e "  ${BOLD}•${NC} Launchpad — busca 'Amellify'"
 echo -e "  ${BOLD}•${NC} Spotlight — Cmd+Space → 'Amellify'"
 echo -e "  ${BOLD}•${NC} Finder → Aplicaciones → Amellify.app"
-echo -e "  ${BOLD}•${NC} Terminal: ${CYAN}./abrir-amellify.sh${NC}"
+echo -e "  ${BOLD}•${NC} Terminal: ${CYAN}./abrir-amellify.sh${NC} o ${CYAN}./abrir-electron.sh${NC}"
 echo ""
-echo "  Tus datos se guardan en:"
-echo -e "  ${CYAN}~/Library/Application Support/amellify/amellify-data.json${NC}"
+echo "  Datos (SQLite):"
+echo -e "  ${CYAN}$APP_DIR/amellify.db${NC}"
+amellify_set_display_host
+echo -e "  Web en red: ${CYAN}$(amellify_lan_url)${NC}"
 echo ""
 
 read -p "  ¿Iniciar el servidor ahora? [S/n]: " OPEN_NOW

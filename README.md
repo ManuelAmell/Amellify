@@ -232,13 +232,20 @@ npm start
 
 ### Scripts disponibles
 
-| Script | Descripción |
-|--------|-------------|
-| `./iniciar-web.sh` | Iniciar servidor web en segundo plano |
-| `./detener-web.sh` | Detener servidor web |
-| `./iniciar-back.sh` | Iniciar backend en terminal |
+| Script / npm | Descripción |
+|--------------|-------------|
+| `./iniciar-web.sh` | Servidor en segundo plano (`/tmp/amellify.log`) |
+| `./iniciar-web.sh -f` | Servidor en primer plano |
+| `./detener-web.sh` | Detener servidor |
+| `./abrir-amellify.sh` | Electron o navegador + servidor |
+| `./desplegar-ssh.sh user@host` | Despliegue remoto por SSH |
+| `npm run web` | Servidor en primer plano (`node server.js`) |
+| `npm run web:bg` / `web:stop` | Iniciar / detener en background |
+| `npm run setup` | Instalar dependencias |
 | `npm test` | Tests unitarios e integración |
-| `npm run test:e2e` | Prueba E2E con Puppeteer (puerto 30998) |
+| `npm run test:e2e` | E2E Puppeteer (puerto 30998) |
+| `npm run test:all` | Unitarios + E2E |
+| `npm run deploy:ssh` | Alias de `./desplegar-ssh.sh` |
 
 ---
 
@@ -303,27 +310,17 @@ Variables opcionales en `.env` — ver [`.env.example`](.env.example).
 
 ---
 
-## 🌐 Acceso Remoto
+## Acceso remoto
 
-Accede desde cualquier dispositivo en la red:
+Tras `./iniciar-web.sh`, usa la URL de red que muestra el script (IP LAN + puerto 3000). Por defecto escucha en `0.0.0.0`.
 
-```
-http://100.101.28.97:3000
-```
-
-### Características
-- 🔄 **Sincronización en tiempo real** - Cambios instantáneos en todos los dispositivos
-- 📡 **WebSocket** - Conexión persistente bidireccional
-- 🗄️ **SQLite** - Base de datos eficiente
-
-### Scripts
 ```bash
-./iniciar-web.sh   # Iniciar en segundo plano
-./detener-web.sh   # Detener servidor
-tail -f /tmp/amellify.log  # Ver logs
+./iniciar-web.sh
+tail -f /tmp/amellify.log
+./desplegar-ssh.sh usuario@otra-maquina ~/amellify   # despliegue SSH
 ```
 
-Para más detalles consulta [ACCESO-REMOTO.md](ACCESO-REMOTO.md).
+Detalles: [ACCESO-REMOTO.md](ACCESO-REMOTO.md).
 
 ---
 

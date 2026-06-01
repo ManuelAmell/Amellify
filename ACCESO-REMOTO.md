@@ -1,31 +1,23 @@
-# 🌐 Acceso Remoto - Amellify
+# Acceso remoto — Amellify
 
 ## Descripción
 
-Amellify incluye un servidor web con **base de datos SQLite** y **WebSocket** para sincronización en tiempo real entre todos los dispositivos conectados.
+Servidor web con **SQLite**, **JWT por usuario** y **WebSocket** para sincronización en tiempo real entre dispositivos en la red.
 
 ---
 
-## Inicio Rápido
+## Inicio rápido
 
 ```bash
-# Iniciar servidor
-./iniciar-web.sh
-
-# Acceder desde cualquier dispositivo
-http://100.101.28.97:3000
+./iniciar-web.sh              # Segundo plano (log en /tmp/amellify.log)
+./iniciar-web.sh --foreground # Desarrollo en terminal
+./detener-web.sh
 ```
 
----
+Tras iniciar, el script muestra la URL local y de red (IP LAN automática). Ejemplo:
 
-## Características
-
-| Feature | Descripción |
-|---------|-------------|
-| 🔄 **Sincronización real** | Cambios instantáneos en todos los dispositivos |
-| 📡 **WebSocket** | Conexión persistente bidireccional |
-| 🗄️ **SQLite** | Base de datos eficiente |
-| 🌐 **Multi-dispositivo** | Móvil, tablet, laptop, PC |
+- Local: `http://127.0.0.1:3000`
+- Red: `http://192.168.x.x:3000`
 
 ---
 
@@ -33,59 +25,99 @@ http://100.101.28.97:3000
 
 | Script | Descripción |
 |--------|-------------|
-| `./iniciar-web.sh` | Iniciar en segundo plano |
+| `./iniciar-web.sh` | Servidor en segundo plano |
+| `./iniciar-web.sh -f` | Servidor en primer plano |
 | `./detener-web.sh` | Detener servidor |
-| `./iniciar-back.sh` | Iniciar en terminal |
+| `./detener-web.sh --clean-log` | Detener y borrar log |
+| `./iniciar-back.sh` | Backend en terminal (primer plano) |
+| `./abrir-amellify.sh` | Electron o navegador + servidor |
+| `./desplegar-ssh.sh` | Despliegue en otra máquina vía SSH |
 
 ```bash
-# Ver logs
 tail -f /tmp/amellify.log
+cat /tmp/amellify.pid
+curl http://localhost:3000/api/health
+```
 
-# Ver estado
-pgrep -f "node server.js" && echo "Corriendo" || echo "Detenido"
+Equivalentes npm: `npm run web:bg`, `npm run web:stop`, `npm run deploy:ssh`.
+
+---
+
+## Variables de entorno
+
+| Variable | Default | Uso |
+|----------|---------|-----|
+| `HOST` | `0.0.0.0` | Interfaz de escucha |
+| `PORT` | `3000` | Puerto HTTP |
+| `DISPLAY_HOST` | IP LAN | Solo mensajes en consola |
+| `AMELLIFY_DB_PATH` | `./amellify.db` | Ruta de la base de datos |
+| `AMELLIFY_JWT_SECRET` | (dev) | Obligatorio en producción |
+
+```bash
+PORT=8080 HOST=0.0.0.0 ./iniciar-web.sh
+```
+
+Copia [`.env.example`](.env.example) a `.env` en el servidor.
+
+---
+
+## Base de datos
+
+**Archivo:** `amellify.db` (o ruta en `AMELLIFY_DB_PATH`)
+
+```bash
+cp amellify.db "amellify-backup-$(date +%Y%m%d).db"
 ```
 
 ---
 
-## Configuración
+## Despliegue por SSH
 
-### Cambiar IP (server.js línea 7)
-```javascript
-const HOST = process.env.HOST || 'TU_IP';
+Instala o actualiza Amellify en otra máquina (rsync + `npm install` + systemd user o nohup):
+
+```bash
+./desplegar-ssh.sh usuario@servidor.remoto ~/amellify
 ```
 
-### Cambiar puerto
+Opciones:
+
+| Opción | Efecto |
+|--------|--------|
+| `--dry-run` | Solo muestra cambios de rsync |
+| `--with-db` | Copia `amellify.db` al remoto |
+| `--port N` | Puerto del servicio (default 3000) |
+| `--restart-only` | Reinicia sin sincronizar archivos |
+
+En el remoto:
+
 ```bash
-PORT=8080 ./iniciar-web.sh
+ssh usuario@servidor systemctl --user status amellify
+ssh usuario@servidor tail -f /tmp/amellify.log   # si usa nohup
+```
+
+Habilitar linger para que el servicio user sobreviva al cerrar sesión (opcional):
+
+```bash
+sudo loginctl enable-linger $USER
 ```
 
 ---
 
-## Base de Datos
-
-**Archivo**: `amellify.db` (carpeta del proyecto)
-
-**Tablas**:
-- `courses` - Materias
-- `schedules` - Horarios
-- `config` - Configuración
-
-### Backup
-```bash
-cp amellify.db amellify-backup-$(date +%Y%m%d).db
-```
-
----
-
-## Solución de Problemas
+## Firewall
 
 ```bash
-# Verificar que corre
-curl http://localhost:3000/api/stats
-
-# Ver IP del servidor
+sudo ufw allow 3000/tcp
 hostname -I
-
-# Permitir firewall
-sudo ufw allow 3000
 ```
+
+---
+
+## Solución de problemas
+
+```bash
+./detener-web.sh
+./iniciar-web.sh
+tail -30 /tmp/amellify.log
+```
+
+Si el puerto está ocupado: `fuser -k 3000/tcp` (Linux) y reiniciar.

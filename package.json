@@ -15,8 +15,14 @@
     "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux",
     "build:all": "electron-builder -mwl",
+    "setup": "npm install && echo 'Listo. E2E: npm run test:e2e (instala Chrome con pretest:e2e)'",
+    "pretest:e2e": "npx puppeteer browsers install chrome",
     "test": "node --test tests/*.test.mjs",
-    "test:e2e": "node tests/e2e-puppeteer.mjs"
+    "test:e2e": "node tests/e2e-puppeteer.mjs",
+    "test:all": "npm test && npm run test:e2e",
+    "web:bg": "./iniciar-web.sh",
+    "web:stop": "./detener-web.sh",
+    "deploy:ssh": "./desplegar-ssh.sh"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

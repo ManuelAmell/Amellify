@@ -4,6 +4,8 @@
 # ──────────────────────────────────────────────────────────────────────────────
 clear
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/amellify-common.sh
+source "$APP_DIR/scripts/amellify-common.sh"
 
 # Colores
 RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'
@@ -42,8 +44,8 @@ echo -e "  ${GREEN}✓${NC} Node.js $NODE_VER instalado"
 # ── Paso 2: Instalar dependencias ─────────────────────────────────────────────
 echo ""
 echo -e "${CYAN}[2/4]${NC} Instalando dependencias..."
-if [ ! -d "$APP_DIR/node_modules/electron" ]; then
-    echo "  Descargando Electron (~150MB, solo esta vez)..."
+if [ ! -d "$APP_DIR/node_modules" ]; then
+    echo "  Instalando dependencias (npm install)..."
     cd "$APP_DIR" && npm install --progress=false 2>&1 | grep -E "added|warn|error" | head -5
     if [ $? -ne 0 ]; then
         echo -e "  ${RED}✗${NC} Error al instalar. Verifica tu conexión a internet."
@@ -53,6 +55,7 @@ if [ ! -d "$APP_DIR/node_modules/electron" ]; then
 else
     echo -e "  ${GREEN}✓${NC} Dependencias ya instaladas"
 fi
+chmod_scripts
 
 # ── Paso 3: Instalar íconos y .desktop ───────────────────────────────────────
 echo ""
@@ -73,7 +76,7 @@ Type=Application
 Name=Amellify
 GenericName=Gestor de Horarios
 Comment=Gestiona tus materias y horarios universitarios
-Exec=bash -c "cd $APP_DIR && npx electron . 2>/dev/null" -- %u
+Exec=bash -c "cd $APP_DIR && ./abrir-amellify.sh" -- %u
 Icon=$ICON_DEST
 Terminal=false
 StartupNotify=true
@@ -126,19 +129,13 @@ echo -e "  ${BOLD}•${NC} El menú de aplicaciones (busca 'Amellify')"
 echo -e "  ${BOLD}•${NC} El acceso directo en el escritorio"
 echo -e "  ${BOLD}•${NC} Ejecutando: ${CYAN}./abrir-amellify.sh${NC}"
 echo ""
-echo "  Tus datos se guardan en:"
-echo -e "  ${CYAN}~/.config/amellify/amellify-data.json${NC}"
+echo "  Datos (SQLite):"
+echo -e "  ${CYAN}$APP_DIR/amellify.db${NC}  (o AMELLIFY_DB_PATH en .env)"
 echo ""
-
-echo ""
-echo -e "  Puedes abrir Amellify desde:"
-echo -e "  ${BOLD}•${NC} El menú de aplicaciones (busca 'Amellify')"
-echo -e "  ${BOLD}•${NC} El acceso directo en el escritorio"
-echo -e "  ${BOLD}•${NC} Ejecutando: ${CYAN}./iniciar-web.sh${NC} (modo web)"
-echo -e "  ${BOLD}•${NC} Ejecutando: ${CYAN}./iniciar-back.sh${NC} (backend)"
-echo ""
-echo -e "  Para acceso desde otros dispositivos:"
-echo -e "  ${CYAN}http://100.101.28.97:3000${NC}"
+echo -e "  ${BOLD}Modo web:${NC} ${CYAN}./iniciar-web.sh${NC}  |  ${CYAN}./detener-web.sh${NC}"
+echo -e "  ${BOLD}Desarrollo:${NC} copia ${CYAN}.env.example${NC} a ${CYAN}.env${NC}"
+amellify_set_display_host
+echo -e "  ${BOLD}Red:${NC} ${CYAN}$(amellify_lan_url)${NC}"
 echo ""
 
 read -p "  ¿Iniciar el servidor ahora? [S/n]: " OPEN_NOW

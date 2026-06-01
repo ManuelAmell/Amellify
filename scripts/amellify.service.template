@@ -1,0 +1,16 @@
+[Unit]
+Description=Amellify — gestor de horarios universitarios
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=@APP_DIR@
+EnvironmentFile=-@APP_DIR@/.env
+Environment=HOST=0.0.0.0
+Environment=PORT=@PORT@
+ExecStart=@NODE@ @APP_DIR@/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
