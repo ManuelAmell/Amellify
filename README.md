@@ -7,11 +7,11 @@
 ![Node](https://img.shields.io/badge/node-%3E%3D16-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 
-**Gestiona tus materias, horarios, profesores y aulas en una app de escritorio elegante y rápida.**
+**Gestiona tus materias, horarios, profesores y aulas en una app web/PWA con sincronización en tiempo real.**
 
-**Sin internet · Sin cuentas · Tus datos son tuyos**
+**Cuentas por usuario · PWA instalable · Datos en SQLite**
 
-[Características](#-características) • [Instalación](#-instalación-rápida) • [Uso](#-uso) • [Atajos](#️-atajos-de-teclado) • [WebSocket](#-websocket) • [Contribuir](#-contribuir)
+[Características](#-características) • [Instalación](#-instalación-rápida) • [Autenticación](#-autenticación) • [Productividad](#-productividad) • [PWA](#-pwa-y-offline) • [Uso](#-uso) • [Contribuir](#-contribuir)
 
 </div>
 
@@ -154,10 +154,23 @@ Accede desde cualquier dispositivo. Sincronización en tiempo real via WebSocket
 <details>
 <summary><b>💾 Datos y Respaldo</b></summary>
 
-- **Exportar/Importar**: Respaldo completo de datos en formato JSON
-- **Almacenamiento local**: Datos guardados en tu computadora
-- **Sin internet**: Funciona 100% offline
-- **Sin cuentas**: No requiere registro ni login
+- **Exportar/Importar**: Respaldo JSON de materias y configuración
+- **Export completo**: Paquete JSON con materias, tareas, exámenes y ajustes (`/api/export/full`)
+- **Backups automáticos**: Respaldo periódico al iniciar sesión (configurable)
+- **Feed ICS personal**: URL revocable para suscribir el horario en calendarios externos
+- **Import ICS URL**: Importar eventos desde un calendario `.ics` público
+- **SQLite por usuario**: Datos aislados con autenticación JWT
+
+</details>
+
+<details>
+<summary><b>🔔 Productividad y calendarios</b></summary>
+
+- **Recordatorios v2**: Avisos por tipo (clase, tarea, examen) con ventana «no molestar»
+- **Push PWA**: Notificaciones push con VAPID (opcional, requiere variables en `.env`)
+- **Google Calendar**: OAuth opcional; alternativa sin OAuth: feed ICS en Configuración → Datos
+- **Export PDF**: Impresión del horario desde Configuración → Datos
+- **Modo offline**: Lectura de datos cacheados en el service worker + banner de estado
 
 </details>
 
@@ -209,6 +222,8 @@ npm run web
 ```
 Luego abre en tu navegador: `http://localhost:3000`
 
+Copia `.env.example` a `.env` y ajusta secretos antes de producción.
+
 ### Modo escritorio
 ```bash
 npm start
@@ -222,6 +237,58 @@ npm start
 | `./iniciar-web.sh` | Iniciar servidor web en segundo plano |
 | `./detener-web.sh` | Detener servidor web |
 | `./iniciar-back.sh` | Iniciar backend en terminal |
+| `npm test` | Tests unitarios e integración |
+| `npm run test:e2e` | Prueba E2E con Puppeteer (puerto 30998) |
+
+---
+
+## Autenticación
+
+Amellify usa **JWT** con registro, login y recuperación de contraseña. Cada usuario ve solo sus materias, tareas y exámenes.
+
+| Rol | Descripción |
+|-----|-------------|
+| `user` | Acceso a sus propios datos |
+| `admin` | Gestión de usuarios en Configuración → Usuarios |
+
+En desarrollo se crea un admin inicial (ver `.env.example` y `CREDENCIALES-ADMIN-DEV.txt` local, no versionado).
+
+Flujos principales:
+- Registro / login desde la pantalla inicial
+- Recuperar contraseña (enlace por correo; en modo test el enlace aparece en consola del servidor)
+- Cierre de sesión desde Configuración → Cuenta
+
+---
+
+## Productividad
+
+Funciones disponibles en **Configuración → Datos** y **Notificaciones**:
+
+| Feature | Ubicación | Notas |
+|---------|-----------|-------|
+| Feed ICS | Datos | URL revocable + QR para suscribir en Google/Apple/Outlook |
+| Export PDF | Datos | Abre diálogo de impresión del horario |
+| Export completo | Datos | JSON con todo el perfil académico |
+| Import ICS URL | Datos | Pega URL pública `.ics` con vista previa |
+| Google Calendar | Datos | OAuth si `GOOGLE_CLIENT_*` están configurados |
+| Recordatorios v2 | Notificaciones | Días antes (tarea/examen) + no molestar |
+| Push PWA | Notificaciones | Requiere `VAPID_*` y permiso del navegador |
+| Backup automático | Al iniciar sesión | Crea respaldo si pasó el intervalo configurado |
+
+Atajo PWA: acceso directo a **Vista Hoy** desde el manifest (`/?view=today`).
+
+---
+
+## PWA y offline
+
+- **Instalable**: `manifest.json` + service worker (`sw.js`)
+- **Offline lectura**: cache de assets y respuestas GET de `/api/courses`, `/api/tasks`, `/api/exams`, `/api/stats`
+- **Banner**: aviso «Sin conexión — mostrando datos guardados» cuando `navigator.onLine` es falso
+- **Push**: el SW muestra notificaciones en evento `push` (envío desde servidor: pendiente de job programado en MVP)
+
+Variables opcionales en `.env` — ver [`.env.example`](.env.example).
+
+---
 
 ### Agregar una materia
 1. Click en **➕ Nueva Materia**

@@ -112,6 +112,26 @@
   border: 1px solid rgba(255, 59, 48, 0.3);
 }
 
+.today-section {
+  margin-bottom: var(--space-4);
+}
+
+.today-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 var(--space-3);
+  color: var(--text-secondary);
+}
+
+.ics-feed-qr {
+  border-radius: var(--radius-md);
+  background: #fff;
+  padding: 8px;
+}
+
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -2381,6 +2401,56 @@ html.grid-compact .grid-schedule {
   font-size: 12px;
   color: var(--text-tertiary);
   text-align: center;
+}
+
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding: 10px 16px;
+  background: var(--warning, #f59e0b);
+  color: #111;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.settings-ics-url {
+  word-break: break-all;
+  font-size: 11px;
+  padding: 8px;
+  background: var(--glass-bg-subtle, rgba(0, 0, 0, 0.04));
+  border-radius: 8px;
+}
+
+@media print {
+  body.print-schedule-mode .header,
+  body.print-schedule-mode .view-tabs,
+  body.print-schedule-mode .sidebar,
+  body.print-schedule-mode .settings-modal,
+  body.print-schedule-mode #auth-screen,
+  body.print-schedule-mode .offline-banner {
+    display: none !important;
+  }
+
+  body.print-schedule-mode .main-content,
+  body.print-schedule-mode #schedule-grid,
+  body.print-schedule-mode .week-view,
+  body.print-schedule-mode .list-view {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  body.print-schedule-mode {
+    background: #fff !important;
+    color: #000 !important;
+  }
 }
 
 @media (max-width: 720px) {

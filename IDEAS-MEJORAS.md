@@ -1,5 +1,7 @@
 # Ideas y Mejoras para Amellify
 
+> **Estado productividad (mayo 2026):** implementados feed ICS, export PDF, notificaciones v2, push PWA (suscripción + SW), offline lectura, Google OAuth stub, import ICS URL, backup automático y export JSON completo. Pendiente: job servidor para envío push programado, resumen por email, 2FA, SaaS multi-tenant.
+
 ## Calculadora de Notas (IMPLEMENTADO)
 
 - [x] Vista standalone "Calculadora"
@@ -8,13 +10,27 @@
 
 ## Escalabilidad y Expansión Multiplataforma
 
-### � Versión Móvil (iOS & Android)
+### Productividad reciente (IMPLEMENTADO — mayo 2026)
 
-**Opción 1: Progressive Web App (PWA)**
-- Convertir la app actual a PWA
-- Instalable desde el navegador
-- Funciona offline
-- Notificaciones push
+- [x] Feed ICS personal (URL revocable + QR en Configuración → Datos)
+- [x] Export PDF / impresión de horario
+- [x] Recordatorios por tipo (tarea/examen) + horario no molestar
+- [x] Push PWA (VAPID, SW, suscripciones en DB)
+- [x] Modo offline lectura (cache API + banner)
+- [x] Google Calendar OAuth (stub; alternativa: feed ICS)
+- [x] Importar calendario desde URL `.ics`
+- [x] Backup automático + export JSON completo del usuario
+- [ ] Job servidor para disparar push en horarios (MVP: solo suscripción + SW)
+- [ ] Resumen semanal por email
+- [ ] Autenticación de dos factores (2FA)
+
+### Versión Móvil (iOS & Android)
+
+**Opción 1: Progressive Web App (PWA)** — parcialmente implementado
+- [x] Convertir la app actual a PWA (manifest + SW)
+- [x] Instalable desde el navegador
+- [x] Funciona offline (lectura)
+- [x] Notificaciones push (con VAPID)
 - Menor costo de desarrollo
 - Una sola base de código
 
@@ -100,10 +116,12 @@
 - Zoom / Meet (links de clases virtuales)
 
 **Calendarios:**
-- Google Calendar
-- Outlook Calendar
-- Apple Calendar
-- Sincronización bidireccional
+- [x] Exportar horario a formato .ics
+- [x] Feed ICS suscribible (URL revocable)
+- [x] Importar eventos desde URL `.ics`
+- [x] Google Calendar OAuth (opcional)
+- Outlook Calendar / Apple Calendar (vía feed ICS)
+- Sincronización bidireccional (pendiente)
 
 **Productividad:**
 - Notion (exportar notas)
@@ -172,11 +190,11 @@
 ### 📅 Calendario y Horarios
 
 **Vista de Calendario Mensual**
-- Calendario completo con todas las clases, tareas y exámenes
+- Calendario completo con todas las clases, tareas y exámenes — implementado (vista Mes)
 - Vista anual para planificación a largo plazo
-- Integración con Google Calendar / Outlook
-- Exportar horario a formato .ics
-- Importar eventos externos
+- [x] Integración con Google Calendar (OAuth stub) / feed ICS
+- [x] Exportar horario a formato .ics
+- [x] Importar eventos externos (URL)
 
 **Horarios Especiales**
 - Soporte para horarios alternos (semana A/B)
@@ -186,8 +204,10 @@
 - Clases irregulares (una sola vez)
 
 **Recordatorios Inteligentes**
-- Notificaciones antes de cada clase (configurable)
-- Recordatorios de tareas pendientes
+- [x] Notificaciones antes de cada clase (configurable)
+- [x] Recordatorios de tareas pendientes (días antes)
+- [x] Recordatorios de exámenes (días antes)
+- [x] Modo no molestar (horario configurable)
 - Alertas de cambios de aula o profesor
 - Recordatorio de materiales necesarios
 - Notificación de clima (llevar paraguas, etc.)
@@ -236,9 +256,9 @@
 
 **Sistema de Notificaciones Avanzado**
 - Notificaciones de escritorio (Electron)
-- Notificaciones push (móvil)
+- [x] Notificaciones push (PWA, VAPID)
 - Sonidos personalizables
-- Configurar horarios de notificaciones (modo "no molestar")
+- [x] Configurar horarios de notificaciones (modo "no molestar")
 - Prioridad de notificaciones (urgente, normal, baja)
 - Agrupación de notificaciones
 - Acciones rápidas desde notificación
@@ -246,8 +266,9 @@
 ### 📱 Sincronización y Respaldo
 
 **Sincronización en la Nube**
-- Backup automático en Google Drive / Dropbox / iCloud
-- Sincronización en tiempo real entre dispositivos
+- Backup automático — implementado (local, al iniciar sesión)
+- [x] Exportación completa de datos del usuario (JSON)
+- Sincronización en tiempo real entre dispositivos — parcial (WebSocket + auth)
 - Historial de versiones (recuperar datos antiguos)
 - Sincronización selectiva (elegir qué sincronizar)
 - Resolución de conflictos automática
@@ -428,16 +449,16 @@
 ### Fase 1: Consolidación (1-3 meses)
 1. ✅ Optimización del Grid actual
 2. ✅ Sistema de configuración de tamaño de texto
-3. Sistema de tareas y entregas básico
-4. Gestión de exámenes
-5. Notificaciones de escritorio
-6. Exportar a .ics
+3. ✅ Sistema de tareas y entregas básico
+4. ✅ Gestión de exámenes
+5. ✅ Notificaciones de escritorio / navegador
+6. ✅ Exportar a .ics + feed ICS
 
 ### Fase 2: Expansión Móvil (3-6 meses)
-1. Convertir a PWA
+1. ✅ Convertir a PWA (manifest + SW)
 2. Diseño responsive completo
 3. Sincronización básica (localStorage + cloud)
-4. Notificaciones push
+4. ✅ Notificaciones push (suscripción PWA)
 5. Publicar en tiendas de apps
 
 ### Fase 3: Funcionalidades Avanzadas (6-12 meses)
@@ -449,11 +470,11 @@
 6. Modo Pomodoro
 
 ### Fase 4: Versión SaaS (12-18 meses)
-1. Backend en la nube
-2. Autenticación y usuarios
-3. Sincronización en tiempo real
+1. Backend en la nube — parcial (Express + SQLite self-hosted)
+2. ✅ Autenticación y usuarios
+3. ✅ Sincronización en tiempo real (WebSocket)
 4. Colaboración entre usuarios
-5. API pública
+5. API pública — parcial (REST documentada en tests)
 6. Versión institucional
 
 ### Fase 5: IA y Automatización (18-24 meses)
@@ -502,11 +523,11 @@
 ## 🎯 Prioridad Sugerida
 
 ### 🔴 Alta Prioridad (Próximos 3 meses)
-1. Sistema de tareas y entregas
-2. Gestión de exámenes
-3. Notificaciones de escritorio
-4. Exportar horario a .ics
-5. PWA básica (responsive)
+1. ✅ Sistema de tareas y entregas
+2. ✅ Gestión de exámenes
+3. ✅ Notificaciones de escritorio / navegador
+4. ✅ Exportar horario a .ics + feed
+5. ✅ PWA básica (responsive + SW)
 
 ### 🟡 Media Prioridad (3-6 meses)
 1. Sistema de calificaciones
@@ -638,5 +659,5 @@
 
 ---
 
-**Última actualización**: Febrero 2026
-**Versión del documento**: 2.0
+**Última actualización**: Mayo 2026
+**Versión del documento**: 2.1

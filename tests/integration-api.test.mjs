@@ -227,3 +227,50 @@ test("import bulk via API", async () => {
   assert.equal(body.imported, 2);
   await cleanupCodes();
 });
+
+test("feed ICS personal y export completo", async () => {
+  const { res: feedRes, body: feed } = await api("/api/integrations/ics-feed", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rotate: false }),
+  });
+  assert.equal(feedRes.status, 200);
+  assert.ok(feed.url);
+  assert.ok(feed.token);
+
+  const publicRes = await fetch(feed.url);
+  assert.equal(publicRes.status, 200);
+  const ics = await publicRes.text();
+  assert.ok(ics.includes("BEGIN:VCALENDAR"));
+
+  const { res: fullRes, body: full } = await api("/api/export/full");
+  assert.equal(fullRes.status, 200);
+  assert.ok(Array.isArray(full.courses));
+  assert.ok(full.version);
+
+  const { res: autoRes, body: auto } = await api("/api/backup/auto", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  assert.equal(autoRes.status, 200);
+  assert.ok(auto.created === true || auto.created === false);
+});
+
+test("import ICS URL confirm", async () => {
+  const { res, body } = await api("/api/import/ics-url/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      courses: [{
+        code: `${PREFIX}ICS`,
+        name: "ICS Local",
+        schedules: [{ day: "Martes", start_time: "10:00", end_time: "12:00" }],
+      }],
+      exams: [],
+    }),
+  });
+  assert.equal(res.status, 200);
+  assert.ok(body.imported >= 1);
+  await cleanupCodes();
+});

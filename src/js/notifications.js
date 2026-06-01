@@ -1,4 +1,4 @@
-/** Recordatorios de clase y tareas vía Notification API */
+/** Recordatorios de clase, tareas y exámenes vía Notification API */
 
 const DAY_MAP = {
   Domingo: 0,
@@ -10,7 +10,12 @@ const DAY_MAP = {
   Sábado: 6,
 };
 
-export class ClassNotificationManager {
+function parseTimeToMinutes(t) {
+  const [h, m] = String(t || '00:00').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+export class AcademicNotificationManager {
   constructor(app) {
     this.app = app;
     this._timers = [];
@@ -18,11 +23,28 @@ export class ClassNotificationManager {
   }
 
   getSettings() {
+    const s = this.app.settings || {};
     return {
-      enabled: this.app.settings.notifications !== false,
-      minutesBefore: this.app.settings.notifyMinutesBefore ?? 15,
-      tasksEnabled: this.app.settings.taskNotifications !== false,
+      enabled: s.notifications !== false,
+      minutesBefore: s.notifyMinutesBefore ?? 15,
+      tasksEnabled: s.taskNotifications !== false,
+      examsEnabled: s.examNotifications !== false,
+      taskDaysBefore: s.notifyTaskDaysBefore ?? 1,
+      examDaysBefore: s.notifyExamDaysBefore ?? 3,
+      dndEnabled: s.dndEnabled !== false,
+      dndStart: s.dndStart || '22:00',
+      dndEnd: s.dndEnd || '08:00',
     };
+  }
+
+  isInDndWindow(at = new Date()) {
+    const { dndEnabled, dndStart, dndEnd } = this.getSettings();
+    if (!dndEnabled) return false;
+    const nowMin = at.getHours() * 60 + at.getMinutes();
+    const start = parseTimeToMinutes(dndStart);
+    const end = parseTimeToMinutes(dndEnd);
+    if (start < end) return nowMin >= start && nowMin < end;
+    return nowMin >= start || nowMin < end;
   }
 
   async requestPermission() {
@@ -37,13 +59,27 @@ export class ClassNotificationManager {
     this._timers = [];
   }
 
+  _queueNotification(key, notifyAt, title, body) {
+    const now = Date.now();
+    const delay = notifyAt - now;
+    const horizon = 14 * 24 * 60 * 60 * 1000;
+    if (delay <= 0 || delay > horizon) return;
+    if (this._notifiedKeys.has(key)) return;
+
+    const timer = setTimeout(() => {
+      if (this.isInDndWindow(new Date(notifyAt))) return;
+      this._notifiedKeys.add(key);
+      new Notification(title, { body, tag: key, silent: false });
+    }, delay);
+    this._timers.push(timer);
+  }
+
   schedule(courses) {
     this.clearTimers();
     const { enabled, minutesBefore } = this.getSettings();
     if (!enabled || Notification.permission !== 'granted') return;
 
     const now = Date.now();
-    const horizon = 7 * 24 * 60 * 60 * 1000;
 
     for (const course of courses) {
       if (course.status !== 'active') continue;
@@ -64,54 +100,62 @@ export class ClassNotificationManager {
         candidate.setHours(sh, sm, 0, 0);
 
         const notifyAt = candidate.getTime() - minutesBefore * 60 * 1000;
-        const delay = notifyAt - now;
-
-        if (delay <= 0 || delay > horizon) continue;
-
         const key = `class-${course.code}-${s.day}-${s.start_time}-${candidate.toDateString()}`;
-        if (this._notifiedKeys.has(key)) continue;
-
-        const timer = setTimeout(() => {
-          this._notifiedKeys.add(key);
-          const title = minutesBefore > 0
-            ? `Clase en ${minutesBefore} min`
-            : 'Clase ahora';
-          const body = `${course.name} · ${s.start_time}${s.room ? ` · ${s.room}` : ''}`;
-          new Notification(title, { body, tag: key, silent: false });
-        }, delay);
-
-        this._timers.push(timer);
+        const title =
+          minutesBefore > 0 ? `Clase en ${minutesBefore} min` : 'Clase ahora';
+        const body = `${course.name} · ${s.start_time}${s.room ? ` · ${s.room}` : ''}`;
+        this._queueNotification(key, notifyAt, title, body);
       }
     }
   }
 
   scheduleTasks(tasks) {
-    const { enabled, tasksEnabled } = this.getSettings();
-    if (!enabled || !tasksEnabled || Notification.permission !== 'granted' || !Array.isArray(tasks)) return;
-
-    const now = Date.now();
-    const horizon = 7 * 24 * 60 * 60 * 1000;
+    const { enabled, tasksEnabled, taskDaysBefore } = this.getSettings();
+    if (!enabled || !tasksEnabled || Notification.permission !== 'granted' || !Array.isArray(tasks)) {
+      return;
+    }
 
     for (const task of tasks) {
       if (task.completed || !task.due_date) continue;
-
       const due = new Date(`${task.due_date}T09:00:00`);
-      const notifyAt = due.getTime() - 24 * 60 * 60 * 1000;
-      const delay = notifyAt - now;
-      if (delay <= 0 || delay > horizon) continue;
-
-      const key = `task-${task.id}-${task.due_date}`;
-      if (this._notifiedKeys.has(key)) continue;
-
-      const timer = setTimeout(() => {
-        this._notifiedKeys.add(key);
-        new Notification('Entrega mañana', {
-          body: `${task.title}${task.course_code ? ` · ${task.course_code}` : ''}`,
-          tag: key,
-        });
-      }, delay);
-
-      this._timers.push(timer);
+      const notifyAt = due.getTime() - taskDaysBefore * 24 * 60 * 60 * 1000;
+      const key = `task-${task.id}-${task.due_date}-${taskDaysBefore}`;
+      const title =
+        taskDaysBefore === 1
+          ? 'Entrega mañana'
+          : `Entrega en ${taskDaysBefore} días`;
+      const body = `${task.title}${task.course_code ? ` · ${task.course_code}` : ''}`;
+      this._queueNotification(key, notifyAt, title, body);
     }
   }
+
+  scheduleExams(exams) {
+    const { enabled, examsEnabled, examDaysBefore } = this.getSettings();
+    if (!enabled || examsEnabled === false || Notification.permission !== 'granted' || !Array.isArray(exams)) {
+      return;
+    }
+
+    for (const exam of exams) {
+      if (!exam.exam_date) continue;
+      const due = new Date(`${exam.exam_date}T${exam.exam_time || '09:00'}`);
+      const notifyAt = due.getTime() - examDaysBefore * 24 * 60 * 60 * 1000;
+      const key = `exam-${exam.id}-${exam.exam_date}-${examDaysBefore}`;
+      const title =
+        examDaysBefore === 1
+          ? 'Examen mañana'
+          : `Examen en ${examDaysBefore} días`;
+      const body = `${exam.title} · ${exam.course_code}${exam.room ? ` · ${exam.room}` : ''}`;
+      this._queueNotification(key, notifyAt, title, body);
+    }
+  }
+
+  rescheduleAll(courses, tasks, exams) {
+    this.clearTimers();
+    this.schedule(courses);
+    this.scheduleTasks(tasks);
+    this.scheduleExams(exams);
+  }
 }
+
+/** @deprecated alias */
+export const ClassNotificationManager = AcademicNotificationManager;

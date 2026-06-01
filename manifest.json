@@ -8,6 +8,15 @@
   "theme_color": "#007aff",
   "orientation": "any",
   "lang": "es",
+  "shortcuts": [
+    {
+      "name": "Vista Hoy",
+      "short_name": "Hoy",
+      "description": "Próxima clase y agenda del día",
+      "url": "/?view=today",
+      "icons": [{ "src": "favicon.svg", "sizes": "any" }]
+    }
+  ],
   "icons": [
     {
       "src": "favicon.svg",

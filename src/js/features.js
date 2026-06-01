@@ -2,7 +2,8 @@
  * Extensiones del plan de producto (R1–R8, M1–M4, U3–U4)
  */
 import { downloadIcs } from './ics.js';
-import { ClassNotificationManager } from './notifications.js';
+import { AcademicNotificationManager } from './notifications.js';
+import { installProductivityFeatures } from './productivity.js';
 import { escapeHtml, escapeJsString, formatLocalDateKey, icon, priorityDot, PASSING_GRADE, GRADE_MIN, GRADE_MAX } from './utils.js';
 import { api } from './api.js';
 
@@ -34,7 +35,7 @@ export function installFeatures(AmellifyApp) {
 
   const _init = proto.init;
   proto.init = async function (...args) {
-    this.notifications = new ClassNotificationManager(this);
+    this.notifications = new AcademicNotificationManager(this);
     await _init.apply(this, args);
   };
 
@@ -53,6 +54,20 @@ export function installFeatures(AmellifyApp) {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
+    this.runAutoBackupIfDue?.();
+    window.addEventListener('online', () => this.showOfflineBanner?.(false));
+    window.addEventListener('offline', () => this.showOfflineBanner?.(true));
+    if (!navigator.onLine) this.showOfflineBanner?.(true);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'today') this.switchView('today');
+    if (params.get('google') === 'connected') {
+      this.showToast('Google Calendar conectado', 'success');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  };
+
+  proto.refreshNotifications = function () {
+    this.notifications?.rescheduleAll(this.courses, this.tasks, this.exams);
   };
 
   const _onAuthenticated = proto.onAuthenticated;
@@ -65,8 +80,7 @@ export function installFeatures(AmellifyApp) {
   proto.renderAll = function () {
     _renderAll.apply(this);
     this.updateHeaderClassStatus();
-    this.notifications?.schedule(this.courses);
-    this.notifications?.scheduleTasks(this.tasks);
+    this.refreshNotifications?.();
   };
 
   proto.applySettings = function () {
@@ -79,8 +93,7 @@ export function installFeatures(AmellifyApp) {
       this.updateThemeIcon(this.settings.theme);
     }
     this.updateHeaderClassStatus();
-    this.notifications?.schedule(this.courses);
-    this.notifications?.scheduleTasks(this.tasks);
+    this.refreshNotifications?.();
   };
 
   proto.getScheduleDays = function () {
@@ -727,7 +740,9 @@ export function installFeatures(AmellifyApp) {
 
   proto.renderTodayView = function () {
     const container = document.getElementById('view-content');
-    const todayName = DAY_NAMES[new Date().getDay()];
+    const now = new Date();
+    const todayName = DAY_NAMES[now.getDay()];
+    const todayKey = formatLocalDateKey(now);
     const classes = [];
     for (const c of this.courses) {
       for (const s of c.schedules || []) {
@@ -736,17 +751,50 @@ export function installFeatures(AmellifyApp) {
     }
     classes.sort((a, b) => a.start_time.localeCompare(b.start_time));
     const current = this.getCurrentClass();
+    const todayTasks = (this.tasks || [])
+      .filter((t) => !t.completed && t.due_date === todayKey)
+      .sort((a, b) => (a.priority || '').localeCompare(b.priority || ''));
+    const todayExams = (this.exams || [])
+      .filter((e) => e.exam_date === todayKey)
+      .sort((a, b) => String(a.exam_time || '').localeCompare(String(b.exam_time || '')));
+
+    const taskBlock = todayTasks.length
+      ? `<div class="today-section">
+          <h3 class="today-section-title">${icon('check', 'icon-sm')} Entregas hoy</h3>
+          ${todayTasks.map((t) => `
+            <div class="class-item today-task-item" onclick="app.switchView('tasks')">
+              <div class="class-title">${escapeHtml(t.title)}</div>
+              <div class="class-details">${escapeHtml(t.course_code || 'Sin materia')}${t.priority ? ` · ${priorityDot(t.priority)}` : ''}</div>
+            </div>`).join('')}
+        </div>`
+      : '';
+    const examBlock = todayExams.length
+      ? `<div class="today-section">
+          <h3 class="today-section-title">${icon('calendar', 'icon-sm')} Exámenes hoy</h3>
+          ${todayExams.map((e) => `
+            <div class="class-item today-exam-item" onclick="app.switchView('exams')">
+              <div class="class-time">${escapeHtml(e.exam_time || 'Sin hora')}</div>
+              <div class="class-title">${escapeHtml(e.title)}</div>
+              <div class="class-details">${escapeHtml(e.course_code)}${e.room ? ` · ${icon('building', 'icon-sm')} ${escapeHtml(e.room)}` : ''}</div>
+            </div>`).join('')}
+        </div>`
+      : '';
 
     container.innerHTML = `
       <div class="panel-glass today-panel scroll-panel view-scroll-panel">
         <h2 class="meta-with-icon">${icon("map-pin", "icon-md")} Hoy — ${escapeHtml(todayName)}</h2>
         ${current ? `<div class="today-now glass status-with-dot">${priorityDot('high')} En curso: <strong>${escapeHtml(current.course.name)}</strong> (${escapeHtml(current.schedule.start_time)}–${escapeHtml(current.schedule.end_time)})</div>` : ''}
-        ${classes.length ? classes.map((c) => `
-          <div class="class-item color-${escapeHtml(c.course.color)}" onclick="app.showClassDetails('${escapeJsString(c.course.code)}', ${Number(c.id) || 0})">
-            <div class="class-time">${escapeHtml(c.start_time)} – ${escapeHtml(c.end_time)}</div>
-            <div class="class-title">${escapeHtml(c.course.name)}</div>
-            <div class="class-details">${escapeHtml(c.course.code)}${c.room ? ` · ${icon("building", "icon-sm")} ${escapeHtml(c.room)}` : ''}</div>
-          </div>`).join('') : '<p class="muted">Sin clases hoy</p>'}
+        <div class="today-section">
+          <h3 class="today-section-title">${icon('clock', 'icon-sm')} Clases</h3>
+          ${classes.length ? classes.map((c) => `
+            <div class="class-item color-${escapeHtml(c.course.color)}" onclick="app.showClassDetails('${escapeJsString(c.course.code)}', ${Number(c.id) || 0})">
+              <div class="class-time">${escapeHtml(c.start_time)} – ${escapeHtml(c.end_time)}</div>
+              <div class="class-title">${escapeHtml(c.course.name)}</div>
+              <div class="class-details">${escapeHtml(c.course.code)}${c.room ? ` · ${icon("building", "icon-sm")} ${escapeHtml(c.room)}` : ''}</div>
+            </div>`).join('') : '<p class="muted">Sin clases hoy</p>'}
+        </div>
+        ${examBlock}
+        ${taskBlock}
       </div>`;
   };
 
@@ -1042,6 +1090,8 @@ export function installFeatures(AmellifyApp) {
             </select>
           </div>
           ${this._settingsToggleBtn(s.taskNotifications === false ? 'Activar avisos de tareas' : 'Desactivar avisos de tareas', s.taskNotifications === false ? 'check' : 'ban', 'app.toggleTaskNotifications()')}
+          ${this._settingsToggleBtn(s.examNotifications === false ? 'Activar avisos de exámenes' : 'Desactivar avisos de exámenes', s.examNotifications === false ? 'calendar' : 'ban', 'app.toggleExamNotifications()')}
+          ${typeof this._renderProductivityNotifExtras === 'function' ? this._renderProductivityNotifExtras() : ''}
         </div>
       `;
     }
@@ -1071,14 +1121,19 @@ export function installFeatures(AmellifyApp) {
     }
 
     if (tab === 'datos') {
+      const prodExtras =
+        typeof this._renderProductivityDatosExtras === 'function'
+          ? this._renderProductivityDatosExtras()
+          : '';
       return `
         <div class="settings-section">
           <h3 class="settings-section-title">${icon('folder', 'icon-sm')} Gestión de datos</h3>
+          ${prodExtras}
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportData()">${icon('download', 'icon-sm')} Exportar JSON</button>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.triggerImport()">${icon('upload', 'icon-sm')} Importar JSON</button>
           <input type="file" id="import-file" accept=".json" hidden>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar .ics</button>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.createBackup()">${icon('save', 'icon-sm')} Respaldo automático</button>
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.createBackup()">${icon('save', 'icon-sm')} Crear respaldo</button>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.showBackupHistory()">${icon('folder', 'icon-sm')} Historial de respaldos</button>
           <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar horario</button>
         </div>
@@ -1129,4 +1184,13 @@ export function installFeatures(AmellifyApp) {
       actions.innerHTML = `<button type="button" class="btn btn-secondary btn-small" onclick="app.duplicateCourse('${escapeJsString(code)}')">${icon("copy")} Duplicar</button>`;
     }
   };
+
+  proto.toggleExamNotifications = function () {
+    this.settings.examNotifications = this.settings.examNotifications === false;
+    this.saveSettingsToServer();
+    this.refreshNotifications();
+    this.openSettingsModal?.('notificaciones');
+  };
+
+  installProductivityFeatures(proto);
 }

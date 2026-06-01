@@ -192,6 +192,28 @@ export const api = {
   getConfig: (key) => request(`/config/${key}`),
   setConfig: (key, value) =>
     request(`/config/${key}`, { method: 'POST', body: JSON.stringify(value) }),
+
+  createIcsFeed: (rotate = false) =>
+    request('/integrations/ics-feed', {
+      method: 'POST',
+      body: JSON.stringify({ rotate }),
+    }),
+  getIcsFeedStatus: () => request('/integrations/ics-feed'),
+  revokeIcsFeed: () => request('/integrations/ics-feed', { method: 'DELETE' }),
+  exportFull: () => request('/export/full'),
+  previewIcsUrl: (url) =>
+    request('/import/ics-url', { method: 'POST', body: JSON.stringify({ url }) }),
+  confirmIcsUrlImport: (preview) =>
+    request('/import/ics-url/confirm', { method: 'POST', body: JSON.stringify(preview) }),
+  autoBackup: () => request('/backup/auto', { method: 'POST', body: '{}' }),
+  getVapidPublic: () => request('/push/vapid-public'),
+  pushSubscribe: (subscription) =>
+    request('/push/subscribe', { method: 'POST', body: JSON.stringify({ subscription }) }),
+  pushUnsubscribe: (body) =>
+    request('/push/subscribe', { method: 'DELETE', body: JSON.stringify(body) }),
+  googleStatus: () => request('/integrations/google/status'),
+  googleAuthUrl: () => request('/integrations/google/auth'),
+  googleDisconnect: () => request('/integrations/google', { method: 'DELETE' }),
 };
 
 /** API de administración (requiere rol admin) */

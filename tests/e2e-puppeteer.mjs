@@ -493,12 +493,53 @@ async function main() {
       await page.evaluate(() => {
         localStorage.setItem('amellify-onboarding-done', '1');
         document.getElementById('onboarding-modal')?.classList.remove('active');
-        window.app?.showDataMenu?.('apariencia');
+        window.app?.showDataMenu?.('datos');
       });
       await page.waitForSelector('#data-menu', { visible: true });
       const menuText = await page.$eval('#data-menu', (el) => el.textContent);
       if (!menuText.includes('Configuración')) fail('Menú de datos sin configuración');
-      if (!menuText.includes('Apariencia')) fail('Menú de datos sin sección Apariencia');
+      if (!menuText.includes('Calendario suscribible')) fail('Sección Datos sin feed ICS');
+      if (!menuText.includes('Exportar PDF')) fail('Sección Datos sin export PDF');
+      if (!menuText.includes('Exportar paquete completo')) fail('Sección Datos sin export completo');
+      if (!menuText.includes('Importar desde URL')) fail('Sección Datos sin import ICS URL');
+      await page.evaluate(() => document.getElementById('settings-modal')?.remove());
+    });
+
+    await runStep(page, 'productividad-api', async () => {
+      const checks = await page.evaluate(async () => {
+        const token =
+          localStorage.getItem('amellify-auth-token') ||
+          sessionStorage.getItem('amellify-auth-token-session');
+        const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+        const feed = await fetch('/api/integrations/ics-feed', { method: 'POST', headers, body: '{}' });
+        const feedBody = feed.ok ? await feed.json() : null;
+        const vapid = await fetch('/api/push/vapid-public');
+        const vapidBody = vapid.ok ? await vapid.json() : null;
+        const google = await fetch('/api/integrations/google/status', { headers });
+        const googleBody = google.ok ? await google.json() : null;
+        const full = await fetch('/api/export/full', { headers });
+        return {
+          feedOk: feed.ok && !!feedBody?.url,
+          vapidOk: vapid.ok && typeof vapidBody?.configured === 'boolean',
+          googleOk: google.ok && typeof googleBody?.configured === 'boolean',
+          exportOk: full.ok,
+        };
+      });
+      if (!checks.feedOk) fail('API feed ICS no devolvió URL');
+      if (!checks.vapidOk) fail('API VAPID no respondió');
+      if (!checks.googleOk) fail('API Google status no respondió');
+      if (!checks.exportOk) fail('API export/full falló');
+    });
+
+    await runStep(page, 'notificaciones-productividad', async () => {
+      await page.evaluate(() => {
+        document.getElementById('settings-modal')?.remove();
+        window.app?.showDataMenu?.('notificaciones');
+      });
+      await page.waitForSelector('#data-menu', { visible: true });
+      const text = await page.$eval('#settings-content', (el) => el.textContent);
+      if (!text.includes('No molestar')) fail('Notificaciones sin modo no molestar');
+      if (!text.includes('push PWA')) fail('Notificaciones sin opciones push');
       await page.evaluate(() => document.getElementById('settings-modal')?.remove());
     });
 

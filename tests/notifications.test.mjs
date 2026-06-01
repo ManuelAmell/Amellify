@@ -21,6 +21,20 @@ test("ClassNotificationManager desactiva si notifications es false", async () =>
   assert.equal(mgr.getSettings().enabled, false);
 });
 
+test("AcademicNotificationManager detecta ventana no molestar", async () => {
+  const { AcademicNotificationManager } = await import("../src/js/notifications.js");
+  const app = {
+    settings: { dndEnabled: true, dndStart: '22:00', dndEnd: '08:00' },
+  };
+  const mgr = new AcademicNotificationManager(app);
+  const late = new Date('2026-01-15T23:00:00');
+  const morning = new Date('2026-01-15T07:00:00');
+  const noon = new Date('2026-01-15T12:00:00');
+  assert.equal(mgr.isInDndWindow(late), true);
+  assert.equal(mgr.isInDndWindow(morning), true);
+  assert.equal(mgr.isInDndWindow(noon), false);
+});
+
 test("ClassNotificationManager desactiva tareas si taskNotifications es false", async () => {
   const { ClassNotificationManager } = await import("../src/js/notifications.js");
 
