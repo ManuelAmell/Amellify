@@ -1,5 +1,6 @@
 {
   "version": 2,
-  "buildCommand": false,
-  "outputDirectory": "."
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
