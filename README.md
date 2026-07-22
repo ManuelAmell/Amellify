@@ -1,19 +1,29 @@
+<h1 align="center">📚 Amellify</h1>
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 280'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23007aff'/%3E%3Cstop offset='100%25' style='stop-color:%235856d6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='280' rx='20' fill='url(%23g)' opacity='0.1'/%3E%3Ctext x='400' y='120' font-family='system-ui,-apple-system,sans-serif' font-size='64' font-weight='800' fill='%23ffffff' text-anchor='middle'%3EAmellify%3C/text%3E%3Ctext x='400' y='170' font-family='system-ui,-apple-system,sans-serif' font-size='20' fill='%23999999' text-anchor='middle' letter-spacing='4'%3EGESTIÓN DE HORARIOS UNIVERSITARIOS%3C/text%3E%3Ctext x='400' y='220' font-family='system-ui,-apple-system,sans-serif' font-size='14' fill='%23666666' text-anchor='middle'%3E📚 Sin servidor · Sin registro · 100% navegador%3C/text%3E%3C/svg%3E">
-    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 280'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23007aff'/%3E%3Cstop offset='100%25' style='stop-color:%235856d6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='800' height='280' rx='20' fill='url(%23g)' opacity='0.08'/%3E%3Ctext x='400' y='120' font-family='system-ui,-apple-system,sans-serif' font-size='64' font-weight='800' fill='%23000000' text-anchor='middle'%3EAmellify%3C/text%3E%3Ctext x='400' y='170' font-family='system-ui,-apple-system,sans-serif' font-size='20' fill='%23666666' text-anchor='middle' letter-spacing='4'%3EGESTIÓN DE HORARIOS UNIVERSITARIOS%3C/text%3E%3Ctext x='400' y='220' font-family='system-ui,-apple-system,sans-serif' font-size='14' fill='%23999999' text-anchor='middle'%3E📚 Sin servidor · Sin registro · 100% navegador%3C/text%3E%3C/svg%3E">
-  </picture>
+  <sub><b>GESTIÓN DE HORARIOS UNIVERSITARIOS</b></sub>
+  <br>
+  <sub>Sin servidor · Sin registro · 100% navegador</sub>
 </p>
 
 <p align="center">
-  <a href="https://amellify.vercel.app">
-    <img src="https://img.shields.io/badge/demo-vercel-%23000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel">
-  </a>
-  <a href="https://github.com/ManuelAmell/Amellify/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-%23007aff?style=for-the-badge" alt="License">
-  </a>
-  <img src="https://img.shields.io/badge/status-estable-%2322c55e?style=for-the-badge" alt="Status">
-  <img src="https://img.shields.io/badge/sin%20backend-100%25%20frontend-%235856d6?style=for-the-badge" alt="Frontend">
+  <a href="https://amellify.vercel.app"><img src="https://img.shields.io/badge/demo-vercel-%23000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Demo en Vercel"></a>
+  <a href="https://github.com/ManuelAmell/Amellify/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-%23007aff?style=for-the-badge" alt="Licencia MIT"></a>
+  <img src="https://img.shields.io/badge/status-estable-%2322c55e?style=for-the-badge" alt="Estado: estable">
+  <img src="https://img.shields.io/badge/sin%20backend-100%25%20frontend-%235856d6?style=for-the-badge" alt="100% frontend">
+</p>
+
+<p align="center">
+  <b>Organizá tu semestre sin depender de ningún servidor.</b><br>
+  Horario visual, calculadora de notas y estadísticas — todo corre en tu navegador y se guarda en tu equipo.
+</p>
+
+<p align="center">
+  <a href="#-demo">Demo</a> ·
+  <a href="#-características">Características</a> ·
+  <a href="#-inicio-rápido">Inicio rápido</a> ·
+  <a href="#-importar-desde-ia">Importar desde IA</a> ·
+  <a href="#%EF%B8%8F-estructura-del-proyecto">Estructura</a> ·
+  <a href="#-licencia">Licencia</a>
 </p>
 
 <br>
@@ -21,47 +31,33 @@
 <div align="center">
   <table>
     <tr>
-      <td align="center" width="120">
-        <br>
-        📅
-        <br>
-        <small>Grid<br>Semanal</small>
-      </td>
-      <td align="center" width="120">
-        <br>
-        📋
-        <br>
-        <small>Lista de<br>Materias</small>
-      </td>
-      <td align="center" width="120">
-        <br>
-        🧮
-        <br>
-        <small>Calculadora<br>de Notas</small>
-      </td>
-      <td align="center" width="120">
-        <br>
-        📊
-        <br>
-        <small>Estadísticas</small>
-      </td>
-      <td align="center" width="120">
-        <br>
-        📤
-        <br>
-        <small>Exportar<br>ICS</small>
-      </td>
-      <td align="center" width="120">
-        <br>
-        🎨
-        <br>
-        <small>Temas<br>Visuales</small>
-      </td>
+      <td align="center" width="120">📅<br><small>Grid<br>Semanal</small></td>
+      <td align="center" width="120">📋<br><small>Lista de<br>Materias</small></td>
+      <td align="center" width="120">🧮<br><small>Calculadora<br>de Notas</small></td>
+      <td align="center" width="120">📊<br><small>Estadísticas</small></td>
+      <td align="center" width="120">📤<br><small>Exportar<br>ICS</small></td>
+      <td align="center" width="120">🎨<br><small>Temas<br>Visuales</small></td>
     </tr>
   </table>
 </div>
 
 <br>
+
+---
+
+## 🚀 Demo
+
+<div align="center">
+  <br>
+  <a href="https://amellify.vercel.app">
+    <img src="https://img.shields.io/badge/🌐%20Abrir%20Amellify-007aff?style=for-the-badge&logo=vercel&logoColor=white&labelColor=%23000" height="48" alt="Abrir demo">
+  </a>
+  <br><br>
+  <code>https://amellify.vercel.app</code>
+  <br><br>
+</div>
+
+No necesitás instalar nada: abrí el link y empezá a usar. Tus datos quedan guardados localmente en tu navegador (`localStorage`), nunca se envían a ningún servidor.
 
 ---
 
@@ -75,27 +71,27 @@
     </td>
     <td width="50%">
       <h3>🧮 Calculadora de Notas</h3>
-      <p>Promedios ponderados, simulación de notas, nota mínima necesaria para pasar.</p>
+      <p>Promedios ponderados, simulación de notas y cálculo de la nota mínima necesaria para pasar.</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
       <h3>📊 Estadísticas</h3>
-      <p>Créditos activos, horas semanales, distribución por día, rendimiento académico.</p>
+      <p>Créditos activos, horas semanales, distribución por día y rendimiento académico.</p>
     </td>
     <td width="50%">
       <h3>📤 Exportar a ICS</h3>
-      <p>Exportá tu horario a cualquier calendario (Google, Apple, Outlook).</p>
+      <p>Exportá tu horario a cualquier calendario: Google, Apple u Outlook.</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
       <h3>🎨 Temas Visuales</h3>
-      <p>10 temas: Claro, Oscuro, Azul, Púrpura, Verde, Naranja, Rosa, Vidrio, Sepia, Alto Contraste.</p>
+      <p>10 temas: Claro, Oscuro, Azul, Púrpura, Verde, Naranja, Rosa, Vidrio, Sepia y Alto Contraste.</p>
     </td>
     <td width="50%">
       <h3>🤖 Importar desde IA</h3>
-      <p>Pegale el prompt a ChatGPT/Claude con la foto del horario y obtené el JSON listo.</p>
+      <p>Pegale el prompt a ChatGPT o Claude junto con la foto de tu horario y obtené el JSON listo para importar.</p>
     </td>
   </tr>
   <tr>
@@ -112,22 +108,6 @@
 
 ---
 
-## 🚀 Demo
-
-<div align="center">
-  <br>
-  <a href="https://amellify.vercel.app">
-    <img src="https://img.shields.io/badge/🌐%20Abrir%20Amellify-007aff?style=for-the-badge&logo=vercel&logoColor=white&labelColor=%23000" height="48" alt="Demo">
-  </a>
-  <br><br>
-  <code>https://amellify.vercel.app</code>
-  <br><br>
-</div>
-
-No necesitas instalar nada — abrí el link y empezá a usar.
-
----
-
 ## 🛠️ Tecnologías
 
 <p align="center">
@@ -138,14 +118,20 @@ No necesitas instalar nada — abrí el link y empezá a usar.
   <img src="https://img.shields.io/badge/localStorage-FF6F00?style=for-the-badge&logo=googlechrome&logoColor=white" alt="localStorage">
 </p>
 
+Sin frameworks, sin build step, sin dependencias de backend: HTML, CSS y JavaScript puro (vanilla), pensado para ser fácil de leer, modificar y desplegar en cualquier hosting estático.
+
 ---
 
-## 📦 Uso Local
+## 📦 Inicio rápido
 
 ```bash
 git clone https://github.com/ManuelAmell/Amellify.git
 cd Amellify
+```
 
+Levantá un servidor estático con la herramienta que prefieras:
+
+```bash
 # Con Python
 python3 -m http.server 8080
 
@@ -156,34 +142,35 @@ npx serve .
 php -S localhost:8080
 ```
 
-Abrí `http://localhost:8080` en tu navegador.
+Después abrí **http://localhost:8080** en tu navegador. Listo, no hace falta instalar dependencias ni compilar nada.
 
 ---
 
 ## ⚙️ Configuración
 
 | Función | Descripción |
-|---------|-------------|
+|---|---|
 | **Tamaño de fuente** | Pequeño / Normal / Grande |
 | **Compactar grid** | Reduce el alto de las celdas para ver más horas |
 | **Día de inicio** | Lunes o Domingo |
-| **Arrastrar clases** | Activar/desactivar drag & drop en grid |
+| **Arrastrar clases** | Activar/desactivar drag & drop en el grid |
 | **Tema visual** | 10 temas de color |
-| **Notificaciones** | Recordatorio de próxima clase |
+| **Notificaciones** | Recordatorio de la próxima clase |
 | **Importar JSON** | Desde IA o archivo |
-| **Exportar ICS** | A Google Calendar / Apple / Outlook |
+| **Exportar ICS** | A Google Calendar, Apple Calendar u Outlook |
 
 ---
 
 ## 🤖 Importar desde IA
 
+Amellify puede generar tu horario automáticamente a partir de una foto o descripción, usando el JSON que devuelve un asistente como ChatGPT o Claude.
+
 <details>
-  <summary><b>📋 Click para ver el prompt</b></summary>
+  <summary><b>📋 Ver el prompt para copiar y pegar</b></summary>
 
-  <br>
-  Copiá esto y pegáselo a ChatGPT o Claude junto con la foto de tu horario:
+Copiá esto y pegáselo a ChatGPT o Claude junto con la foto de tu horario:
 
-  <pre>
+```
 Quiero que actúes como un generador de horarios universitarios en formato JSON.
 Te voy a pasar una descripción (texto o imagen) de mi horario de clases y vos
 debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin
@@ -208,61 +195,82 @@ FORMATO EXACTO DE SALIDA:
   }
 ]
 
-- code: Máx 8 caracteres, mayúsculas, sin espacios. NUNCA vacío.
-- name: Obligatorio.
-- credits: Entero 1-6. Default 3.
-- status: Siempre "active".
-- color: "blue","red","green","orange","purple","teal".
-- day: "Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo".
-- start_time/end_time: "HH:MM" en 24h. Incorrecto: "7:00","3pm".
-- partials: Siempre [].
-  </pre>
+Reglas:
+- code: máx. 8 caracteres, mayúsculas, sin espacios. Nunca vacío.
+- name: obligatorio.
+- credits: entero 1-6. Default 3.
+- status: siempre "active".
+- color: "blue", "red", "green", "orange", "purple", "teal".
+- day: "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo".
+- start_time / end_time: "HH:MM" en formato 24h. Incorrecto: "7:00", "3pm".
+- partials: siempre [].
+```
+
 </details>
+
+Luego pegá el JSON resultante en la sección **Importar JSON** de la app.
 
 ---
 
-## 🧪 Script de prueba de notas
+## 🧪 Ejemplo: calculadora de notas
+
+Así se estructuran las notas parciales que usa la calculadora internamente:
 
 ```js
-// Proba combinaciones de notas en la calculadora
 const partials = [
-  { name: "P1", grade: 3.5, percent: 30 },
-  { name: "P2", grade: 4.0, percent: 30 },
-  { name: "Final", grade: null, percent: 40 }
+  { name: "P1",    grade: 3.5,  percent: 30 },
+  { name: "P2",    grade: 4.0,  percent: 30 },
+  { name: "Final", grade: null, percent: 40 } // null = nota aún no definida
 ];
 ```
 
+La calculadora usa esto para mostrar el promedio actual, simular escenarios y calcular la nota mínima que necesitás en el `Final` para aprobar.
+
 ---
 
-## 🏗️ Estructura del Proyecto
+## 🏗️ Estructura del proyecto
 
 ```
 Amellify/
-├── index.html             ← Entry point (SPA)
-├── favicon.svg            ← Ícono principal
-├── manifest.json          ← PWA manifest
-├── vercel.json            ← Config Vercel
-├── src/
-│   ├── css/
-│   │   ├── variables.css  ← Tokens de diseño
-│   │   ├── base.css       ← Reset y tipografía
-│   │   ├── layout.css     ← Layout principal
-│   │   ├── components.css ← Componentes reutilizables
-│   │   ├── schedule.css   ← Grid y horarios
-│   │   ├── colors.css     ← Paletas de color
-│   │   ├── glass.css      ← Efecto vidrio
-│   │   ├── features.css   ← Características adicionales
-│   │   └── themes-extra.css ← Temas extra
-│   └── js/
-│       ├── app.js         ← Core de la aplicación
-│       ├── api.js         ← Capa de datos (localStorage)
-│       ├── features.js    ← Funcionalidades principales
-│       ├── features-advanced.js ← Features avanzadas
-│       ├── grid-dnd.js    ← Drag & drop en grid
-│       ├── ics.js         ← Exportación ICS
-│       ├── notifications.js ← Notificaciones
-│       └── utils.js       ← Utilidades
+├── index.html                 ← Entry point (SPA)
+├── favicon.svg                ← Ícono principal
+├── manifest.json               ← PWA manifest
+├── vercel.json                 ← Config de Vercel
+└── src/
+    ├── css/
+    │   ├── variables.css       ← Tokens de diseño
+    │   ├── base.css            ← Reset y tipografía
+    │   ├── layout.css          ← Layout principal
+    │   ├── components.css      ← Componentes reutilizables
+    │   ├── schedule.css        ← Grid y horarios
+    │   ├── colors.css          ← Paletas de color
+    │   ├── glass.css           ← Efecto vidrio
+    │   ├── features.css        ← Características adicionales
+    │   └── themes-extra.css    ← Temas extra
+    └── js/
+        ├── app.js              ← Core de la aplicación
+        ├── api.js              ← Capa de datos (localStorage)
+        ├── features.js         ← Funcionalidades principales
+        ├── features-advanced.js← Features avanzadas
+        ├── grid-dnd.js         ← Drag & drop en grid
+        ├── ics.js              ← Exportación ICS
+        ├── notifications.js    ← Notificaciones
+        └── utils.js            ← Utilidades
 ```
+
+---
+
+## 🤝 Contribuir
+
+¿Tenés una idea o encontraste un bug? Las contribuciones son bienvenidas:
+
+1. Hacé un fork del repositorio.
+2. Creá una rama para tu cambio: `git checkout -b feature/mi-mejora`.
+3. Commiteá tus cambios: `git commit -m "Agrega mi mejora"`.
+4. Subí la rama: `git push origin feature/mi-mejora`.
+5. Abrí un Pull Request.
+
+Para bugs o sugerencias, también podés abrir un [issue](https://github.com/ManuelAmell/Amellify/issues).
 
 ---
 
@@ -275,15 +283,14 @@ Amellify/
   <sub>Hecho con ❤️ para estudiantes universitarios</sub>
   <br>
   <sub>Manuel Amell · 2026</sub>
+  <br>
 </div>
-
-<br>
 
 ---
 
 <div align="center">
   <a href="https://amellify.vercel.app">
-    <img src="https://img.shields.io/badge/🚀%20Probar%20Amellify-007aff?style=for-the-badge" alt="Probar">
+    <img src="https://img.shields.io/badge/🚀%20Probar%20Amellify-007aff?style=for-the-badge" alt="Probar Amellify">
   </a>
   &nbsp;
   <a href="https://github.com/ManuelAmell/Amellify/issues">
@@ -291,6 +298,6 @@ Amellify/
   </a>
   &nbsp;
   <a href="https://github.com/ManuelAmell/Amellify">
-    <img src="https://img.shields.io/badge/⭐%20Star%20en%20GitHub-22c55e?style=for-the-badge" alt="Star">
+    <img src="https://img.shields.io/badge/⭐%20Star%20en%20GitHub-22c55e?style=for-the-badge" alt="Star en GitHub">
   </a>
 </div>
