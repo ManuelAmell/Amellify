@@ -69,7 +69,7 @@
 .grid-header-cell {
     padding: 9px 6px 8px;
     text-align: center;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -103,7 +103,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     font-family: 'IBM Plex Mono', monospace;
     color: var(--text-secondary);
@@ -160,7 +160,7 @@
 /* ── Class Cell in Grid ─────────────────────────────────────────────────────── */
 .class-cell {
     border-radius: 6px;
-    padding: var(--grid-cell-padding, 9px 10px 8px);
+    padding: var(--grid-cell-padding, 12px 14px 11px);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -173,7 +173,7 @@
     overflow-wrap: break-word;
     display: flex;
     flex-direction: column;
-    gap: var(--grid-cell-gap, 3px);
+    gap: var(--grid-cell-gap, 5px);
     z-index: 10;
 
     /* subtle inner gradient depth */
@@ -203,7 +203,7 @@
 
 .class-cell-code {
     font-weight: 700;
-    font-size: var(--grid-cell-code-size, 13px);
+    font-size: var(--grid-cell-code-size, 16px);
     letter-spacing: 0.05em;
     text-transform: uppercase;
     opacity: 0.75;
@@ -211,7 +211,7 @@
 }
 
 .class-cell-name {
-    font-size: var(--grid-cell-name-size, 15px);
+    font-size: var(--grid-cell-name-size, 18px);
     font-weight: 600;
     opacity: 0.9;
     line-height: 1.2;
@@ -219,14 +219,14 @@
 }
 
 .class-cell-room {
-    font-size: var(--grid-cell-room-size, 11px);
+    font-size: var(--grid-cell-room-size, 13px);
     opacity: 0.6;
     font-family: 'IBM Plex Mono', monospace;
     margin-top: auto;
 }
 
 .class-cell-professor {
-    font-size: var(--grid-cell-professor-size, 11px);
+    font-size: var(--grid-cell-professor-size, 13px);
     opacity: 0.6;
     margin-top: 1px;
 }

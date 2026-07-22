@@ -1,14 +1,3 @@
-# Dependencies
-node_modules/
-
-# Build output
-build/
-dist/
-
-# Logs
-*.log
-npm-debug.log*
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -19,15 +8,6 @@ Thumbs.db
 *.swp
 *.swo
 
-# Data files (local user data)
-amellify.db
-backups/
-amellify.db.backup*
-*.log
-
 # Environment
 .env
 .env.local
-horario.json
-# Credenciales de desarrollo (no versionar)
-CREDENCIALES-ADMIN-DEV.txt

@@ -1,4 +1,3 @@
-// ─── Amellify App ─────────────────────────────────────────────────────────────
 import {
   escapeHtml,
   escapeJsString,
@@ -19,16 +18,10 @@ import {
   validateCourseCode,
   validateScheduleSlot,
   formatTime,
-  getClientOrigin,
 } from "./utils.js";
-import { api, setUnauthorizedHandler, getAuthToken, getCurrentUser, checkServerHealth, setAuthToken, isAdmin } from "./api.js";
-import { AuthUI } from "./auth-ui.js";
+import { api, getCurrentUser } from "./api.js";
 import { installFeatures } from "./features.js";
 import { installAdvancedFeatures } from "./features-advanced.js";
-import { installAdminUI } from "./admin-ui.js";
-
-const API_BASE = getClientOrigin();
-const WS_URL = API_BASE;
 
 class AmellifyApp {
   constructor() {
@@ -39,27 +32,17 @@ class AmellifyApp {
     this.countdownInterval = null;
     this.currentTimeUpdateInterval = null;
     this._menuClickHandler = null;
-    this._updateSlotTimeout = null; // For debouncing slot updates
-    this.socket = null;
-    this._socketReconnectTimer = null;
-    this._skipNextSocketSync = false;
-    this.authUI = null;
-    this.authenticated = false;
-    this._apiReachable = false;
-    this._wsConnected = false;
+    this._updateSlotTimeout = null;
     this._initialLoadDone = false;
-    this._eventListenersBound = false;
 
-    // Settings with defaults
     this.settings = {
-      fontSize: 'normal',
-      gridCompact: false,
+      fontSize: 'large',
+      gridCompact: true,
       notifications: true,
       notifyMinutesBefore: 15,
       defaultView: 'grid',
       weekStartsOn: 'monday',
       gridDragDisabled: false,
-      taskNotifications: true,
       passingGrade: PASSING_GRADE,
       timeFormat24h: true,
       showClassBadge: true,
@@ -79,7 +62,6 @@ class AmellifyApp {
     return formatTime(timeStr, this.settings?.timeFormat24h !== false);
   }
 
-  // ─── Initialization ──────────────────────────────────────────────────────────
   async init() {
     const savedTheme = localStorage.getItem("amellify-theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
@@ -92,239 +74,31 @@ class AmellifyApp {
     if (typeof this.applySettings === "function") this.applySettings();
     else this.applyFontSize();
 
-    this.authUI = new AuthUI({
-      onAuthenticated: (user) => this.onAuthenticated(user),
-      onToast: (msg, type) => this.showToast(msg, type),
-    });
-
-    setUnauthorizedHandler(() => {
-      if (this.authenticated) {
-        this.authenticated = false;
-        this.socket?.disconnect();
-        this.authUI?.show();
-        this.showToast("Sesión expirada. Inicia sesión de nuevo.", "warning");
-      }
-    });
-
-    const ok = await this.authUI.bootstrap();
-    if (!ok) return;
-
-    this.authUI.hide();
     await this.onAuthenticated(getCurrentUser());
   }
 
   async onAuthenticated(user) {
-    this.authenticated = true;
     this._initialLoadDone = false;
-    this.updateUserBadge(user);
-    this.setupSocket();
     this.setupEventListeners();
     try {
       await this.fetchCourses();
-      if (!this._apiReachable) {
-        this._apiReachable = await checkServerHealth();
-        this.refreshConnectionStatus();
-      }
     } finally {
       this._initialLoadDone = true;
-      this.refreshConnectionStatus();
     }
     this.renderAll();
-    if (typeof this.checkPinLock === 'function') this.checkPinLock();
-  }
-
-  updateUserBadge(user) {
-    let badge = document.getElementById('auth-user-badge');
-    if (!user) {
-      badge?.remove();
-      return;
-    }
-    if (!badge) {
-      badge = document.createElement('span');
-      badge.id = 'auth-user-badge';
-      badge.className = 'auth-user-badge';
-      const actions = document.querySelector('.header-actions');
-      actions?.insertBefore(badge, actions.firstChild);
-    }
-    badge.title = user.email;
-    const adminBadge = isAdmin(user)
-      ? `<span class="auth-admin-badge">${icon('shield', 'icon-sm')} Admin</span>`
-      : '';
-    badge.innerHTML = `${icon('user', 'icon-sm')} ${escapeHtml(user.name || user.email)}${adminBadge}`;
-  }
-
-  async logout() {
-    if (!confirm('¿Cerrar sesión?')) return;
-    this.authenticated = false;
-    this.courses = [];
-    this._apiReachable = false;
-    this._wsConnected = false;
-    this._initialLoadDone = false;
-    this._eventListenersBound = false;
-    this.socket?.disconnect();
-    this.socket = null;
-    document.getElementById('auth-user-badge')?.remove();
-    document.getElementById('settings-modal')?.remove();
-    this.refreshConnectionStatus();
-    await this.authUI.logout();
+    this.setupEventListeners();
   }
 
   async fetchCourses() {
     try {
       this.courses = await api.getCourses();
-      this._apiReachable = true;
-      this.hideConnectionBanner();
-      this.refreshConnectionStatus();
       return this.courses;
     } catch (err) {
       console.error(err);
-      this._apiReachable = false;
-      this.refreshConnectionStatus();
-      if (this.courses.length === 0) {
-        this.showConnectionBanner(err.message || 'No se pudo conectar al servidor');
-      }
       return this.courses;
     }
   }
 
-  refreshConnectionStatus() {
-    let state = 'offline';
-    if (this._wsConnected || this._apiReachable) {
-      state = 'online';
-    } else if (!this._initialLoadDone) {
-      state = 'reconnecting';
-    }
-    this.updateConnectionStatus(state);
-  }
-
-  showConnectionBanner(message) {
-    let banner = document.getElementById('connection-banner');
-    if (!banner) {
-      banner = document.createElement('div');
-      banner.id = 'connection-banner';
-      banner.className = 'connection-banner';
-      banner.setAttribute('role', 'alert');
-      document.body.appendChild(banner);
-    }
-    banner.innerHTML = `
-      <span class="connection-banner-text">${icon('warning', 'icon-sm')} ${escapeHtml(message)}</span>
-      <button type="button" class="btn btn-small btn-secondary connection-banner-retry" id="connection-retry-btn">
-        ${icon('refresh', 'icon-sm')} Reintentar
-      </button>
-    `;
-    banner.removeAttribute('hidden');
-    banner.querySelector('#connection-retry-btn')?.addEventListener('click', () =>
-      this.retryConnection()
-    );
-  }
-
-  hideConnectionBanner() {
-    document.getElementById('connection-banner')?.setAttribute('hidden', '');
-  }
-
-  async retryConnection() {
-    this._initialLoadDone = false;
-    this.updateConnectionStatus('reconnecting');
-    await this.fetchCourses();
-    if (!this._apiReachable) {
-      this._apiReachable = await checkServerHealth();
-    }
-    if (!this._apiReachable) {
-      this._initialLoadDone = true;
-      this.showConnectionBanner('El servidor no responde. Comprueba que Amellify esté en ejecución.');
-      this.refreshConnectionStatus();
-      return;
-    }
-    if (this.socket && !this.socket.connected) {
-      this.socket.connect();
-    } else if (!this.socket) {
-      this.setupSocket();
-    }
-    this._initialLoadDone = true;
-    this.refreshConnectionStatus();
-  }
-
-  // ─── WebSocket Setup ───────────────────────────────────────────────────────────
-  setupSocket() {
-    if (this.socket) {
-      this.socket.disconnect();
-    }
-    const token = getAuthToken();
-    if (!token || typeof io === 'undefined') {
-      this._wsConnected = false;
-      this.refreshConnectionStatus();
-      return;
-    }
-    this.socket = io(WS_URL, {
-      auth: { token },
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-    });
-
-    this.socket.on('connect', () => {
-      console.log('WebSocket conectado');
-      this._socketReconnectTimer = null;
-      this._wsConnected = true;
-      this.refreshConnectionStatus();
-    });
-
-    this.socket.on('disconnect', () => {
-      console.log('WebSocket desconectado');
-      this._wsConnected = false;
-      this.refreshConnectionStatus();
-    });
-
-    this.socket.on('courses:update', (courses) => {
-      this.courses = courses;
-      this.renderAll();
-      if (this._skipNextSocketSync) {
-        this._skipNextSocketSync = false;
-      }
-    });
-
-    this.socket.on('stats:update', (stats) => {
-      document.getElementById("total-courses").textContent = stats.totalCourses;
-      document.getElementById("total-credits").textContent = stats.totalCredits;
-      document.getElementById("total-hours").textContent = stats.totalHours;
-    });
-
-    this.socket.on('config:update', ({ key, value }) => {
-      if (key === 'amellify-settings' && typeof this.applyRemoteSettings === 'function') {
-        this.applyRemoteSettings(value);
-      }
-    });
-
-    this.socket.on('connect_error', (err) => {
-      console.warn('WebSocket error:', err?.message || err);
-      this._wsConnected = false;
-      this.refreshConnectionStatus();
-      if (!this._socketReconnectTimer && !this._apiReachable) {
-        this._socketReconnectTimer = setTimeout(() => {
-          this.showToast('Reconectando al servidor…', 'warning');
-        }, 3000);
-      }
-    });
-
-    this.refreshConnectionStatus();
-  }
-
-  updateConnectionStatus(state) {
-    const el = document.getElementById('connection-status');
-    if (!el) return;
-    const labels = {
-      online: 'En línea',
-      offline: 'Sin conexión',
-      reconnecting: 'Conectando',
-    };
-    el.className = `connection-pill is-${state}`;
-    const label = el.querySelector('.connection-label');
-    if (label) label.textContent = labels[state] || state;
-  }
-
-  // ─── Toast Notifications ──────────────────────────────────────────────────────
   showToast(message, type = 'info') {
     const container = document.getElementById('toast-container') || (() => {
       const div = document.createElement('div');
@@ -347,7 +121,7 @@ class AmellifyApp {
       color: ${colors[type] || colors.info};
       padding: 12px 20px;
       border-radius: 8px;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: 500;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       animation: slideIn 0.3s ease-out;
@@ -361,7 +135,6 @@ class AmellifyApp {
     }, 3000);
   }
 
-  // ─── Render All ──────────────────────────────────────────────────────────────
   renderAll() {
     this.updateStats();
     this.renderNextClassHero();
@@ -401,7 +174,6 @@ class AmellifyApp {
       });
   }
 
-  // ─── Next Class Hero ─────────────────────────────────────────────────────────
   renderNextClassHero() {
     const hero = document.getElementById("next-class-hero");
     const next = this.getNextClass();
@@ -431,57 +203,35 @@ class AmellifyApp {
 
   getNextClass() {
     const dayMap = {
-      Domingo: 0,
-      Lunes: 1,
-      Martes: 2,
-      Miércoles: 3,
-      Jueves: 4,
-      Viernes: 5,
-      Sábado: 6,
+      Domingo: 0, Lunes: 1, Martes: 2, Miércoles: 3,
+      Jueves: 4, Viernes: 5, Sábado: 6,
     };
-
     const now = new Date();
     let nearest = null;
     let nearestMs = Infinity;
-
     const active = this.courses.filter((c) => c.status === "active");
 
     for (const course of active) {
       for (const s of course.schedules || []) {
         const targetDay = dayMap[s.day];
         if (targetDay === undefined) continue;
-
         const [sh, sm] = s.start_time.split(":").map(Number);
-        
-        // Calculate next occurrence of this class
         const currentDay = now.getDay();
         const currentTime = now.getHours() * 60 + now.getMinutes();
         const targetTime = sh * 60 + sm;
-        
         let daysUntil = targetDay - currentDay;
-        
-        // If it's today but the class already started/passed, look for next week
-        if (daysUntil === 0 && currentTime >= targetTime) {
-          daysUntil = 7;
-        }
-        // If target day is before current day, add days to get to next week
-        else if (daysUntil < 0) {
-          daysUntil += 7;
-        }
-        
+        if (daysUntil === 0 && currentTime >= targetTime) daysUntil = 7;
+        else if (daysUntil < 0) daysUntil += 7;
         const candidate = new Date(now);
         candidate.setDate(candidate.getDate() + daysUntil);
         candidate.setHours(sh, sm, 0, 0);
-        
         const diff = candidate - now;
-        
         if (diff > 0 && diff < nearestMs) {
           nearestMs = diff;
           nearest = { course, schedule: s, msUntil: diff };
         }
       }
     }
-
     return nearest;
   }
 
@@ -490,20 +240,14 @@ class AmellifyApp {
     this.countdownInterval = setInterval(() => {
       const el = document.getElementById("countdown-display");
       if (!el) return;
-
       const next = this.getNextClass();
-      if (!next) {
-        el.textContent = "--:--:--";
-        return;
-      }
-
+      if (!next) { el.textContent = "--:--:--"; return; }
       const diff = next.msUntil;
       const totalSecs = Math.floor(diff / 1000);
       const days = Math.floor(totalSecs / 86400);
       const hours = Math.floor((totalSecs % 86400) / 3600);
       const mins = Math.floor((totalSecs % 3600) / 60);
       const secs = totalSecs % 60;
-
       if (days > 0) {
         el.textContent = `${days} día${days !== 1 ? 's' : ''} ${String(hours).padStart(2, "0")} hrs ${String(mins).padStart(2, "0")} min`;
       } else if (hours > 0) {
@@ -514,7 +258,6 @@ class AmellifyApp {
     }, 1000);
   }
 
-  // ─── View Management ─────────────────────────────────────────────────────────
   switchView(view) {
     this.currentView = view;
     document.querySelectorAll(".view-tab").forEach((t) => {
@@ -546,7 +289,6 @@ class AmellifyApp {
     return calcFinalGrade(partials);
   }
 
-  // ─── Partials (shared course form + calc view) ───────────────────────────
   _partialRowHtml(name, grade, percent, context) {
     const gradeVal = grade !== null && grade !== undefined && grade !== "" ? grade : "";
     const percentVal = percent !== null && percent !== undefined && percent !== "" ? percent : "";
@@ -570,10 +312,10 @@ class AmellifyApp {
     const rows = partials?.length
       ? partials
       : [
-          { name: "P1", grade: "", percent: 30 },
-          { name: "P2", grade: "", percent: 30 },
-          { name: "P3", grade: "", percent: 40 },
-        ];
+        { name: "P1", grade: "", percent: 30 },
+        { name: "P2", grade: "", percent: 30 },
+        { name: "P3", grade: "", percent: 40 },
+      ];
     rows.forEach((p) => {
       container.insertAdjacentHTML(
         "beforeend",
@@ -680,14 +422,8 @@ class AmellifyApp {
   _renderGradeResult(resultEl, finalEl, statusEl, partials, silent) {
     const { totalPercent, grade, passed, isValid } = evaluatePartials(partials, this.getPassingGrade());
     if (!resultEl || !finalEl || !statusEl) return;
-
     resultEl.classList.remove("is-visible", "is-error", "is-pass", "is-fail");
-
-    if (partials.length === 0) {
-      if (!silent) return;
-      return;
-    }
-
+    if (partials.length === 0) { if (!silent) return; return; }
     if (!isValid) {
       resultEl.classList.add("is-visible", "is-error");
       finalEl.textContent = totalPercent > 0 ? "—" : "—";
@@ -699,7 +435,6 @@ class AmellifyApp {
       statusEl.style.color = "var(--error)";
       return;
     }
-
     const finalGrade = grade.toFixed(2);
     resultEl.classList.add("is-visible", passed ? "is-pass" : "is-fail");
     finalEl.textContent = finalGrade;
@@ -734,7 +469,6 @@ class AmellifyApp {
     this.renderPartialsContainer("partials-container", [], "form");
   }
 
-  // ─── Calculator View ─────────────────────────────────────────────────
   renderCalcView() {
     const courseOptions = this.courses
       .filter((c) => c.status !== "dropped")
@@ -774,9 +508,7 @@ class AmellifyApp {
         <div class="glass-calc-panel grade-calc-panel">
           <div class="grade-calc-header">
             <h2>${icon("calculator", "icon-md")} Calculadora de Notas</h2>
-            <p class="grade-calc-subtitle">
-              Calcula, simula y planifica tu nota final ponderada.
-            </p>
+            <p class="grade-calc-subtitle">Calcula, simula y planifica tu nota final ponderada.</p>
           </div>
 
           <div class="calc-card glass">
@@ -860,7 +592,6 @@ class AmellifyApp {
     const stickyGrade = document.getElementById("calc-sticky-grade");
     const badge = document.getElementById("calc-pass-badge");
     const weightFill = document.getElementById("calc-weight-fill");
-
     const pct = Math.min(100, Math.max(0, totalPercent));
     const dash = `${pct * 0.942} 100`;
     if (ringFill) {
@@ -874,13 +605,11 @@ class AmellifyApp {
       weightFill.classList.toggle("is-complete", pct === 100);
       weightFill.classList.toggle("is-over", pct > 100);
     }
-
     if (stickyGrade) {
       stickyGrade.textContent = isValid && grade != null ? grade.toFixed(2) : "—";
       stickyGrade.classList.toggle("is-pass", isValid && passed);
       stickyGrade.classList.toggle("is-fail", isValid && !passed);
     }
-
     if (badge) {
       badge.classList.remove("calc-pass-badge--pass", "calc-pass-badge--fail", "calc-pass-badge--pending", "calc-pass-badge--warn");
       if (!partials.length || totalPercent === 0) {
@@ -903,11 +632,7 @@ class AmellifyApp {
     const el = document.getElementById("calc-validation-warnings");
     if (!el) return;
     const warnings = validatePartialRows(partials);
-    if (!warnings.length) {
-      el.hidden = true;
-      el.innerHTML = "";
-      return;
-    }
+    if (!warnings.length) { el.hidden = true; el.innerHTML = ""; return; }
     el.hidden = false;
     el.innerHTML = warnings
       .map((w) => `<div class="calc-warning-item">${icon("warning", "icon-sm")} ${escapeHtml(w.message)}</div>`)
@@ -930,8 +655,7 @@ class AmellifyApp {
       );
     }
     items.push(`<div class="calc-insight-item muted">${gradeScaleHint(this.getPassingGrade())}</div>`);
-    const avg =
-      withGrades.reduce((s, p) => s + parseFloat(p.grade), 0) / withGrades.length;
+    const avg = withGrades.reduce((s, p) => s + parseFloat(p.grade), 0) / withGrades.length;
     items.push(
       `<div class="calc-insight-item">${icon("clipboard", "icon-sm")} Promedio simple de ingresados: <strong>${avg.toFixed(2)}</strong></div>`,
     );
@@ -960,18 +684,14 @@ class AmellifyApp {
     const result = computeRequiredGrade(partials, target, remaining);
     const el = document.getElementById("calc-required-result");
     if (!el) return;
-
     if (result.reason === "no-remaining-weight") {
-      el.innerHTML = `<span class="muted">${icon("warning", "icon-sm")} No hay peso restante definido</span>`;
-      return;
+      el.innerHTML = `<span class="muted">${icon("warning", "icon-sm")} No hay peso restante definido</span>`; return;
     }
     if (result.alreadyMet) {
-      el.innerHTML = `<span class="calc-required-ok">${icon("check", "icon-sm")} Ya alcanzas la meta con 0.0 en el ${result.remainingWeight}% restante</span>`;
-      return;
+      el.innerHTML = `<span class="calc-required-ok">${icon("check", "icon-sm")} Ya alcanzas la meta con 0.0 en el ${result.remainingWeight}% restante</span>`; return;
     }
     if (result.impossible) {
-      el.innerHTML = `<span class="calc-required-fail">${icon("x", "icon-sm")} Necesitarías ${result.neededRounded.toFixed(2)} (máx. ${GRADE_MAX}) — meta inalcanzable</span>`;
-      return;
+      el.innerHTML = `<span class="calc-required-fail">${icon("x", "icon-sm")} Necesitarías ${result.neededRounded.toFixed(2)} (máx. ${GRADE_MAX}) — meta inalcanzable</span>`; return;
     }
     el.innerHTML = `<span class="calc-required-ok">${icon("target", "icon-sm")} Necesitas al menos <strong>${result.neededRounded.toFixed(2)}</strong> en el ${result.remainingWeight}% restante para llegar a ${target.toFixed(2)}</span>`;
   }
@@ -983,23 +703,13 @@ class AmellifyApp {
     const percent = parseFloat(document.getElementById("calc-sim-percent")?.value);
     const el = document.getElementById("calc-sim-result");
     if (!el) return;
-
     if (!percent || percent <= 0) {
-      el.innerHTML = `<span class="muted">Ingresa peso % para simular</span>`;
-      return;
+      el.innerHTML = `<span class="muted">Ingresa peso % para simular</span>`; return;
     }
-
-    const evalResult = evaluateWithHypothetical(partials, {
-      name,
-      grade: grade === "" ? 0 : grade,
-      percent,
-    });
-
+    const evalResult = evaluateWithHypothetical(partials, { name, grade: grade === "" ? 0 : grade, percent });
     if (!evalResult.isValid) {
-      el.innerHTML = `<span class="muted">${icon("warning", "icon-sm")} Con «${escapeHtml(name)}» (${percent}%) la ponderación total sería ${evalResult.totalPercent}%</span>`;
-      return;
+      el.innerHTML = `<span class="muted">${icon("warning", "icon-sm")} Con «${escapeHtml(name)}» (${percent}%) la ponderación total sería ${evalResult.totalPercent}%</span>`; return;
     }
-
     const status = evalResult.passed ? "Aprobado" : "Reprobado";
     const statusClass = evalResult.passed ? "calc-sim-pass" : "calc-sim-fail";
     el.innerHTML = `<span class="${statusClass}">${icon("eye", "icon-sm")} Proyección con simulación: <strong>${evalResult.grade.toFixed(2)}</strong> · ${status}</span>`;
@@ -1007,20 +717,14 @@ class AmellifyApp {
 
   async saveCalcToCourse() {
     const code = document.getElementById("calc-course-select")?.value;
-    if (!code) {
-      this.showAlert("Selecciona una materia primero", "error");
-      return;
-    }
+    if (!code) { this.showAlert("Selecciona una materia primero", "error"); return; }
     const course = this.courses.find((c) => c.code === code);
     if (!course) return;
-
     const partials = this.getPartialsFromCalc();
     const { totalPercent } = evaluatePartials(partials, this.getPassingGrade());
     if (totalPercent !== 100) {
-      this.showAlert(`La ponderación debe sumar 100% (actual: ${totalPercent}%)`, "error");
-      return;
+      this.showAlert(`La ponderación debe sumar 100% (actual: ${totalPercent}%)`, "error"); return;
     }
-
     try {
       await api.updateCourse(code, { ...course, partials });
       const idx = this.courses.findIndex((c) => c.code === code);
@@ -1040,9 +744,7 @@ class AmellifyApp {
     try {
       const saved = localStorage.getItem("amellify-calc-state");
       if (saved) partials = JSON.parse(saved);
-    } catch {
-      partials = [];
-    }
+    } catch { partials = []; }
     if (!Array.isArray(partials) || partials.length === 0) {
       partials = [
         { name: "P1", grade: "", percent: 30 },
@@ -1055,30 +757,16 @@ class AmellifyApp {
 
   persistCalcState() {
     try {
-      localStorage.setItem(
-        "amellify-calc-state",
-        JSON.stringify(this.getPartialsFromCalc()),
-      );
-    } catch {
-      /* ignore quota errors */
-    }
+      localStorage.setItem("amellify-calc-state", JSON.stringify(this.getPartialsFromCalc()));
+    } catch { }
   }
 
   onCalcCourseChange(code) {
-    if (!code) {
-      this.loadCalcState();
-      this.calculateCalcGrade(true);
-      this._updateCalcSaveButton();
-      return;
-    }
+    if (!code) { this.loadCalcState(); this.calculateCalcGrade(true); this._updateCalcSaveButton(); return; }
     const course = this.courses.find((c) => c.code === code);
     const partials = course?.partials?.length
       ? course.partials
-      : [
-          { name: "P1", grade: "", percent: 30 },
-          { name: "P2", grade: "", percent: 30 },
-          { name: "P3", grade: "", percent: 40 },
-        ];
+      : [{ name: "P1", grade: "", percent: 30 }, { name: "P2", grade: "", percent: 30 }, { name: "P3", grade: "", percent: 40 }];
     this.renderPartialsContainer("calc-partials-container", partials, "calc");
     document.getElementById("calc-course-select").value = code;
     this.persistCalcState();
@@ -1093,8 +781,7 @@ class AmellifyApp {
       document.getElementById("calc-grade-result"),
       document.getElementById("calc-final-grade"),
       document.getElementById("calc-grade-status"),
-      partials,
-      silent,
+      partials, silent,
     );
     this._updateCalcStickyBar(partials, evalResult);
     this._updateCalcValidation(partials);
@@ -1104,18 +791,14 @@ class AmellifyApp {
     this._updateCalcSaveButton();
   }
 
-  initCalcPartials() {
-    this.loadCalcState();
-  }
+  initCalcPartials() { this.loadCalcState(); }
 
-  // ─── Grid View ───────────────────────────────────────────────────────────────
   renderGridView() {
     const container = document.getElementById("view-content");
     const days = typeof this.getScheduleDays === "function"
       ? this.getScheduleDays()
       : ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-    // Collect all schedules
     const allSchedules = [];
     for (const course of this.courses) {
       for (const s of course.schedules || []) {
@@ -1123,31 +806,26 @@ class AmellifyApp {
       }
     }
 
-    // ── CSS Grid approach: each row = 10 minutes ──
-    const SLOT_MIN = 10;   // minutes per grid row
-    const SLOT_H   = this.settings.gridCompact ? 8 : 12;
+    const SLOT_MIN = 10;
+    const SLOT_H = this.settings.gridCompact ? 10 : 16;
 
-    // Helper: "HH:MM" → total minutes from midnight
     const timeToMin = (t) => {
       const [h, m] = t.split(':').map(Number);
       return h * 60 + m;
     };
 
-    // ALWAYS show full day: 00:00 - 23:59
     const startHour = 0;
-    const endHour   = 24;
+    const endHour = 24;
     const originMin = 0;
     const totalSlots = (endHour * 60 - originMin) / SLOT_MIN;
 
-    // Convert time string to grid row number (1-indexed, row 1 = header)
     const timeToRow = (t) => {
       const min = timeToMin(t);
-      return Math.round((min - originMin) / SLOT_MIN) + 2; // +2: 1 for CSS grid 1-index, 1 for header
+      return Math.round((min - originMin) / SLOT_MIN) + 2;
     };
 
-    // Build hour labels (placed in column 1)
     let hourLabels = '';
-    const slotsPerHour = 60 / SLOT_MIN; // 6 slots per hour
+    const slotsPerHour = 60 / SLOT_MIN;
     for (let h = startHour; h < endHour; h++) {
       const rowStart = Math.round((h * 60 - originMin) / SLOT_MIN) + 2;
       const rowEnd = rowStart + slotsPerHour;
@@ -1155,20 +833,17 @@ class AmellifyApp {
       hourLabels += `<div class="grid-hour-label" style="grid-column:1; grid-row:${rowStart} / ${rowEnd};">${label}</div>`;
     }
 
-    // Build hour gridlines (span all columns)
     let hourLines = '';
     for (let h = startHour; h <= endHour; h++) {
       const row = Math.round((h * 60 - originMin) / SLOT_MIN) + 2;
       hourLines += `<div class="grid-hour-line" style="grid-column:1 / -1; grid-row:${row};"></div>`;
     }
 
-    // Today info
     const now = new Date();
-    const todayMap = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const todayMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const todayName = todayMap[now.getDay()];
     const nowMin = now.getHours() * 60 + now.getMinutes();
 
-    // Build vertical day separators + today column background
     let daySeparators = '';
     for (let di = 0; di < days.length; di++) {
       const isToday = days[di] === todayName;
@@ -1177,69 +852,30 @@ class AmellifyApp {
       }
       daySeparators += `<div class="grid-day-separator" style="grid-column:${di + 2}; grid-row:2 / ${totalSlots + 2};"></div>`;
     }
-    // Add right border separator for the last column
     daySeparators += `<div class="grid-day-separator" style="grid-column:${days.length + 2}; grid-row:2 / ${totalSlots + 2}; border-left:none; border-right:1px solid var(--border);"></div>`;
 
-    // Build current time indicator (Google Calendar style)
     let currentTimeIndicator = '';
     if (nowMin >= 0 && nowMin < 1440) {
       const currentRow = Math.round((nowMin - originMin) / SLOT_MIN) + 2;
-      
-      // Find today's column index to position the circle
       const todayColumnIndex = days.indexOf(todayName);
       const circleColumn = todayColumnIndex >= 0 ? todayColumnIndex + 2 : 1;
-      
       currentTimeIndicator = `
-        <div class="current-time-indicator" style="
-          grid-column: 1 / -1;
-          grid-row: ${currentRow};
-          position: relative;
-          z-index: 100;
-          pointer-events: none;
-        ">
-          <div style="
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0;
-            height: 2px;
-            background: var(--danger);
-            box-shadow: 0 0 8px rgba(255, 59, 48, 0.5);
-          "></div>
+        <div class="current-time-indicator" style="grid-column: 1 / -1; grid-row: ${currentRow}; position: relative; z-index: 100; pointer-events: none;">
+          <div style="position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--danger); box-shadow: 0 0 8px rgba(255, 59, 48, 0.5);"></div>
         </div>
-        <div class="current-time-circle" style="
-          grid-column: ${circleColumn};
-          grid-row: ${currentRow};
-          position: relative;
-          z-index: 101;
-          pointer-events: none;
-          display: flex;
-          justify-content: center;
-          align-items: flex-start;
-        ">
-          <div style="
-            width: 10px;
-            height: 10px;
-            background: var(--danger);
-            border-radius: 50%;
-            box-shadow: 0 0 8px rgba(255, 59, 48, 0.7), 0 0 16px rgba(255, 59, 48, 0.4);
-            border: 2px solid var(--bg-secondary);
-            margin-top: -4px;
-          "></div>
+        <div class="current-time-circle" style="grid-column: ${circleColumn}; grid-row: ${currentRow}; position: relative; z-index: 101; pointer-events: none; display: flex; justify-content: center; align-items: flex-start;">
+          <div style="width: 10px; height: 10px; background: var(--danger); border-radius: 50%; box-shadow: 0 0 8px rgba(255, 59, 48, 0.7), 0 0 16px rgba(255, 59, 48, 0.4); border: 2px solid var(--bg-secondary); margin-top: -4px;"></div>
         </div>`;
     }
 
-    // Build class blocks
     let classBlocks = '';
     for (const s of allSchedules) {
       const dayIdx = days.indexOf(s.day);
       if (dayIdx === -1) continue;
-
       const rowStart = timeToRow(s.start_time);
-      const rowEnd   = timeToRow(s.end_time);
+      const rowEnd = timeToRow(s.end_time);
       const col = dayIdx + 2;
       const isToday = s.day === todayName;
-
       const partials = s.course.partials || [];
       let gradeHtml = '';
       if (partials.length > 0) {
@@ -1250,7 +886,6 @@ class AmellifyApp {
           gradeHtml = '<div class="class-cell-grade" style="font-size:11px;font-weight:700;margin-top:4px;padding:2px 6px;border-radius:4px;background:' + gradeColor + ';color:#fff;">' + finalGrade.toFixed(2) + '</div>';
         }
       }
-
       classBlocks += `
         <div class="class-cell${this.settings.gridDragDisabled ? '' : ' draggable-cell'} color-${escapeHtml(s.course.color)}"
              ${this.settings.gridDragDisabled ? '' : 'draggable="true"'}
@@ -1266,11 +901,10 @@ class AmellifyApp {
           <div class="class-cell-name">${escapeHtml(s.course.name)}</div>
           ${gradeHtml}
           ${s.room ? `<div class="class-cell-room meta-with-icon">${icon("building", "icon-sm")} ${escapeHtml(s.room)}</div>` : ''}
-          <div style="font-size:var(--grid-cell-time-size, 11px);margin-top:auto;opacity:0.5;font-family:'IBM Plex Mono',monospace;">${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}</div>
+          <div style="font-size:var(--grid-cell-time-size, 14px);margin-top:auto;opacity:0.5;font-family:'IBM Plex Mono',monospace;">${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}</div>
         </div>`;
     }
 
-    // Build day headers — highlight today
     const dayHeaders = days.map((d, i) => {
       const isToday = d === todayName;
       const style = isToday
@@ -1279,93 +913,24 @@ class AmellifyApp {
       return `<div class="grid-header-cell" style="${style}">${d}</div>`;
     }).join('');
 
-    // Empty state overlay (floating, outside grid)
     const emptyOverlay = allSchedules.length === 0 ? `
-      <!-- Backdrop semi-transparente -->
-      <div id="empty-state-backdrop" onclick="this.nextElementSibling.remove(); this.remove();" style="
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(4px);
-        z-index: 199;
-        animation: fadeIn 0.3s ease-out;
-      "></div>
-      
-      <!-- Modal flotante -->
-      <div id="empty-state-overlay" style="
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 200;
-        background: var(--bg-secondary);
-        border-radius: 20px;
-        padding: 48px 40px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-        border: 1px solid var(--border);
-        max-width: 480px;
-        text-align: center;
-        animation: fadeInScale 0.3s ease-out;
-      ">
-        <button onclick="document.getElementById('empty-state-overlay').remove(); document.getElementById('empty-state-backdrop').remove();" style="
-          position: absolute;
-          top: 16px;
-          right: 16px;
-          background: transparent;
-          border: none;
-          font-size: 28px;
-          color: var(--text-tertiary);
-          cursor: pointer;
-          opacity: 0.4;
-          transition: opacity 0.2s, transform 0.2s;
-          padding: 4px 8px;
-          line-height: 1;
-          font-weight: 300;
-        " onmouseover="this.style.opacity='0.8'; this.style.transform='rotate(90deg)';" onmouseout="this.style.opacity='0.4'; this.style.transform='rotate(0deg)';">×</button>
-        
+      <div id="empty-state-backdrop" onclick="this.nextElementSibling.remove(); this.remove();" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); z-index: 199; animation: fadeIn 0.3s ease-out;"></div>
+      <div id="empty-state-overlay" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 200; background: var(--bg-secondary); border-radius: 20px; padding: 48px 40px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4); border: 1px solid var(--border); max-width: 480px; text-align: center; animation: fadeInScale 0.3s ease-out;">
+        <button onclick="document.getElementById('empty-state-overlay').remove(); document.getElementById('empty-state-backdrop').remove();" style="position: absolute; top: 16px; right: 16px; background: transparent; border: none; font-size: 28px; color: var(--text-tertiary); cursor: pointer; opacity: 0.4; transition: opacity 0.2s, transform 0.2s; padding: 4px 8px; line-height: 1; font-weight: 300;" onmouseover="this.style.opacity='0.8'; this.style.transform='rotate(90deg)';" onmouseout="this.style.opacity='0.4'; this.style.transform='rotate(0deg)';">×</button>
         <div class="empty-state-icon">${icon("calendar", "icon-lg")}</div>
-        <div style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
-          No hay materias con horarios asignados
-        </div>
-        <div style="font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px;">
-          Comienza agregando tu primera materia para ver tu horario semanal
-        </div>
-        <button class="btn btn-primary" onclick="app.openAddCourseModal(); document.getElementById('empty-state-overlay').remove(); document.getElementById('empty-state-backdrop').remove();" style="
-          font-size: 16px;
-          padding: 14px 32px;
-          box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
-        ">
-          ${icon("plus")} Agregar Primera Materia
-        </button>
+        <div style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">No hay materias con horarios asignados</div>
+        <div style="font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 28px;">Comienza agregando tu primera materia para ver tu horario semanal</div>
+        <button class="btn btn-primary" onclick="app.openAddCourseModal(); document.getElementById('empty-state-overlay').remove(); document.getElementById('empty-state-backdrop').remove();" style="font-size: 16px; padding: 14px 32px; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);">${icon("plus")} Agregar Primera Materia</button>
       </div>
-      
       <style>
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes fadeInScale {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-          }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInScale { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
       </style>
     ` : '';
 
     container.innerHTML = `
       <div class="grid-schedule" id="grid-schedule-container">
-        <div class="grid-timeline" id="grid-timeline" style="
-          display: grid;
-          grid-template-columns: 48px repeat(${days.length}, 1fr);
-          grid-template-rows: auto repeat(${totalSlots}, ${SLOT_H}px);
-          min-width: 680px;
-          position: relative;
-        ">
+        <div class="grid-timeline" id="grid-timeline" style="display: grid; grid-template-columns: 56px repeat(${days.length}, 1fr); grid-template-rows: auto repeat(${totalSlots}, ${SLOT_H}px); min-width: 1300px; position: relative;">
           <div class="grid-header-cell" style="grid-column:1; grid-row:1;">Hora</div>
           ${dayHeaders}
           ${daySeparators}
@@ -1378,73 +943,38 @@ class AmellifyApp {
       ${emptyOverlay}
     `;
 
-    // Auto-scroll: prioritize classes, fallback to current time
-    // Capture SLOT_H value for use in timeout
     const slotHeight = SLOT_H;
     setTimeout(() => {
       const scheduleContainer = document.getElementById('grid-schedule-container');
       if (!scheduleContainer) return;
-
-      // Get the header height to account for it in scroll calculation
-      const headerHeight = 40; // Approximate header height
-
+      const headerHeight = 40;
       if (allSchedules.length > 0) {
-        // WITH SCHEDULES: Focus on next/current class
         const todaySchedules = allSchedules.filter(s => s.day === todayName);
-        
         if (todaySchedules.length > 0) {
-          // Find next or current class today
           let targetSchedule = null;
-          
-          // First, try to find current class (happening now)
           for (const s of todaySchedules) {
             const startMin = timeToMin(s.start_time);
             const endMin = timeToMin(s.end_time);
-            if (nowMin >= startMin && nowMin <= endMin) {
-              targetSchedule = s;
-              break;
-            }
+            if (nowMin >= startMin && nowMin <= endMin) { targetSchedule = s; break; }
           }
-          
-          // If no current class, find next class today
           if (!targetSchedule) {
-            const futureClasses = todaySchedules
-              .filter(s => timeToMin(s.start_time) > nowMin)
-              .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time));
-            
-            if (futureClasses.length > 0) {
-              targetSchedule = futureClasses[0];
-            }
+            const futureClasses = todaySchedules.filter(s => timeToMin(s.start_time) > nowMin).sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time));
+            if (futureClasses.length > 0) targetSchedule = futureClasses[0];
           }
-          
-          // If still no target, use first class of the day
           if (!targetSchedule) {
-            targetSchedule = todaySchedules.sort((a, b) => 
-              timeToMin(a.start_time) - timeToMin(b.start_time)
-            )[0];
+            targetSchedule = todaySchedules.sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))[0];
           }
-          
-          // Scroll to target class (center it in viewport)
           if (targetSchedule) {
             const classStartMin = timeToMin(targetSchedule.start_time);
             const classEndMin = timeToMin(targetSchedule.end_time);
             const classMidMin = (classStartMin + classEndMin) / 2;
-            
-            // Calculate pixel position from top (accounting for origin)
             const pixelsFromOrigin = (classMidMin - originMin) * (slotHeight / SLOT_MIN);
-            
-            // Center in viewport
             const scrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
             scheduleContainer.scrollTop = Math.max(0, scrollPosition);
             return;
           }
         }
-        
-        // If no classes today, scroll to earliest class in the week
-        const earliestClass = allSchedules.sort((a, b) => 
-          timeToMin(a.start_time) - timeToMin(b.start_time)
-        )[0];
-        
+        const earliestClass = allSchedules.sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))[0];
         if (earliestClass) {
           const classStartMin = timeToMin(earliestClass.start_time);
           const pixelsFromOrigin = (classStartMin - originMin) * (slotHeight / SLOT_MIN);
@@ -1453,8 +983,6 @@ class AmellifyApp {
           return;
         }
       }
-      
-      // NO SCHEDULES: Focus on current time (red line)
       if (nowMin >= 0 && nowMin < 1440) {
         const pixelsFromOrigin = (nowMin - originMin) * (slotHeight / SLOT_MIN);
         const scrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
@@ -1462,30 +990,17 @@ class AmellifyApp {
       }
     }, 50);
 
-    // Update current time indicator every minute
-    if (this.currentTimeUpdateInterval) {
-      clearInterval(this.currentTimeUpdateInterval);
-    }
+    if (this.currentTimeUpdateInterval) clearInterval(this.currentTimeUpdateInterval);
     this.currentTimeUpdateInterval = setInterval(() => {
-      if (this.currentView === 'grid') {
-        this.renderGridView();
-      }
-    }, 60000); // Update every minute
+      if (this.currentView === 'grid') this.renderGridView();
+    }, 60000);
   }
 
-  // ─── Week View ───────────────────────────────────────────────────────────────
   renderWeekView() {
     const container = document.getElementById("view-content");
     const days = typeof this.getScheduleDays === "function"
       ? this.getScheduleDays()
-      : [
-      "Lunes",
-      "Martes",
-      "Miércoles",
-      "Jueves",
-      "Viernes",
-      "Sábado",
-    ];
+      : ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
     const byDay = {};
     for (const d of days) byDay[d] = [];
@@ -1497,16 +1012,7 @@ class AmellifyApp {
     for (const d of days)
       byDay[d].sort((a, b) => a.start_time.localeCompare(b.start_time));
 
-    // Highlight today
-    const todayMap = [
-      "Domingo",
-      "Lunes",
-      "Martes",
-      "Miércoles",
-      "Jueves",
-      "Viernes",
-      "Sábado",
-    ];
+    const todayMap = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const today = todayMap[new Date().getDay()];
 
     let html = `<div class="week-grid">`;
@@ -1520,7 +1026,6 @@ class AmellifyApp {
             <div class="day-count" style="${isToday ? "color:rgba(255,255,255,0.8)" : ""}">${classes.length} clase${classes.length !== 1 ? "s" : ""}</div>
           </div>
           <div class="day-classes">`;
-
       if (classes.length === 0) {
         html += `<div style="text-align:center;padding:24px 12px;color:var(--text-tertiary);font-size:13px;">Sin clases</div>`;
       } else {
@@ -1535,17 +1040,14 @@ class AmellifyApp {
             </div>`;
         }
       }
-
       html += `</div></div>`;
     }
     html += `</div>`;
     container.innerHTML = html;
   }
 
-  // ─── List View ───────────────────────────────────────────────────────────────
   renderListView() {
     const container = document.getElementById("view-content");
-
     if (this.courses.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
@@ -1555,43 +1057,18 @@ class AmellifyApp {
         </div>`;
       return;
     }
-
-    const statusLabelMap = {
-      active: "Activas",
-      paused: "En Pausa",
-      completed: "Completadas",
-      dropped: "Retiradas",
-    };
-
-    // Group by status
+    const statusLabelMap = { active: "Activas", paused: "En Pausa", completed: "Completadas", dropped: "Retiradas" };
     const groups = [
-      {
-        key: "active",
-        label: statusLabelMap.active,
-        courses: this.courses.filter((c) => c.status === "active"),
-      },
-      {
-        key: "paused",
-        label: statusLabelMap.paused,
-        courses: this.courses.filter((c) => c.status === "paused"),
-      },
-      {
-        key: "completed",
-        label: statusLabelMap.completed,
-        courses: this.courses.filter((c) => c.status === "completed"),
-      },
-      {
-        key: "dropped",
-        label: statusLabelMap.dropped,
-        courses: this.courses.filter((c) => c.status === "dropped"),
-      },
+      { key: "active", label: statusLabelMap.active, courses: this.courses.filter((c) => c.status === "active") },
+      { key: "paused", label: statusLabelMap.paused, courses: this.courses.filter((c) => c.status === "paused") },
+      { key: "completed", label: statusLabelMap.completed, courses: this.courses.filter((c) => c.status === "completed") },
+      { key: "dropped", label: statusLabelMap.dropped, courses: this.courses.filter((c) => c.status === "dropped") },
     ].filter((g) => g.courses.length > 0);
 
     let html = '<div class="scroll-panel view-scroll-panel">';
     for (const group of groups) {
       html += `<div class="group-label-with-dot" style="margin-bottom:8px;font-size:13px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;">${statusDot(group.key)} ${group.label}</div>`;
       html += `<div class="course-list" style="margin-bottom:24px;">`;
-
       for (const course of group.courses) {
         html += `
           <div class="course-card color-${escapeHtml(course.color)}">
@@ -1604,47 +1081,31 @@ class AmellifyApp {
                 <div class="course-credits">${Number(course.credits) || 0} cr.</div>
               </div>
             </div>
-
-            ${
-              (course.schedules || []).length > 0
-                ? `
+            ${(course.schedules || []).length > 0 ? `
               <div class="course-schedule">
-                ${course.schedules
-                  .map(
-                    (s) => `
+                ${course.schedules.map((s) => `
                   <span class="schedule-tag meta-with-icon">${icon("calendar", "icon-sm")} ${escapeHtml(s.day)} ${escapeHtml(this.formatTimeDisplay(s.start_time))}–${escapeHtml(this.formatTimeDisplay(s.end_time))}${s.room ? " · " + escapeHtml(s.room) : ""}</span>
-                `,
-                  )
-                  .join("")}
-              </div>`
-                : ""
-            }
-
+                `).join("")}
+              </div>` : ""}
             ${course.professor ? `<div class="course-professor meta-with-icon">${icon("user", "icon-sm")} ${escapeHtml(course.professor)}${course.email ? ` · <a href="mailto:${escapeHtml(course.email)}" style="color:inherit;text-decoration:underline;">${escapeHtml(course.email)}</a>` : ""}</div>` : ""}
             ${course.faculty ? `<div class="meta-with-icon" style="font-size:13px;color:var(--text-secondary);margin-top:4px;">${icon("landmark", "icon-sm")} ${escapeHtml(course.faculty)}</div>` : ""}
             ${course.notes ? `<div style="font-size:13px;color:var(--text-secondary);margin-top:8px;font-style:italic;padding:8px;background:var(--bg-primary);border-radius:6px;">${escapeHtml(course.notes)}</div>` : ""}
-
             <div class="course-actions">
               <button class="btn btn-secondary btn-small" onclick="app.openEditCourseModal('${escapeJsString(course.code)}')">${icon("edit")} Editar</button>
               <button class="btn btn-danger btn-small" onclick="app.confirmDeleteCourse('${escapeJsString(course.code)}')">${icon("trash")} Eliminar</button>
             </div>
           </div>`;
       }
-
       html += `</div>`;
     }
-
     html += `</div>`;
     container.innerHTML = html;
   }
 
-  // ─── Modals ──────────────────────────────────────────────────────────────────
   openAddCourseModal() {
     this.editingCode = null;
     this.scheduleSlots = [];
-
-    document.getElementById("course-modal-title").innerHTML =
-      `${icon("plus", "icon-md")} Nueva Materia`;
+    document.getElementById("course-modal-title").innerHTML = `${icon("plus", "icon-md")} Nueva Materia`;
     document.getElementById("course-form").reset();
     document.getElementById("edit-course-code").value = "";
     document.getElementById("btn-delete-course").style.display = "none";
@@ -1660,12 +1121,9 @@ class AmellifyApp {
   openEditCourseModal(code) {
     const course = this.courses.find((c) => c.code === code);
     if (!course) return;
-
     this.editingCode = code;
     this.scheduleSlots = (course.schedules || []).map((s) => ({ ...s }));
-
-    document.getElementById("course-modal-title").innerHTML =
-      `${icon("edit", "icon-md")} Editar Materia`;
+    document.getElementById("course-modal-title").innerHTML = `${icon("edit", "icon-md")} Editar Materia`;
     document.getElementById("edit-course-code").value = code;
     document.getElementById("course-code").value = course.code;
     document.getElementById("course-name").value = course.name;
@@ -1677,115 +1135,49 @@ class AmellifyApp {
     document.getElementById("course-status").value = course.status || "active";
     document.getElementById("course-notes").value = course.notes || "";
     document.getElementById("btn-delete-course").style.display = "inline-flex";
-
     this.clearCourseFormErrors();
     this.setColor(course.color || "blue");
     this.renderScheduleSlots();
-    this.renderPartialsContainer(
-      "partials-container",
-      course.partials?.length ? course.partials : [],
-      "form",
-    );
+    this.renderPartialsContainer("partials-container", course.partials?.length ? course.partials : [], "form");
     this.calculateGrade(true);
-
     document.getElementById("class-modal").classList.remove("active");
     document.getElementById("course-modal").classList.add("active");
   }
 
   clearCourseFormErrors() {
-    document
-      .querySelectorAll("#course-form .form-field-error")
-      .forEach((el) => {
-        el.textContent = "";
-        el.classList.remove("is-visible");
-      });
-    document
-      .querySelectorAll("#course-form .form-input.is-invalid, #course-form .form-select.is-invalid")
-      .forEach((el) => el.classList.remove("is-invalid"));
+    document.querySelectorAll("#course-form .form-field-error").forEach((el) => { el.textContent = ""; el.classList.remove("is-visible"); });
+    document.querySelectorAll("#course-form .form-input.is-invalid, #course-form .form-select.is-invalid").forEach((el) => el.classList.remove("is-invalid"));
   }
 
   setFieldError(fieldId, errorId, message) {
     const field = document.getElementById(fieldId);
     const error = document.getElementById(errorId);
     if (field) field.classList.add("is-invalid");
-    if (error) {
-      error.textContent = message;
-      error.classList.add("is-visible");
-    }
+    if (error) { error.textContent = message; error.classList.add("is-visible"); }
   }
 
   validateCourseFormData() {
     this.clearCourseFormErrors();
     let valid = true;
     const isEdit = !!this.editingCode;
-
-    const codeResult = validateCourseCode(
-      document.getElementById("course-code").value,
-    );
-    if (!codeResult.valid) {
-      this.setFieldError("course-code", "course-code-error", codeResult.error);
-      valid = false;
-    } else if (
-      !isEdit &&
-      this.courses.some((c) => c.code === codeResult.code)
-    ) {
-      this.setFieldError(
-        "course-code",
-        "course-code-error",
-        `Ya existe una materia con el código ${codeResult.code}`,
-      );
-      valid = false;
-    } else if (
-      isEdit &&
-      codeResult.code !== this.editingCode &&
-      this.courses.some((c) => c.code === codeResult.code)
-    ) {
-      this.setFieldError(
-        "course-code",
-        "course-code-error",
-        `Ya existe una materia con el código ${codeResult.code}`,
-      );
-      valid = false;
-    }
-
+    const codeResult = validateCourseCode(document.getElementById("course-code").value);
+    if (!codeResult.valid) { this.setFieldError("course-code", "course-code-error", codeResult.error); valid = false; }
+    else if (!isEdit && this.courses.some((c) => c.code === codeResult.code)) { this.setFieldError("course-code", "course-code-error", `Ya existe una materia con el código ${codeResult.code}`); valid = false; }
+    else if (isEdit && codeResult.code !== this.editingCode && this.courses.some((c) => c.code === codeResult.code)) { this.setFieldError("course-code", "course-code-error", `Ya existe una materia con el código ${codeResult.code}`); valid = false; }
     const name = document.getElementById("course-name").value.trim();
-    if (!name) {
-      this.setFieldError("course-name", "course-name-error", "El nombre es obligatorio");
-      valid = false;
-    }
-
+    if (!name) { this.setFieldError("course-name", "course-name-error", "El nombre es obligatorio"); valid = false; }
     const credits = parseInt(document.getElementById("course-credits").value, 10);
-    if (!credits || credits < 1 || credits > 20) {
-      this.setFieldError(
-        "course-credits",
-        "course-credits-error",
-        "Ingresa créditos entre 1 y 20",
-      );
-      valid = false;
-    }
-
+    if (!credits || credits < 1 || credits > 20) { this.setFieldError("course-credits", "course-credits-error", "Ingresa créditos entre 1 y 20"); valid = false; }
     const email = document.getElementById("course-email").value.trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      this.setFieldError(
-        "course-email",
-        "course-email-error",
-        "Email no válido",
-      );
-      valid = false;
-    }
-
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.setFieldError("course-email", "course-email-error", "Email no válido"); valid = false; }
     const partials = this.getPartialsFromForm();
     const { totalPercent } = evaluatePartials(partials, this.getPassingGrade());
     const hasPartialWeights = partials.some((p) => p.percent > 0);
     if (hasPartialWeights && totalPercent !== 100) {
       const errEl = document.getElementById("partials-error");
-      if (errEl) {
-        errEl.textContent = `Los parciales deben sumar 100% (actual: ${totalPercent}%)`;
-        errEl.classList.add("is-visible");
-      }
+      if (errEl) { errEl.textContent = `Los parciales deben sumar 100% (actual: ${totalPercent}%)`; errEl.classList.add("is-visible"); }
       valid = false;
     }
-
     const scheduleErrors = [];
     this.scheduleSlots.forEach((slot, i) => {
       const result = validateScheduleSlot(slot);
@@ -1793,52 +1185,31 @@ class AmellifyApp {
     });
     if (scheduleErrors.length) {
       const errEl = document.getElementById("schedule-error");
-      if (errEl) {
-        errEl.textContent = scheduleErrors.join(" · ");
-        errEl.classList.add("is-visible");
-      }
+      if (errEl) { errEl.textContent = scheduleErrors.join(" · "); errEl.classList.add("is-visible"); }
       valid = false;
     }
-
     return valid;
   }
 
   checkCourseCodeDuplicate() {
     const isEdit = !!this.editingCode;
-    const codeResult = validateCourseCode(
-      document.getElementById("course-code").value,
-    );
+    const codeResult = validateCourseCode(document.getElementById("course-code").value);
     const errorEl = document.getElementById("course-code-error");
     const field = document.getElementById("course-code");
     if (!codeResult.valid) return;
-
-    const duplicate =
-      (!isEdit && this.courses.some((c) => c.code === codeResult.code)) ||
-      (isEdit &&
-        codeResult.code !== this.editingCode &&
-        this.courses.some((c) => c.code === codeResult.code));
-
+    const duplicate = (!isEdit && this.courses.some((c) => c.code === codeResult.code)) ||
+      (isEdit && codeResult.code !== this.editingCode && this.courses.some((c) => c.code === codeResult.code));
     if (duplicate) {
       field?.classList.add("is-invalid");
-      if (errorEl) {
-        errorEl.textContent = `Ya existe una materia con el código ${codeResult.code}`;
-        errorEl.classList.add("is-visible");
-      }
+      if (errorEl) { errorEl.textContent = `Ya existe una materia con el código ${codeResult.code}`; errorEl.classList.add("is-visible"); }
     } else if (errorEl?.textContent.includes("Ya existe")) {
       field?.classList.remove("is-invalid");
-      errorEl.textContent = "";
-      errorEl.classList.remove("is-visible");
+      errorEl.textContent = ""; errorEl.classList.remove("is-visible");
     }
   }
 
-  // ─── Schedule Slots ──────────────────────────────────────────────────────────
   addScheduleSlot() {
-    this.scheduleSlots.push({
-      day: "Lunes",
-      start_time: "08:00",
-      end_time: "10:00",
-      room: "",
-    });
+    this.scheduleSlots.push({ day: "Lunes", start_time: "08:00", end_time: "10:00", room: "" });
     this.renderScheduleSlots();
   }
 
@@ -1850,97 +1221,45 @@ class AmellifyApp {
   updateSlot(index, field, value) {
     if (this.scheduleSlots[index]) {
       this.scheduleSlots[index][field] = value;
-      
-      // Clear existing timeout
-      if (this._updateSlotTimeout) {
-        clearTimeout(this._updateSlotTimeout);
-      }
-      
-      // Only re-render for fields that affect conflicts
-      // Use debounce to avoid losing focus while typing
+      if (this._updateSlotTimeout) clearTimeout(this._updateSlotTimeout);
       if (field === 'day' || field === 'start_time' || field === 'end_time') {
-        this._updateSlotTimeout = setTimeout(() => {
-          this.renderScheduleSlots();
-        }, 800); // Wait 800ms after user stops typing
+        this._updateSlotTimeout = setTimeout(() => { this.renderScheduleSlots(); }, 800);
       }
-      // For room field, never re-render (no conflicts to check)
     }
   }
 
   renderScheduleSlots() {
     const container = document.getElementById("schedule-list");
-    const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
-
+    const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
     if (this.scheduleSlots.length === 0) {
       container.innerHTML = `<div class="schedule-empty">Sin horarios asignados. Agrega bloques de clase abajo.</div>`;
       return;
     }
-
     const slotConflicts = this.scheduleSlots.map((slot) => {
       if (!slot.day || !slot.start_time || !slot.end_time) return [];
       return this.getConflicts([slot], this.editingCode);
     });
-
     container.innerHTML = this.scheduleSlots.map((slot, i) => {
       const conflicts = slotConflicts[i];
       const hasConflict = conflicts.length > 0;
       const timeValidation = validateScheduleSlot(slot);
-      const rowClass = [
-        "schedule-slot-row",
-        hasConflict ? "has-conflict" : "",
-        !timeValidation.valid && slot.start_time && slot.end_time ? "has-time-error" : "",
-      ]
-        .filter(Boolean)
-        .join(" ");
-
-      const conflictWarning = hasConflict ? `
-        <div class="schedule-slot-warning">
-          <strong>Conflicto:</strong>
-          ${conflicts.map(c => `<strong>${escapeHtml(c.course.name)}</strong> (${escapeHtml(c.existing.start_time)}–${escapeHtml(c.existing.end_time)})`).join(", ")}
-          ya ocupa este horario.
-        </div>` : "";
-
-      const timeWarning =
-        !timeValidation.valid && slot.start_time && slot.end_time
-          ? `<div class="schedule-slot-warning">${escapeHtml(timeValidation.error)}</div>`
-          : "";
-
-      return `
-        <div class="${rowClass}">
-          <div>
-            <label class="form-label" for="schedule-day-${i}">Día</label>
-            <select id="schedule-day-${i}" class="form-select" onchange="app.updateSlot(${i},'day',this.value)">
-              ${days.map(d => `<option value="${d}" ${slot.day===d?'selected':''}>${d}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label class="form-label" for="schedule-start-${i}">Inicio</label>
-            <input id="schedule-start-${i}" type="time" class="form-input" value="${slot.start_time}" oninput="app.updateSlot(${i},'start_time',this.value)">
-          </div>
-          <div>
-            <label class="form-label" for="schedule-end-${i}">Fin</label>
-            <input id="schedule-end-${i}" type="time" class="form-input" value="${slot.end_time}" oninput="app.updateSlot(${i},'end_time',this.value)">
-          </div>
-          <div>
-            <label class="form-label" for="schedule-room-${i}">Aula</label>
-            <input id="schedule-room-${i}" type="text" class="form-input" value="${escapeHtml(slot.room||'')}" placeholder="A-201" oninput="app.updateSlot(${i},'room',this.value)">
-          </div>
-          <div style="padding-bottom:1px;">
-            <button type="button" class="btn btn-danger btn-small" aria-label="Eliminar horario" onclick="app.removeScheduleSlot(${i})">${icon("x")}</button>
-          </div>
-          ${timeWarning}
-          ${conflictWarning}
-        </div>`;
+      const rowClass = ["schedule-slot-row", hasConflict ? "has-conflict" : "", !timeValidation.valid && slot.start_time && slot.end_time ? "has-time-error" : ""].filter(Boolean).join(" ");
+      const conflictWarning = hasConflict ? `<div class="schedule-slot-warning"><strong>Conflicto:</strong> ${conflicts.map(c => `<strong>${escapeHtml(c.course.name)}</strong> (${escapeHtml(c.existing.start_time)}–${escapeHtml(c.existing.end_time)})`).join(", ")} ya ocupa este horario.</div>` : "";
+      const timeWarning = !timeValidation.valid && slot.start_time && slot.end_time ? `<div class="schedule-slot-warning">${escapeHtml(timeValidation.error)}</div>` : "";
+      return `<div class="${rowClass}">
+        <div><label class="form-label" for="schedule-day-${i}">Día</label><select id="schedule-day-${i}" class="form-select" onchange="app.updateSlot(${i},'day',this.value)">${days.map(d => `<option value="${d}" ${slot.day === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+        <div><label class="form-label" for="schedule-start-${i}">Inicio</label><input id="schedule-start-${i}" type="time" class="form-input" value="${slot.start_time}" oninput="app.updateSlot(${i},'start_time',this.value)"></div>
+        <div><label class="form-label" for="schedule-end-${i}">Fin</label><input id="schedule-end-${i}" type="time" class="form-input" value="${slot.end_time}" oninput="app.updateSlot(${i},'end_time',this.value)"></div>
+        <div><label class="form-label" for="schedule-room-${i}">Aula</label><input id="schedule-room-${i}" type="text" class="form-input" value="${escapeHtml(slot.room || '')}" placeholder="A-201" oninput="app.updateSlot(${i},'room',this.value)"></div>
+        <div style="padding-bottom:1px;"><button type="button" class="btn btn-danger btn-small" aria-label="Eliminar horario" onclick="app.removeScheduleSlot(${i})">${icon("x")}</button></div>
+        ${timeWarning}${conflictWarning}
+      </div>`;
     }).join('');
   }
 
-  // ─── Color Picker ─────────────────────────────────────────────────────────────
   setColor(color) {
-    document.querySelectorAll(".color-option").forEach((el) => {
-      el.classList.toggle("selected", el.dataset.color === color);
-    });
+    document.querySelectorAll(".color-option").forEach((el) => { el.classList.toggle("selected", el.dataset.color === color); });
     document.getElementById("course-color").value = color;
-
     const colorMap = {
       red: { bg: "#ffebee", border: "#ef5350", text: "#c62828" },
       blue: { bg: "#e3f2fd", border: "#42a5f5", text: "#1565c0" },
@@ -1951,27 +1270,15 @@ class AmellifyApp {
     };
     const c = colorMap[color] || colorMap.blue;
     const preview = document.getElementById("color-preview");
-    if (preview) {
-      preview.style.background = c.bg;
-      preview.style.borderColor = c.border;
-      preview.style.color = c.text;
-      preview.style.borderWidth = "1px";
-      preview.style.borderStyle = "solid";
-    }
+    if (preview) { preview.style.background = c.bg; preview.style.borderColor = c.border; preview.style.color = c.text; preview.style.borderWidth = "1px"; preview.style.borderStyle = "solid"; }
   }
 
-  // ─── Conflict Detection ──────────────────────────────────────────────────────
-  timeToMin(t) {
-    const [h, m] = t.split(':').map(Number);
-    return h * 60 + m;
-  }
+  timeToMin(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
 
   slotsOverlap(a, b) {
     if (a.day !== b.day) return false;
-    const aStart = this.timeToMin(a.start_time);
-    const aEnd   = this.timeToMin(a.end_time);
-    const bStart = this.timeToMin(b.start_time);
-    const bEnd   = this.timeToMin(b.end_time);
+    const aStart = this.timeToMin(a.start_time), aEnd = this.timeToMin(a.end_time);
+    const bStart = this.timeToMin(b.start_time), bEnd = this.timeToMin(b.end_time);
     return aStart < bEnd && bStart < aEnd;
   }
 
@@ -1982,9 +1289,7 @@ class AmellifyApp {
         if (excludeCode && course.code === excludeCode) continue;
         if (course.status === 'dropped') continue;
         for (const existing of (course.schedules || [])) {
-          if (this.slotsOverlap(newSlot, existing)) {
-            conflicts.push({ newSlot, existing, course });
-          }
+          if (this.slotsOverlap(newSlot, existing)) conflicts.push({ newSlot, existing, course });
         }
       }
     }
@@ -1992,14 +1297,10 @@ class AmellifyApp {
   }
 
   showConflictModal(conflicts, onForceCancel) {
-    // Remove any existing conflict modal
     document.getElementById('conflict-modal')?.remove();
-
     const rows = conflicts.map(({ newSlot, existing, course }) => `
       <div class="conflict-row">
-        <div class="conflict-row-title">
-          ${icon("zap", "icon-sm")} Conflicto detectado — ${icon("calendar", "icon-sm")} ${escapeHtml(newSlot.day)}
-        </div>
+        <div class="conflict-row-title">${icon("zap", "icon-sm")} Conflicto detectado — ${icon("calendar", "icon-sm")} ${escapeHtml(newSlot.day)}</div>
         <div class="conflict-row-grid">
           <div class="conflict-block conflict-block-new">
             <div class="conflict-block-label">${icon("clock", "icon-sm")} Quieres agregar</div>
@@ -2019,32 +1320,12 @@ class AmellifyApp {
 
     const modal = document.createElement('div');
     modal.id = 'conflict-modal';
-    modal.style.cssText = `
-      position:fixed; inset:0;
-      background:rgba(0,0,0,0.65);
-      backdrop-filter:blur(12px);
-      z-index:2000;
-      display:flex; align-items:center; justify-content:center;
-      padding:24px;
-      animation: fadeInConflict 0.2s ease-out;
-    `;
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(12px);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;animation:fadeInConflict 0.2s ease-out;';
 
-    // Inject keyframe once
     if (!document.getElementById('conflict-keyframe')) {
       const style = document.createElement('style');
       style.id = 'conflict-keyframe';
-      style.textContent = `
-        @keyframes fadeInConflict {
-          from { opacity:0; } to { opacity:1; }
-        }
-        @keyframes shakeModal {
-          0%,100% { transform: translateX(0); }
-          20% { transform: translateX(-8px); }
-          40% { transform: translateX(8px); }
-          60% { transform: translateX(-5px); }
-          80% { transform: translateX(5px); }
-        }
-      `;
+      style.textContent = '@keyframes fadeInConflict{from{opacity:0}to{opacity:1}}@keyframes shakeModal{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}';
       document.head.appendChild(style);
     }
 
@@ -2053,43 +1334,22 @@ class AmellifyApp {
         <div class="conflict-modal-header">
           <div class="conflict-modal-icon">${icon("ban", "icon-lg")}</div>
           <div class="conflict-modal-title">¡Choque de horarios!</div>
-          <div class="conflict-modal-subtitle">
-            ${conflicts.length === 1
-              ? 'Este horario se traslapa con una materia existente.'
-              : `Se encontraron <strong>${conflicts.length}</strong> conflictos de horario.`}
-          </div>
+          <div class="conflict-modal-subtitle">${conflicts.length === 1 ? 'Este horario se traslapa con una materia existente.' : `Se encontraron <strong>${conflicts.length}</strong> conflictos de horario.`}</div>
         </div>
-        <div class="conflict-modal-list">
-          ${rows}
-        </div>
+        <div class="conflict-modal-list">${rows}</div>
         <div class="conflict-modal-actions">
-          <button onclick="document.getElementById('conflict-modal').remove()"
-            class="btn btn-primary" style="flex:1; min-width:140px;">
-            ${icon("edit")} Corregir horarios
-          </button>
-          <button onclick="document.getElementById('conflict-modal').remove(); ${onForceCancel ? onForceCancel : ''}"
-            class="btn btn-secondary" style="flex:1; min-width:140px;">
-            Cancelar
-          </button>
+          <button onclick="document.getElementById('conflict-modal').remove()" class="btn btn-primary" style="flex:1;min-width:140px;">${icon("edit")} Corregir horarios</button>
+          <button onclick="document.getElementById('conflict-modal').remove(); ${onForceCancel ? onForceCancel : ''}" class="btn btn-secondary" style="flex:1;min-width:140px;">Cancelar</button>
         </div>
-      </div>
-    `;
+      </div>`;
 
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
-
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
     document.body.appendChild(modal);
   }
 
-  // ─── Save Course ─────────────────────────────────────────────────────────────
   async saveCourse(e) {
     e.preventDefault();
-    if (!this.validateCourseFormData()) {
-      this.showAlert("Revisa los campos marcados en el formulario", "error");
-      return;
-    }
+    if (!this.validateCourseFormData()) { this.showAlert("Revisa los campos marcados en el formulario", "error"); return; }
 
     const isEdit = !!this.editingCode;
     const codeResult = validateCourseCode(document.getElementById("course-code").value);
@@ -2105,19 +1365,13 @@ class AmellifyApp {
       notes: document.getElementById("course-notes").value.trim(),
       color: document.getElementById("course-color").value || "blue",
       partials: this.getPartialsFromForm(),
-      schedules: this.scheduleSlots.filter(
-        (s) => s.day && s.start_time && s.end_time,
-      ),
+      schedules: this.scheduleSlots.filter((s) => s.day && s.start_time && s.end_time),
     };
 
-    // ── Conflict check ────────────────────────────────────────────────────────
     const status = data.status;
     if (status !== 'dropped' && status !== 'completed') {
       const conflicts = this.getConflicts(data.schedules, isEdit ? this.editingCode : null);
-      if (conflicts.length > 0) {
-        this.showConflictModal(conflicts);
-        return;
-      }
+      if (conflicts.length > 0) { this.showConflictModal(conflicts); return; }
     }
 
     try {
@@ -2126,31 +1380,20 @@ class AmellifyApp {
       } else {
         await api.createCourse(data);
       }
-
       document.getElementById("course-modal").classList.remove("active");
-      this._skipNextSocketSync = true;
       await this.fetchCourses();
       this.renderAll();
-      this.showAlert(
-        isEdit ? "Materia actualizada" : "Materia creada",
-        "success",
-      );
+      this.showAlert(isEdit ? "Materia actualizada" : "Materia creada", "success");
     } catch (err) {
       this.showAlert(err.message || "Error de conexión con el servidor", "error");
     }
   }
 
-  // ─── Delete ──────────────────────────────────────────────────────────────────
   async deleteCurrentCourse() {
     if (!this.editingCode) return;
     const course = this.courses.find((c) => c.code === this.editingCode);
     if (this.settings.confirmDeleteCourse !== false) {
-      if (
-        !confirm(
-          `¿Eliminar "${course?.name || this.editingCode}"?\n\nEsta acción no se puede deshacer.`,
-        )
-      )
-        return;
+      if (!confirm(`¿Eliminar "${course?.name || this.editingCode}"?\n\nEsta acción no se puede deshacer.`)) return;
     }
     document.getElementById("course-modal").classList.remove("active");
     await this._deleteCourse(this.editingCode);
@@ -2159,12 +1402,7 @@ class AmellifyApp {
   async confirmDeleteCourse(code) {
     const course = this.courses.find((c) => c.code === code);
     if (this.settings.confirmDeleteCourse !== false) {
-      if (
-        !confirm(
-          `¿Eliminar "${course?.name || code}"?\n\nEsta acción no se puede deshacer.`,
-        )
-      )
-        return;
+      if (!confirm(`¿Eliminar "${course?.name || code}"?\n\nEsta acción no se puede deshacer.`)) return;
     }
     await this._deleteCourse(code);
   }
@@ -2172,7 +1410,6 @@ class AmellifyApp {
   async _deleteCourse(code) {
     try {
       await api.deleteCourse(code);
-      this._skipNextSocketSync = true;
       await this.fetchCourses();
       this.renderAll();
       this.showAlert("Materia eliminada", "success");
@@ -2181,20 +1418,13 @@ class AmellifyApp {
     }
   }
 
-  // ─── Class Detail Modal ──────────────────────────────────────────────────────
   showClassDetails(courseCode, scheduleId) {
     const course = this.courses.find((c) => c.code === courseCode);
     if (!course) return;
-
     const schedule = scheduleId
       ? (course.schedules || []).find((s) => Number(s.id) === Number(scheduleId))
       : (course.schedules || [])[0];
-    const statusDots = {
-      active: statusDot("active"),
-      paused: statusDot("paused"),
-      completed: statusDot("completed"),
-      dropped: statusDot("dropped"),
-    };
+    const statusDots = { active: statusDot("active"), paused: statusDot("paused"), completed: statusDot("completed"), dropped: statusDot("dropped") };
 
     document.getElementById("modal-body").innerHTML = `
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);">
@@ -2204,48 +1434,14 @@ class AmellifyApp {
           <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-secondary);margin-top:4px;">${course.code}</div>
         </div>
       </div>
-
-      ${
-        schedule
-          ? `
-        <div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:16px;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;" class="meta-with-icon">${icon("calendar", "icon-sm")} Horario de esta clase</div>
-          <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:15px;">
-            <span class="meta-with-icon">${icon("calendar", "icon-sm")} ${schedule.day}</span>
-            <span class="meta-with-icon">${icon("clock", "icon-sm")} ${schedule.start_time} – ${schedule.end_time}</span>
-            ${schedule.room ? `<span class="meta-with-icon">${icon("building", "icon-sm")} ${schedule.room}</span>` : ""}
-          </div>
-        </div>`
-          : ""
-      }
-
-      ${
-        (course.schedules || []).length > 1
-          ? `
-        <div style="margin-bottom:16px;">
-          <div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Todos los horarios</div>
-          ${course.schedules.map((s) => `<span class="schedule-tag meta-with-icon" style="display:inline-block;margin:2px;">${icon("calendar", "icon-sm")} ${s.day} ${s.start_time}–${s.end_time}${s.room ? " · " + s.room : ""}</span>`).join("")}
-        </div>`
-          : ""
-      }
-
+      ${schedule ? `<div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:16px;"><div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;" class="meta-with-icon">${icon("calendar", "icon-sm")} Horario de esta clase</div><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:15px;"><span class="meta-with-icon">${icon("calendar", "icon-sm")} ${schedule.day}</span><span class="meta-with-icon">${icon("clock", "icon-sm")} ${schedule.start_time} – ${schedule.end_time}</span>${schedule.room ? `<span class="meta-with-icon">${icon("building", "icon-sm")} ${schedule.room}</span>` : ""}</div></div>` : ""}
+      ${(course.schedules || []).length > 1 ? `<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Todos los horarios</div>${course.schedules.map((s) => `<span class="schedule-tag meta-with-icon" style="display:inline-block;margin:2px;">${icon("calendar", "icon-sm")} ${s.day} ${s.start_time}–${s.end_time}${s.room ? " · " + s.room : ""}</span>`).join("")}</div>` : ""}
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">CRÉDITOS</div>
-          <div style="font-size:24px;font-weight:800;">${course.credits}</div>
-        </div>
-        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">ESTADO</div>
-          <div style="font-size:18px;" class="status-with-dot">${statusDots[course.status] || statusDot("active")}</div>
-          <div style="font-size:12px;color:var(--text-secondary);">${statusLabel(course.status)}</div>
-        </div>
-        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">SEMESTRE</div>
-          <div style="font-size:13px;font-weight:600;">${course.semester || "—"}</div>
-        </div>
+        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">CRÉDITOS</div><div style="font-size:24px;font-weight:800;">${course.credits}</div></div>
+        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">ESTADO</div><div style="font-size:18px;" class="status-with-dot">${statusDots[course.status] || statusDot("active")}</div><div style="font-size:12px;color:var(--text-secondary);">${statusLabel(course.status)}</div></div>
+        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">SEMESTRE</div><div style="font-size:13px;font-weight:600;">${course.semester || "—"}</div></div>
       </div>
-
-      ${(function() {
+      ${(function () {
         var partials = course.partials || [];
         if (partials.length > 0) {
           var finalGrade = app.calculateFinalGrade(partials);
@@ -2259,42 +1455,18 @@ class AmellifyApp {
         }
         return '';
       })()}
-
-      ${
-        course.professor
-          ? `
-        <div style="padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-bottom:12px;">
-          <div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">PROFESOR</div>
-          <div style="font-weight:600;" class="meta-with-icon">${icon("user", "icon-sm")} ${course.professor}</div>
-          ${course.email ? `<div style="margin-top:4px;" class="meta-with-icon"><a href="mailto:${course.email}" style="color:var(--accent);font-size:13px;">${icon("mail", "icon-sm")} ${course.email}</a></div>` : ""}
-        </div>`
-          : ""
-      }
-
+      ${course.professor ? `<div style="padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-bottom:12px;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">PROFESOR</div><div style="font-weight:600;" class="meta-with-icon">${icon("user", "icon-sm")} ${course.professor}</div>${course.email ? `<div style="margin-top:4px;" class="meta-with-icon"><a href="mailto:${course.email}" style="color:var(--accent);font-size:13px;">${icon("mail", "icon-sm")} ${course.email}</a></div>` : ""}</div>` : ""}
       ${course.faculty ? `<div class="meta-with-icon" style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">${icon("landmark", "icon-sm")} ${course.faculty}</div>` : ""}
-
-      ${
-        course.notes
-          ? `
-        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);font-size:14px;color:var(--text-secondary);font-style:italic;line-height:1.6;margin-bottom:16px;" class="meta-with-icon">
-          ${icon("file-text", "icon-sm")} ${course.notes}
-        </div>`
-          : ""
-      }
-
+      ${course.notes ? `<div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);font-size:14px;color:var(--text-secondary);font-style:italic;line-height:1.6;margin-bottom:16px;" class="meta-with-icon">${icon("file-text", "icon-sm")} ${course.notes}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:20px;">
         <button class="btn btn-primary" onclick="app.openEditCourseModal('${course.code}')">${icon("edit")} Editar Materia</button>
         <button class="btn btn-secondary" onclick="document.getElementById('class-modal').classList.remove('active')">Cerrar</button>
-      </div>
-    `;
-
+      </div>`;
     document.getElementById("class-modal").classList.add("active");
   }
 
-  // ─── Theme ───────────────────────────────────────────────────────────────────
   toggleTheme() {
-    const current =
-      document.documentElement.getAttribute("data-theme") || "light";
+    const current = document.documentElement.getAttribute("data-theme") || "light";
     const next = current === "dark" ? "light" : "dark";
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("amellify-theme", next);
@@ -2310,65 +1482,26 @@ class AmellifyApp {
     }
   }
 
-  // ─── Font Size Settings ──────────────────────────────────────────────────────
   setFontSize(size) {
     this.settings.fontSize = size;
     localStorage.setItem("amellify-settings", JSON.stringify(this.settings));
-    if (typeof this.saveSettingsToServer === "function") {
-      this.saveSettingsToServer();
-    }
+    if (typeof this.saveSettingsToServer === "function") this.saveSettingsToServer();
     this.applyFontSize();
-    
-    // Close menu and show notification
     const menu = document.getElementById("settings-modal");
     if (menu) menu.remove();
-    
     const sizeNames = { small: 'Pequeño', normal: 'Normal', large: 'Grande' };
     this.showSilentNotification(`Tamaño: ${sizeNames[size]}`);
-    
-    // Re-render if in grid view to apply changes
-    if (this.currentView === 'grid') {
-      this.renderGridView();
-    }
+    if (this.currentView === 'grid') this.renderGridView();
   }
 
   applyFontSize() {
     const root = document.documentElement;
-    
-    // Font size configurations (Grande anterior = Normal ahora)
     const fontSizes = {
-      small: {
-        code: '11px',
-        name: '13px',
-        room: '10px',
-        professor: '10px',
-        time: '10px',
-        padding: '8px 9px 7px',
-        gap: '2px'
-      },
-      normal: {
-        code: '13px',
-        name: '15px',
-        room: '11px',
-        professor: '11px',
-        time: '11px',
-        padding: '9px 10px 8px',
-        gap: '3px'
-      },
-      large: {
-        code: '15px',
-        name: '17px',
-        room: '12px',
-        professor: '12px',
-        time: '12px',
-        padding: '10px 11px 9px',
-        gap: '3px'
-      }
+      small: { code: '13px', name: '15px', room: '11px', professor: '11px', time: '11px', padding: '9px 10px 8px', gap: '3px' },
+      normal: { code: '15px', name: '17px', room: '12px', professor: '12px', time: '12px', padding: '10px 11px 9px', gap: '3px' },
+      large: { code: '17px', name: '20px', room: '14px', professor: '14px', time: '14px', padding: '11px 12px 10px', gap: '4px' },
     };
-
     const config = fontSizes[this.settings.fontSize];
-    
-    // Apply CSS variables
     root.style.setProperty('--grid-cell-code-size', config.code);
     root.style.setProperty('--grid-cell-name-size', config.name);
     root.style.setProperty('--grid-cell-room-size', config.room);
@@ -2378,69 +1511,34 @@ class AmellifyApp {
     root.style.setProperty('--grid-cell-gap', config.gap);
   }
 
-  // ─── Shortcuts Modal ─────────────────────────────────────────────────────────
   showShortcutsModal() {
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
     const modKey = isMac ? 'Cmd' : 'Ctrl';
-    
     const shortcuts = [
+      { categoryIcon: "calendar", category: "Navegación", items: [{ keys: [`${modKey}`, 'H'], desc: 'Ir a Grid y Enfocar Horario' }] },
       {
-        categoryIcon: "calendar",
-        category: "Navegación",
-        items: [
-          { keys: [`${modKey}`, 'H'], desc: 'Ir a Grid y Enfocar Horario' }
-        ]
-      },
-      {
-        categoryIcon: "search",
-        category: "Zoom",
-        items: [
+        categoryIcon: "search", category: "Zoom", items: [
           { keys: [`${modKey}`, '+'], desc: 'Acercar (Zoom In)' },
           { keys: [`${modKey}`, '-'], desc: 'Alejar (Zoom Out)' },
           { keys: [`${modKey}`, '0'], desc: 'Zoom Normal (100%)' }
         ]
       },
+      { categoryIcon: "file-text", category: "Materias", items: [{ keys: [`${modKey}`, 'N'], desc: 'Nueva Materia' }] },
       {
-        categoryIcon: "file-text",
-        category: "Materias",
-        items: [
-          { keys: [`${modKey}`, 'N'], desc: 'Nueva Materia' }
-        ]
-      },
-      {
-        categoryIcon: "eye",
-        category: "Vistas",
-        items: [
+        categoryIcon: "eye", category: "Vistas", items: [
           { keys: [`${modKey}`, '1'], desc: 'Vista Grid' },
           { keys: [`${modKey}`, '2'], desc: 'Vista Semanal' },
           { keys: [`${modKey}`, '3'], desc: 'Lista de Materias' },
-          { keys: [`${modKey}`, '4'], desc: 'Tareas' },
-          { keys: [`${modKey}`, '5'], desc: 'Exámenes' },
           { keys: [`${modKey}`, '6'], desc: 'Calendario mensual' },
           { keys: [`${modKey}`, '7'], desc: 'Vista Hoy' },
           { keys: [`${modKey}`, '8'], desc: 'Calculadora' },
           { keys: [`${modKey}`, '9'], desc: 'Estadísticas' },
-          { keys: [`${modKey}`, '0'], desc: 'Modo examen' },
         ]
       },
+      { categoryIcon: "search", category: "Búsqueda", items: [{ keys: [`${modKey}`, 'K'], desc: 'Buscar materias, horarios' }] },
+      { categoryIcon: "palette", category: "Apariencia", items: [{ keys: [`${modKey}`, 'Shift', 'T'], desc: 'Ciclar tema (Claro / Oscuro / AMOLED / Contraste)' }] },
       {
-        categoryIcon: "search",
-        category: "Búsqueda",
-        items: [
-          { keys: [`${modKey}`, 'K'], desc: 'Buscar materias, horarios y tareas' },
-        ]
-      },
-      {
-        categoryIcon: "palette",
-        category: "Apariencia",
-        items: [
-          { keys: [`${modKey}`, 'Shift', 'T'], desc: 'Ciclar tema (Claro / Oscuro / AMOLED / Contraste)' },
-        ]
-      },
-      {
-        categoryIcon: "keyboard",
-        category: "General",
-        items: [
+        categoryIcon: "keyboard", category: "General", items: [
           { keys: ['Esc'], desc: 'Cerrar Modal o Overlay' },
           { keys: [`${modKey}`, 'R'], desc: 'Recargar Aplicación' }
         ]
@@ -2448,92 +1546,29 @@ class AmellifyApp {
     ];
 
     let html = '<div style="display: grid; gap: 24px;">';
-    
     for (const section of shortcuts) {
-      html += `
-        <div>
-          <div style="
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--border);
-          ">${icon(section.categoryIcon, "icon-sm")} ${section.category}</div>
-          <div style="display: grid; gap: 8px;">`;
-      
+      html += `<div><div style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border);">${icon(section.categoryIcon, "icon-sm")} ${section.category}</div><div style="display: grid; gap: 8px;">`;
       for (const item of section.items) {
-        const keysHtml = item.keys.map(key => 
-          `<kbd style="
-            display: inline-block;
-            padding: 4px 8px;
-            font-size: 12px;
-            font-weight: 600;
-            font-family: 'IBM Plex Mono', monospace;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            box-shadow: 0 2px 0 var(--border);
-            margin: 0 2px;
-          ">${key}</kbd>`
-        ).join(' + ');
-        
-        html += `
-          <div style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            background: var(--bg-tertiary);
-            border-radius: 8px;
-            transition: var(--transition);
-          " onmouseover="this.style.background='var(--bg-primary)'" onmouseout="this.style.background='var(--bg-tertiary)'">
-            <span style="font-size: 14px; color: var(--text-secondary);">${item.desc}</span>
-            <span>${keysHtml}</span>
-          </div>`;
+        const keysHtml = item.keys.map(key => `<kbd style="display:inline-block;padding:4px 8px;font-size:12px;font-weight:600;font-family:'IBM Plex Mono',monospace;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:4px;box-shadow:0 2px 0 var(--border);margin:0 2px;">${key}</kbd>`).join(' + ');
+        html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--bg-tertiary);border-radius:8px;transition:var(--transition);" onmouseover="this.style.background='var(--bg-primary)'" onmouseout="this.style.background='var(--bg-tertiary)'"><span style="font-size:14px;color:var(--text-secondary);">${item.desc}</span><span>${keysHtml}</span></div>`;
       }
-      
       html += `</div></div>`;
     }
-    
-    html += `</div>
-      <div style="
-        margin-top: 24px;
-        padding: 16px;
-        background: var(--bg-tertiary);
-        border-radius: 12px;
-        border-left: 4px solid var(--accent);
-      ">
-        <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;" class="meta-with-icon">
-          ${icon("lightbulb", "icon-sm")} Consejo
-        </div>
-        <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-          Usa <kbd style="padding:2px 6px;background:var(--bg-primary);border-radius:4px;font-family:monospace;">${modKey}</kbd> + <kbd style="padding:2px 6px;background:var(--bg-primary);border-radius:4px;font-family:monospace;">H</kbd> para volver rápidamente a tu próxima clase o la hora actual.
-        </div>
-      </div>`;
-    
+    html += `</div><div style="margin-top:24px;padding:16px;background:var(--bg-tertiary);border-radius:12px;border-left:4px solid var(--accent);"><div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:8px;" class="meta-with-icon">${icon("lightbulb", "icon-sm")} Consejo</div><div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">Usa <kbd style="padding:2px 6px;background:var(--bg-primary);border-radius:4px;font-family:monospace;">${modKey}</kbd> + <kbd style="padding:2px 6px;background:var(--bg-primary);border-radius:4px;font-family:monospace;">H</kbd> para volver rápidamente a tu próxima clase o la hora actual.</div></div>`;
+
     document.getElementById('shortcuts-body').innerHTML = html;
     document.getElementById('shortcuts-modal').classList.add('active');
   }
 
-  // ─── Settings Modal ──────────────────────────────────────────────────────────
-  showDataMenu(tab = 'cuenta') {
+  showDataMenu(tab = 'apariencia') {
     const existing = document.getElementById('settings-modal');
-    if (existing) {
-      existing.remove();
-      return;
-    }
+    if (existing) { existing.remove(); return; }
 
-    const user = getCurrentUser();
-    const tabs = typeof this.getSettingsTabs === 'function'
-      ? this.getSettingsTabs(user)
-      : [
-      { id: 'cuenta', label: 'Cuenta', icon: 'user' },
+    const tabs = [
       { id: 'apariencia', label: 'Apariencia', icon: 'palette' },
       { id: 'horario', label: 'Horario', icon: 'calendar' },
       { id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
       { id: 'calculadora', label: 'Calculadora', icon: 'calculator' },
-      { id: 'privacidad', label: 'Privacidad', icon: 'shield' },
       { id: 'datos', label: 'Datos', icon: 'folder' },
     ];
 
@@ -2549,53 +1584,34 @@ class AmellifyApp {
       <div id="data-menu" class="settings-panel glass-strong">
         <header class="settings-header">
           <h2 class="settings-title meta-with-icon">${icon('settings', 'icon-sm')} Configuración</h2>
-          <button type="button" class="btn btn-icon btn-secondary settings-close" data-close-settings aria-label="Cerrar">
-            ${icon('x')}
-          </button>
+          <button type="button" class="btn btn-icon btn-secondary settings-close" data-close-settings aria-label="Cerrar">${icon('x')}</button>
         </header>
         <div class="settings-layout">
           <nav class="settings-tabs" role="tablist" aria-label="Secciones de configuración">
-            ${tabs
-              .map(
-                (t) => `
-              <button type="button" role="tab" class="settings-tab ${t.id === tab ? 'active' : ''}"
-                data-settings-tab="${t.id}" aria-selected="${t.id === tab}">
-                ${icon(t.icon, 'icon-sm')} ${t.label}
-              </button>`
-              )
-              .join('')}
+            ${tabs.map((t) => `<button type="button" role="tab" class="settings-tab ${t.id === tab ? 'active' : ''}" data-settings-tab="${t.id}" aria-selected="${t.id === tab}">${icon(t.icon, 'icon-sm')} ${t.label}</button>`).join('')}
           </nav>
           <div class="settings-content" id="settings-content" role="tabpanel">
-            ${this._renderSettingsTab(tab, user)}
+            ${this._renderSettingsTab(tab)}
           </div>
         </div>
-        <footer class="settings-footer">
-          ${this.courses.length} materias · ${this.courses.reduce((s, c) => s + (c.credits || 0), 0)} créditos
-        </footer>
-      </div>
-    `;
+        <footer class="settings-footer">${this.courses.length} materias · ${this.courses.reduce((s, c) => s + (c.credits || 0), 0)} créditos</footer>
+      </div>`;
 
     document.body.appendChild(modal);
     requestAnimationFrame(() => modal.classList.add('settings-modal--open'));
 
     const close = () => modal.remove();
-    modal.querySelectorAll('[data-close-settings]').forEach((el) => {
-      el.addEventListener('click', close);
-    });
+    modal.querySelectorAll('[data-close-settings]').forEach((el) => { el.addEventListener('click', close); });
 
     modal.querySelectorAll('[data-settings-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        modal.querySelectorAll('.settings-tab').forEach((t) => {
-          t.classList.remove('active');
-          t.setAttribute('aria-selected', 'false');
-        });
-        btn.classList.add('active');
-        btn.setAttribute('aria-selected', 'true');
+        modal.querySelectorAll('.settings-tab').forEach((t) => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
+        btn.classList.add('active'); btn.setAttribute('aria-selected', 'true');
         const panel = modal.querySelector('#settings-content');
         if (panel) {
           panel.classList.add('settings-content--exit');
           setTimeout(() => {
-            panel.innerHTML = this._renderSettingsTab(btn.dataset.settingsTab, getCurrentUser());
+            panel.innerHTML = this._renderSettingsTab(btn.dataset.settingsTab);
             panel.classList.remove('settings-content--exit');
             panel.classList.add('settings-content--enter');
             this._bindSettingsTabEvents(modal, btn.dataset.settingsTab);
@@ -2605,60 +1621,24 @@ class AmellifyApp {
     });
 
     this._bindSettingsTabEvents(modal, tab);
-
-    const escHandler = (e) => {
-      if (e.key === 'Escape') {
-        close();
-        document.removeEventListener('keydown', escHandler);
-      }
-    };
+    const escHandler = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
     document.addEventListener('keydown', escHandler);
   }
 
-  _renderSettingsTab(tab, user) {
+  _renderSettingsTab(tab) {
     if (typeof this._buildSettingsTabContent === 'function') {
-      return this._buildSettingsTabContent(tab, user);
+      return this._buildSettingsTabContent(tab);
     }
     return `<p class="muted">Sección en construcción.</p>`;
   }
 
   _bindSettingsTabEvents(modal, tab) {
-    if (tab === 'cuenta') {
-      modal.querySelector('#settings-profile-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        try {
-          const { user: updated } = await api.updateProfile({ name: fd.get('name') });
-          setAuthToken(getAuthToken(), updated, { remember: true });
-          this.updateUserBadge(updated);
-          this.showToast('Perfil actualizado', 'success');
-        } catch (err) {
-          this.showToast(err.message, 'error');
-        }
-      });
-      modal.querySelector('#settings-password-form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        try {
-          await api.changePassword({
-            currentPassword: fd.get('currentPassword'),
-            newPassword: fd.get('newPassword'),
-          });
-          e.target.reset();
-          this.showToast('Contraseña actualizada', 'success');
-        } catch (err) {
-          this.showToast(err.message, 'error');
-        }
-      });
-    }
     const inp = modal.querySelector('#import-file');
     if (inp) inp.onchange = function () { app.showImportPreview(this); };
   }
 
   exportData() {
-    const blob = new Blob([JSON.stringify(this.courses, null, 2)], {
-      type: "application/json",
-    });
+    const blob = new Blob([JSON.stringify(this.courses, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -2669,9 +1649,7 @@ class AmellifyApp {
     document.getElementById("settings-modal")?.remove();
   }
 
-  triggerImport() {
-    document.getElementById("import-file")?.click();
-  }
+  triggerImport() { document.getElementById("import-file")?.click(); }
 
   async importData(input) {
     if (typeof this.showImportPreview === 'function') {
@@ -2682,24 +1660,11 @@ class AmellifyApp {
     if (!file) return;
     try {
       const courses = JSON.parse(await file.text());
-      if (!Array.isArray(courses)) {
-        this.showAlert("Formato inválido", "error");
-        return;
-      }
-
-      let imported = 0,
-        skipped = 0;
+      if (!Array.isArray(courses)) { this.showAlert("Formato inválido", "error"); return; }
       const data = await api.importCourses(courses);
-      imported = data.imported ?? 0;
-      skipped = data.skipped ?? 0;
-
-      this._skipNextSocketSync = true;
       await this.fetchCourses();
       this.renderAll();
-      this.showAlert(
-        `${imported} importadas${skipped > 0 ? ` · ${skipped} ya existían` : ""}`,
-        "success",
-      );
+      this.showAlert(`${data.imported} importadas${data.skipped > 0 ? ` · ${data.skipped} ya existían` : ""}`, "success");
     } catch (e) {
       this.showAlert("Error al importar", "error");
     }
@@ -2708,30 +1673,14 @@ class AmellifyApp {
   }
 
   async deleteAllCourses() {
-    if (!confirm(
-      `¿Estás seguro de que quieres borrar TODAS las materias?\n\n` +
-      `Se eliminarán ${this.courses.length} materias del horario.\n\n` +
-      `Esta acción NO se puede deshacer.`
-    )) return;
-
-    if (!confirm(
-      `ÚLTIMA CONFIRMACIÓN\n\n` +
-      `Esto borrará permanentemente todas tus materias.\n\n` +
-      `¿Continuar?`
-    )) return;
-
+    if (!confirm(`¿Estás seguro de que quieres borrar TODAS las materias?\n\nSe eliminarán ${this.courses.length} materias del horario.\n\nEsta acción NO se puede deshacer.`)) return;
+    if (!confirm(`ÚLTIMA CONFIRMACIÓN\n\nEsto borrará permanentemente todas tus materias.\n\n¿Continuar?`)) return;
     document.getElementById("settings-modal")?.remove();
-
     try {
       let deleted = 0;
       for (const course of [...this.courses]) {
-        try {
-          await api.deleteCourse(course.code);
-          deleted++;
-        } catch (_e) { /* skip */ }
+        try { await api.deleteCourse(course.code); deleted++; } catch { }
       }
-
-      this._skipNextSocketSync = true;
       await this.fetchCourses();
       this.renderAll();
       this.showAlert(`${deleted} materias eliminadas`, "success");
@@ -2740,7 +1689,6 @@ class AmellifyApp {
     }
   }
 
-  // ─── Alert ───────────────────────────────────────────────────────────────────
   showAlert(message, type = "success") {
     const container = document.getElementById("alert-container");
     const alert = document.createElement("div");
@@ -2750,74 +1698,32 @@ class AmellifyApp {
     alert.innerHTML = `<span class="alert-with-icon">${icon(ic)} ${escapeHtml(message)}</span>`;
     container.appendChild(alert);
     setTimeout(() => {
-      alert.style.opacity = "0";
-      alert.style.transform = "translateX(100px)";
-      alert.style.transition = "all 0.3s";
+      alert.style.opacity = "0"; alert.style.transform = "translateX(100px)"; alert.style.transition = "all 0.3s";
       setTimeout(() => alert.remove(), 300);
     }, 2700);
   }
 
-  // ─── Event Listeners ─────────────────────────────────────────────────────────
   setupEventListeners() {
-    if (this._eventListenersBound) return;
-    this._eventListenersBound = true;
-
-    // View tabs
     document.querySelectorAll(".view-tab").forEach((tab) => {
       tab.addEventListener("click", () => this.switchView(tab.dataset.view));
     });
-
-    // Form submit
-    document
-      .getElementById("course-form")
-      .addEventListener("submit", (e) => this.saveCourse(e));
-
+    document.getElementById("course-form").addEventListener("submit", (e) => this.saveCourse(e));
     const courseCodeInput = document.getElementById("course-code");
     if (courseCodeInput) {
       courseCodeInput.addEventListener("blur", () => this.checkCourseCodeDuplicate());
-      courseCodeInput.addEventListener("input", () => {
-        courseCodeInput.value = courseCodeInput.value.toUpperCase();
-      });
+      courseCodeInput.addEventListener("input", () => { courseCodeInput.value = courseCodeInput.value.toUpperCase(); });
     }
+    document.querySelectorAll(".color-option").forEach((opt) => { opt.addEventListener("click", () => this.setColor(opt.dataset.color)); });
+    document.querySelectorAll(".modal").forEach((modal) => { modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.remove("active"); }); });
 
-    // Color picker
-    document.querySelectorAll(".color-option").forEach((opt) => {
-      opt.addEventListener("click", () => this.setColor(opt.dataset.color));
-    });
-
-    // Close modal on backdrop
-    document.querySelectorAll(".modal").forEach((modal) => {
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) modal.classList.remove("active");
-      });
-    });
-
-    // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
-      // Escape key - close modals
       if (e.key === "Escape") {
-        document
-          .querySelectorAll(".modal.active")
-          .forEach((m) => m.classList.remove("active"));
+        document.querySelectorAll(".modal.active").forEach((m) => m.classList.remove("active"));
         document.getElementById("settings-modal")?.remove();
         this.closeSearch?.();
       }
-      
-      // Ctrl/Cmd + H - Go to Grid view and focus on schedule
-      if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
-        e.preventDefault();
-        this.showSilentNotification('Ctrl+H: Ir a Horario');
-        this.goToSchedule();
-      }
-      
-      // Ctrl/Cmd + N - New course
-      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-        e.preventDefault();
-        this.showSilentNotification('Ctrl+N: Nueva Materia');
-        this.openAddCourseModal();
-      }
-      
-      // Ctrl/Cmd + 1/2/3 - Switch views
+      if ((e.ctrlKey || e.metaKey) && e.key === 'h') { e.preventDefault(); this.showSilentNotification('Ctrl+H: Ir a Horario'); this.goToSchedule(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); this.showSilentNotification('Ctrl+N: Nueva Materia'); this.openAddCourseModal(); }
       if ((e.ctrlKey || e.metaKey) && ['1', '2', '3'].includes(e.key)) {
         e.preventDefault();
         const views = { '1': 'grid', '2': 'week', '3': 'list' };
@@ -2825,209 +1731,82 @@ class AmellifyApp {
         this.showSilentNotification(`Ctrl+${e.key}: ${viewNames[e.key]}`);
         this.switchView(views[e.key]);
       }
-      
-      // Ctrl/Cmd + Shift + T - Toggle theme
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
-        e.preventDefault();
-        this.showSilentNotification('Ctrl+Shift+T: Cambiar Tema');
-        this.toggleTheme();
-      }
-      
-      // Ctrl/Cmd + R - Reload (show notification before reload)
-      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-        this.showSilentNotification('Ctrl+R: Recargando...');
-        // Let the default reload happen
-      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') { e.preventDefault(); this.showSilentNotification('Ctrl+Shift+T: Cambiar Tema'); this.toggleTheme(); }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r') { this.showSilentNotification('Ctrl+R: Recargando...'); }
     });
   }
 
-  // ─── Silent Notification ─────────────────────────────────────────────────────
   showSilentNotification(message) {
     const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--bg-secondary);
-      color: var(--text-primary);
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      border: 1px solid var(--border);
-      z-index: 1000;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.3s ease;
-      pointer-events: none;
-      font-family: 'IBM Plex Mono', monospace;
-    `;
+    notification.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--bg-secondary);color:var(--text-primary);padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.15);border:1px solid var(--border);z-index:1000;opacity:0;transform:translateY(10px);transition:all 0.3s ease;pointer-events:none;font-family:\'IBM Plex Mono\',monospace;';
     notification.textContent = message;
     document.body.appendChild(notification);
-    
-    // Fade in
-    setTimeout(() => {
-      notification.style.opacity = '0.9';
-      notification.style.transform = 'translateY(0)';
-    }, 10);
-    
-    // Fade out and remove
-    setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transform = 'translateY(10px)';
-      setTimeout(() => notification.remove(), 300);
-    }, 1500);
+    setTimeout(() => { notification.style.opacity = '0.9'; notification.style.transform = 'translateY(0)'; }, 10);
+    setTimeout(() => { notification.style.opacity = '0'; notification.style.transform = 'translateY(10px)'; setTimeout(() => notification.remove(), 300); }, 1500);
   }
 
-  // ─── Go to Schedule (Grid + Focus) ───────────────────────────────────────────
   goToSchedule() {
-    // First, switch to Grid view if not already there
-    if (this.currentView !== 'grid') {
-      this.switchView('grid');
-      // Wait for view to render before focusing
-      setTimeout(() => {
-        this.focusOnSchedule();
-      }, 150);
-    } else {
-      // Already in grid, just focus
-      this.focusOnSchedule();
-    }
+    if (this.currentView !== 'grid') { this.switchView('grid'); setTimeout(() => { this.focusOnSchedule(); }, 150); }
+    else { this.focusOnSchedule(); }
   }
 
-  // ─── Focus on Schedule ───────────────────────────────────────────────────────
   focusOnSchedule() {
     const scheduleContainer = document.getElementById('grid-schedule-container');
     if (!scheduleContainer) return;
-
-    // Get current time info
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const todayMap = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const todayMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const todayName = todayMap[now.getDay()];
-    
     const SLOT_MIN = 10;
-    const SLOT_H = this.settings.gridCompact ? 8 : 12;
+    const SLOT_H = this.settings.gridCompact ? 10 : 16;
     const originMin = 0;
-    const headerHeight = 40; // Header height for accurate scroll calculation
-    
-    const timeToMin = (t) => {
-      const [h, m] = t.split(':').map(Number);
-      return h * 60 + m;
-    };
-
-    // Collect all schedules
+    const headerHeight = 40;
+    const timeToMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     const allSchedules = [];
-    for (const course of this.courses) {
-      for (const s of course.schedules || []) {
-        allSchedules.push({ ...s, course });
-      }
-    }
-
+    for (const course of this.courses) { for (const s of course.schedules || []) { allSchedules.push({ ...s, course }); } }
     let targetScrollPosition = 0;
     let targetMessage = '';
-
     if (allSchedules.length > 0) {
-      // WITH SCHEDULES: Focus on next/current class
       const todaySchedules = allSchedules.filter(s => s.day === todayName);
-      
       if (todaySchedules.length > 0) {
         let targetSchedule = null;
-        
-        // Find current class
         for (const s of todaySchedules) {
-          const startMin = timeToMin(s.start_time);
-          const endMin = timeToMin(s.end_time);
-          if (nowMin >= startMin && nowMin <= endMin) {
-            targetSchedule = s;
-            break;
-          }
+          const startMin = timeToMin(s.start_time), endMin = timeToMin(s.end_time);
+          if (nowMin >= startMin && nowMin <= endMin) { targetSchedule = s; break; }
         }
-        
-        // If no current class, find next class today
         if (!targetSchedule) {
-          const futureClasses = todaySchedules
-            .filter(s => timeToMin(s.start_time) > nowMin)
-            .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time));
-          
-          if (futureClasses.length > 0) {
-            targetSchedule = futureClasses[0];
-          }
+          const futureClasses = todaySchedules.filter(s => timeToMin(s.start_time) > nowMin).sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time));
+          if (futureClasses.length > 0) targetSchedule = futureClasses[0];
         }
-        
-        // If still no target, use first class of the day
-        if (!targetSchedule) {
-          targetSchedule = todaySchedules.sort((a, b) => 
-            timeToMin(a.start_time) - timeToMin(b.start_time)
-          )[0];
-        }
-        
-        // Calculate scroll position for target class (center it in viewport)
+        if (!targetSchedule) { targetSchedule = todaySchedules.sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))[0]; }
         if (targetSchedule) {
-          const classStartMin = timeToMin(targetSchedule.start_time);
-          const classEndMin = timeToMin(targetSchedule.end_time);
-          const classMidMin = (classStartMin + classEndMin) / 2;
-          
-          // Calculate pixel position from top
-          const pixelsFromOrigin = (classMidMin - originMin) * (SLOT_H / SLOT_MIN);
-          targetScrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+          const classMidMin = (timeToMin(targetSchedule.start_time) + timeToMin(targetSchedule.end_time)) / 2;
+          targetScrollPosition = (classMidMin - originMin) * (SLOT_H / SLOT_MIN) - (scheduleContainer.clientHeight / 2) + headerHeight;
           targetMessage = targetSchedule.course.name;
         }
       }
-      
-      // If no classes today, scroll to earliest class in the week
       if (!targetMessage) {
-        const earliestClass = allSchedules.sort((a, b) => 
-          timeToMin(a.start_time) - timeToMin(b.start_time)
-        )[0];
-        
+        const earliestClass = allSchedules.sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))[0];
         if (earliestClass) {
-          const classStartMin = timeToMin(earliestClass.start_time);
-          const pixelsFromOrigin = (classStartMin - originMin) * (SLOT_H / SLOT_MIN);
-          targetScrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+          targetScrollPosition = (timeToMin(earliestClass.start_time) - originMin) * (SLOT_H / SLOT_MIN) - (scheduleContainer.clientHeight / 2) + headerHeight;
           targetMessage = earliestClass.course.name + ' (' + earliestClass.day + ')';
         }
       }
     }
-    
-    // NO SCHEDULES: Focus on current time (red line)
     if (!targetMessage && nowMin >= 0 && nowMin < 1440) {
-      const pixelsFromOrigin = (nowMin - originMin) * (SLOT_H / SLOT_MIN);
-      targetScrollPosition = pixelsFromOrigin - (scheduleContainer.clientHeight / 2) + headerHeight;
+      targetScrollPosition = (nowMin - originMin) * (SLOT_H / SLOT_MIN) - (scheduleContainer.clientHeight / 2) + headerHeight;
       targetMessage = 'Hora actual';
     }
-
-    // Perform smooth scroll on both page and container
     if (targetMessage) {
-      // First, scroll the main page to bring the view-content into view
       const viewContent = document.getElementById('view-content');
-      if (viewContent) {
-        // Scroll to the top of view-content with some offset for header
-        window.scrollTo({
-          top: viewContent.offsetTop - 80, // 80px offset for header
-          behavior: 'smooth'
-        });
-      }
-      
-      // Then scroll the grid container (with a small delay to let page scroll start)
-      setTimeout(() => {
-        scheduleContainer.scrollTo({
-          top: Math.max(0, targetScrollPosition),
-          behavior: 'smooth'
-        });
-      }, 100);
-      
-      // Show notification after scrolling starts
-      setTimeout(() => {
-        this.showSilentNotification(targetMessage);
-      }, 300);
+      if (viewContent) { window.scrollTo({ top: viewContent.offsetTop - 80, behavior: 'smooth' }); }
+      setTimeout(() => { scheduleContainer.scrollTo({ top: Math.max(0, targetScrollPosition), behavior: 'smooth' }); }, 100);
+      setTimeout(() => { this.showSilentNotification(targetMessage); }, 300);
     }
   }
 }
 
 installFeatures(AmellifyApp);
 installAdvancedFeatures(AmellifyApp);
-installAdminUI(AmellifyApp);
 
-// ─── Bootstrap ────────────────────────────────────────────────────────────────
 window.app = new AmellifyApp();

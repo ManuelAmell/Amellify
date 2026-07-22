@@ -1,4 +1,4 @@
-/** Recordatorios de clase, tareas y exámenes vía Notification API */
+/** Recordatorios de clase vía Notification API */
 
 const DAY_MAP = {
   Domingo: 0,
@@ -27,10 +27,6 @@ export class AcademicNotificationManager {
     return {
       enabled: s.notifications !== false,
       minutesBefore: s.notifyMinutesBefore ?? 15,
-      tasksEnabled: s.taskNotifications !== false,
-      examsEnabled: s.examNotifications !== false,
-      taskDaysBefore: s.notifyTaskDaysBefore ?? 1,
-      examDaysBefore: s.notifyExamDaysBefore ?? 3,
       dndEnabled: s.dndEnabled !== false,
       dndStart: s.dndStart || '22:00',
       dndEnd: s.dndEnd || '08:00',
@@ -109,52 +105,7 @@ export class AcademicNotificationManager {
     }
   }
 
-  scheduleTasks(tasks) {
-    const { enabled, tasksEnabled, taskDaysBefore } = this.getSettings();
-    if (!enabled || !tasksEnabled || Notification.permission !== 'granted' || !Array.isArray(tasks)) {
-      return;
-    }
 
-    for (const task of tasks) {
-      if (task.completed || !task.due_date) continue;
-      const due = new Date(`${task.due_date}T09:00:00`);
-      const notifyAt = due.getTime() - taskDaysBefore * 24 * 60 * 60 * 1000;
-      const key = `task-${task.id}-${task.due_date}-${taskDaysBefore}`;
-      const title =
-        taskDaysBefore === 1
-          ? 'Entrega mañana'
-          : `Entrega en ${taskDaysBefore} días`;
-      const body = `${task.title}${task.course_code ? ` · ${task.course_code}` : ''}`;
-      this._queueNotification(key, notifyAt, title, body);
-    }
-  }
-
-  scheduleExams(exams) {
-    const { enabled, examsEnabled, examDaysBefore } = this.getSettings();
-    if (!enabled || examsEnabled === false || Notification.permission !== 'granted' || !Array.isArray(exams)) {
-      return;
-    }
-
-    for (const exam of exams) {
-      if (!exam.exam_date) continue;
-      const due = new Date(`${exam.exam_date}T${exam.exam_time || '09:00'}`);
-      const notifyAt = due.getTime() - examDaysBefore * 24 * 60 * 60 * 1000;
-      const key = `exam-${exam.id}-${exam.exam_date}-${examDaysBefore}`;
-      const title =
-        examDaysBefore === 1
-          ? 'Examen mañana'
-          : `Examen en ${examDaysBefore} días`;
-      const body = `${exam.title} · ${exam.course_code}${exam.room ? ` · ${exam.room}` : ''}`;
-      this._queueNotification(key, notifyAt, title, body);
-    }
-  }
-
-  rescheduleAll(courses, tasks, exams) {
-    this.clearTimers();
-    this.schedule(courses);
-    this.scheduleTasks(tasks);
-    this.scheduleExams(exams);
-  }
 }
 
 /** @deprecated alias */
