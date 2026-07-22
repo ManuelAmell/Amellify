@@ -79,7 +79,6 @@ class AmellifyApp {
 
   async onAuthenticated(user) {
     this._initialLoadDone = false;
-    this.setupEventListeners();
     try {
       await this.fetchCourses();
     } finally {
