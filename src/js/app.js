@@ -1171,12 +1171,15 @@ class AmellifyApp {
     const email = document.getElementById("course-email").value.trim();
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { this.setFieldError("course-email", "course-email-error", "Email no válido"); valid = false; }
     const partials = this.getPartialsFromForm();
-    const { totalPercent } = evaluatePartials(partials, this.getPassingGrade());
-    const hasPartialWeights = partials.some((p) => p.percent > 0);
-    if (hasPartialWeights && totalPercent !== 100) {
-      const errEl = document.getElementById("partials-error");
-      if (errEl) { errEl.textContent = `Los parciales deben sumar 100% (actual: ${totalPercent}%)`; errEl.classList.add("is-visible"); }
-      valid = false;
+    const allEmpty = partials.every((p) => p.grade === '' || p.grade === null || p.grade === undefined);
+    const noWeights = partials.every((p) => !p.percent);
+    if (!allEmpty && !noWeights) {
+      const { totalPercent } = evaluatePartials(partials, this.getPassingGrade());
+      if (totalPercent !== 100) {
+        const errEl = document.getElementById("partials-error");
+        if (errEl) { errEl.textContent = `Los parciales deben sumar 100% (actual: ${totalPercent}%)`; errEl.classList.add("is-visible"); }
+        valid = false;
+      }
     }
     const scheduleErrors = [];
     this.scheduleSlots.forEach((slot, i) => {
@@ -1385,7 +1388,7 @@ class AmellifyApp {
       this.renderAll();
       this.showAlert(isEdit ? "Materia actualizada" : "Materia creada", "success");
     } catch (err) {
-      this.showAlert(err.message || "Error de conexión con el servidor", "error");
+      this.showAlert(err.message || "Error al guardar la materia", "error");
     }
   }
 
