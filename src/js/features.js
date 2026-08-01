@@ -656,7 +656,7 @@ export function installFeatures(AmellifyApp) {
         images.push(canvas.toDataURL('image/jpeg', 0.85));
         canvas.remove();
       }
-      await pdf.destroy();
+      await pdf.cleanup();
       loadingEl.hidden = true;
       if (!images.length) {
         this.showAlert('No se pudo extraer contenido del PDF', 'error');
@@ -681,6 +681,7 @@ export function installFeatures(AmellifyApp) {
       if (results) { results.hidden = true; results.innerHTML = ''; }
     } catch (e) {
       loadingEl.hidden = true;
+      console.error('PDF processing error:', e);
       this.showAlert('No se pudo leer el PDF. Asegurate de que sea un archivo válido.', 'error');
     }
   };
