@@ -16,12 +16,16 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'OPENROUTER_API_KEY no configurada en el servidor' });
   }
 
-  const { image, model } = req.body;
-  if (!image) {
-    return res.status(400).json({ error: 'Falta la imagen' });
+  const { image, images, model } = req.body;
+  const imgs = Array.isArray(images) && images.length ? images : (image ? [image] : []);
+  if (!imgs.length) {
+    return res.status(400).json({ error: 'Falta la imagen o el PDF' });
+  }
+  if (imgs.length > 8) {
+    return res.status(400).json({ error: 'Máximo 8 imágenes por petición' });
   }
 
-  const prompt = `Quiero que actúes como un generador de horarios universitarios en formato JSON. Te paso una imagen de mi horario de clases y debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin explicaciones, sin texto adicional.
+  const prompt = `Quiero que actúes como un generador de horarios universitarios en formato JSON. Te paso una o más imágenes de mi horario de clases (si son varias, pueden ser páginas de un PDF) y debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin explicaciones, sin texto adicional.
 
 FORMATO EXACTO DE SALIDA:
 [
@@ -84,7 +88,7 @@ INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin e
             role: 'user',
             content: [
               { type: 'text', text: prompt },
-              { type: 'image_url', image_url: { url: image } },
+              ...imgs.map(url => ({ type: 'image_url', image_url: { url } })),
             ],
           },
         ],

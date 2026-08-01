@@ -2504,6 +2504,43 @@ html.grid-compact .grid-schedule {
   border: 1px solid var(--glass-border-subtle);
 }
 
+.ia-pdf-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-subtle);
+  background: var(--bg-tertiary);
+}
+
+.ia-pdf-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+  display: inline-flex;
+}
+
+.ia-pdf-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  min-width: 0;
+}
+
+.ia-pdf-label strong {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.ia-pdf-warn {
+  font-size: 12px;
+  color: var(--warning);
+  margin-top: 4px;
+}
+
 .ia-loading {
   display: flex;
   align-items: center;

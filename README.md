@@ -91,7 +91,7 @@ No necesitás instalar nada: abrí el link y empezá a usar. Tus datos quedan gu
     </td>
     <td width="50%">
       <h3>🤖 Importar desde IA</h3>
-      <p>Cargá una foto de tu horario y la IA lo analiza automáticamente. También podés pegar el prompt en ChatGPT o Claude.</p>
+      <p>Cargá una foto o un PDF de tu horario y la IA lo analiza automáticamente. También podés pegar el prompt en ChatGPT o Claude.</p>
     </td>
   </tr>
   <tr>
@@ -156,23 +156,25 @@ Después abrí **http://localhost:8080** en tu navegador. Listo, no hace falta i
 | **Arrastrar clases** | Activar/desactivar drag & drop en el grid |
 | **Tema visual** | 10 temas de color |
 | **Notificaciones** | Recordatorio de la próxima clase |
-| **Importar desde IA** | Cargar foto con IA o archivo JSON |
+| **Importar desde IA** | Cargar foto o PDF con IA, o archivo JSON |
 | **Exportar ICS** | A Google Calendar, Apple Calendar u Outlook |
 
 ---
 
 ## 🤖 Importar desde IA
 
-Amellify puede generar tu horario automáticamente a partir de **una foto de tu horario** usando IA.
+Amellify puede generar tu horario automáticamente a partir de **una foto o un PDF de tu horario** usando IA.
 
-### Cargar foto con IA (recomendado)
+### Cargar foto o PDF con IA (recomendado)
 
 En la pestaña **IA** de Configuración:
 
-1. Hacé clic en **Seleccionar foto** y elegí una imagen de tu horario (JPG, PNG, WebP — máx. 5 MB).
+1. Hacé clic en **Seleccionar archivo** y elegí una imagen (JPG, PNG, WebP) o un PDF de tu horario (máx. 5 MB). Si elegís un PDF, se escanean hasta las 2 primeras páginas.
 2. Seleccioná el modelo de IA (por defecto se usa **Gemini 2.0 Flash**, rápido y preciso).
-3. Hacé clic en **Analizar horario con IA**. La IA procesará la imagen y detectará las materias.
+3. Hacé clic en **Analizar horario con IA**. La IA procesará el archivo y detectará las materias.
 4. Revisá el preview y confirmá la importación.
+
+> El PDF se procesa localmente en tu navegador (PDF.js) y solo se envían las páginas renderizadas al servidor para el análisis con IA.
 
 > La api key de OpenRouter se configura como variable de entorno `OPENROUTER_API_KEY` en Vercel.
 

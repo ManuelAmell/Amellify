@@ -2,6 +2,9 @@ import { downloadIcs } from './ics.js';
 import { AcademicNotificationManager } from './notifications.js';
 import { escapeHtml, escapeJsString, formatLocalDateKey, icon, priorityDot, PASSING_GRADE, GRADE_MIN, GRADE_MAX } from './utils.js';
 import { api } from './api.js';
+import * as pdfjsLib from '../lib/pdf.min.mjs';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('../lib/pdf.worker.min.mjs', import.meta.url).href;
 
 const DAY_NAMES = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 const SCHEDULE_DAYS_MON = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -579,12 +582,19 @@ export function installFeatures(AmellifyApp) {
 
   proto._resetAIPhotoState = function () {
     this._pendingPhotoData = null;
+    this._pendingIsPdf = false;
     const iaResults = document.getElementById('ia-results');
     if (iaResults) { iaResults.hidden = true; iaResults.innerHTML = ''; }
     const iaLoading = document.getElementById('ia-loading');
     if (iaLoading) iaLoading.hidden = true;
     const analyzeBtn = document.getElementById('ia-analyze-container');
     if (analyzeBtn) analyzeBtn.hidden = false;
+    const img = document.getElementById('ia-image-preview');
+    if (img) img.src = '';
+    const imageContainer = document.getElementById('ia-image-preview-container');
+    if (imageContainer) imageContainer.hidden = true;
+    const pdfPreview = document.getElementById('ia-pdf-preview');
+    if (pdfPreview) { pdfPreview.hidden = true; pdfPreview.innerHTML = ''; }
   };
 
   proto.triggerPhotoUpload = function () {
@@ -594,39 +604,97 @@ export function installFeatures(AmellifyApp) {
   proto.handlePhotoSelect = async function (input) {
     const file = input.files?.[0];
     if (!file) return;
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
     if (!validTypes.includes(file.type)) {
-      this.showAlert('Formato de imagen no soportado (JPG, PNG, WebP)', 'error');
+      this.showAlert('Formato de archivo no soportado (JPG, PNG, WebP, PDF)', 'error');
       input.value = '';
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      this.showAlert('Imagen demasiado grande (máximo 5 MB)', 'error');
+      this.showAlert('Archivo demasiado grande (máximo 5 MB)', 'error');
       input.value = '';
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this._pendingPhotoData = e.target.result;
-      const img = document.getElementById('ia-image-preview');
-      if (img) img.src = e.target.result;
-      document.getElementById('ia-image-preview-container').hidden = false;
+    this._pendingIsPdf = file.type === 'application/pdf';
+    if (this._pendingIsPdf) {
+      await this._processPdf(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this._pendingPhotoData = e.target.result;
+        const img = document.getElementById('ia-image-preview');
+        if (img) img.src = e.target.result;
+        document.getElementById('ia-image-preview-container').hidden = false;
+        document.getElementById('ia-pdf-preview').hidden = true;
+        document.getElementById('ia-model-select-container').hidden = false;
+        document.getElementById('ia-analyze-container').hidden = false;
+        const results = document.getElementById('ia-results');
+        if (results) { results.hidden = true; results.innerHTML = ''; }
+      };
+      reader.readAsDataURL(file);
+    }
+    input.value = '';
+  };
+
+  proto._processPdf = async function (file) {
+    const loadingEl = document.getElementById('ia-loading');
+    const analyzeContainer = document.getElementById('ia-analyze-container');
+    try {
+      loadingEl.hidden = false;
+      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      const maxPages = 2;
+      const pageCount = Math.min(pdf.numPages, maxPages);
+      const images = [];
+      for (let i = 1; i <= pageCount; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        images.push(canvas.toDataURL('image/jpeg', 0.85));
+        canvas.remove();
+      }
+      await pdf.destroy();
+      loadingEl.hidden = true;
+      if (!images.length) {
+        this.showAlert('No se pudo extraer contenido del PDF', 'error');
+        return;
+      }
+      this._pendingPhotoData = images;
+      const pdfPreview = document.getElementById('ia-pdf-preview');
+      if (pdfPreview) {
+        pdfPreview.hidden = false;
+        pdfPreview.innerHTML = `
+          <div class="ia-pdf-icon">${icon('file-text', 'icon-sm')}</div>
+          <div class="ia-pdf-label">
+            <strong>${pdf.numPages > maxPages ? `${pageCount} de ${pdf.numPages}` : pageCount} página${pageCount === 1 ? '' : 's'}</strong>
+            <span>${escapeHtml(file.name)}</span>
+            ${pdf.numPages > maxPages ? `<span class="ia-pdf-warn">El PDF tiene ${pdf.numPages} páginas. Solo se escanearán las primeras ${maxPages}.</span>` : ''}
+          </div>`;
+      }
+      document.getElementById('ia-image-preview-container').hidden = true;
       document.getElementById('ia-model-select-container').hidden = false;
       document.getElementById('ia-analyze-container').hidden = false;
       const results = document.getElementById('ia-results');
       if (results) { results.hidden = true; results.innerHTML = ''; }
-    };
-    reader.readAsDataURL(file);
-    input.value = '';
+    } catch (e) {
+      loadingEl.hidden = true;
+      this.showAlert('No se pudo leer el PDF. Asegurate de que sea un archivo válido.', 'error');
+    }
   };
 
   proto.resetPhotoUpload = function () {
     this._pendingPhotoData = null;
+    this._pendingIsPdf = false;
     const input = document.getElementById('ia-photo-input');
     if (input) input.value = '';
     const img = document.getElementById('ia-image-preview');
     if (img) img.src = '';
     document.getElementById('ia-image-preview-container').hidden = true;
+    const pdfPreview = document.getElementById('ia-pdf-preview');
+    if (pdfPreview) { pdfPreview.hidden = true; pdfPreview.innerHTML = ''; }
     document.getElementById('ia-model-select-container').hidden = true;
     document.getElementById('ia-analyze-container').hidden = true;
     const results = document.getElementById('ia-results');
@@ -635,7 +703,7 @@ export function installFeatures(AmellifyApp) {
 
   proto.analyzePhotoWithIA = async function () {
     if (!this._pendingPhotoData) {
-      this.showAlert('Primero seleccioná una foto', 'error');
+      this.showAlert('Primero seleccioná un archivo', 'error');
       return;
     }
     const modelSelect = document.getElementById('ia-model-select');
@@ -644,26 +712,27 @@ export function installFeatures(AmellifyApp) {
     const analyzeContainer = document.getElementById('ia-analyze-container');
     loadingEl.hidden = false;
     analyzeContainer.hidden = true;
+    const images = Array.isArray(this._pendingPhotoData) ? this._pendingPhotoData : [this._pendingPhotoData];
     try {
       const response = await fetch('/api/generate-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image: this._pendingPhotoData,
+          images: images,
           model: model,
         }),
       });
       loadingEl.hidden = true;
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        this.showAlert(err.error || 'Error al analizar la imagen', 'error');
+        this.showAlert(err.error || 'Error al analizar el archivo', 'error');
         analyzeContainer.hidden = false;
         return;
       }
       const data = await response.json();
       const courses = data.courses || [];
       if (!courses.length) {
-        this.showAlert('No se detectaron materias en la imagen. Intentá con otro modelo.', 'warning');
+        this.showAlert('No se detectaron materias en el archivo. Intentá con otro modelo.', 'warning');
         analyzeContainer.hidden = false;
         return;
       }
@@ -780,20 +849,21 @@ export function installFeatures(AmellifyApp) {
       return `
         <div class="settings-section">
           <h3 class="settings-section-title">${icon('photo', 'icon-sm')} Cargar horario con IA</h3>
-          <p class="muted" style="font-size:13px;line-height:1.6;">Subí una foto de tu horario de clases y la IA lo analizará automáticamente, extrayendo las materias y horarios en formato JSON listo para importar.</p>
+          <p class="muted" style="font-size:13px;line-height:1.6;">Subí una foto o un PDF de tu horario de clases y la IA lo analizará automáticamente, extrayendo las materias y horarios en formato JSON listo para importar.</p>
           <div class="ia-upload-area" id="ia-upload-area">
-            <input type="file" id="ia-photo-input" accept="image/*" hidden>
+            <input type="file" id="ia-photo-input" accept="image/*,application/pdf" hidden>
             <button type="button" class="btn btn-secondary" onclick="app.triggerPhotoUpload()">
-              ${icon('upload', 'icon-sm')} Seleccionar foto
+              ${icon('upload', 'icon-sm')} Seleccionar archivo
             </button>
-            <div class="ia-upload-hint">Formatos: JPG, PNG, WebP · Máx. 5 MB</div>
+            <div class="ia-upload-hint">Formatos: JPG, PNG, WebP, PDF · Máx. 5 MB</div>
           </div>
           <div id="ia-image-preview-container" hidden class="ia-image-wrapper">
             <img id="ia-image-preview" class="ia-image-preview" alt="Vista previa de la foto">
             <button type="button" class="btn btn-secondary btn-small" onclick="app.resetPhotoUpload()" style="margin-top:8px;">
-              ${icon('trash', 'icon-sm')} Cambiar foto
+              ${icon('trash', 'icon-sm')} Cambiar archivo
             </button>
           </div>
+          <div id="ia-pdf-preview" class="ia-pdf-preview" hidden></div>
           <div id="ia-model-select-container" hidden style="margin-top:12px;">
             <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
               ${icon('settings', 'icon-sm')} Modelo de IA
