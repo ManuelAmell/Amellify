@@ -70,7 +70,7 @@ VALIDACIÓN FINAL:
 
 INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ].`;
 
-  const selectedModel = model || 'google/gemini-2.0-flash-001';
+  const selectedModel = model || 'google/gemini-3.6-flash';
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {

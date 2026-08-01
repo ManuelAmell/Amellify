@@ -708,7 +708,7 @@ export function installFeatures(AmellifyApp) {
       return;
     }
     const modelSelect = document.getElementById('ia-model-select');
-    const model = modelSelect?.value || 'google/gemini-2.0-flash-001';
+    const model = modelSelect?.value || 'google/gemini-3.6-flash';
     const loadingEl = document.getElementById('ia-loading');
     const analyzeContainer = document.getElementById('ia-analyze-container');
     loadingEl.hidden = false;
@@ -870,9 +870,10 @@ export function installFeatures(AmellifyApp) {
               ${icon('settings', 'icon-sm')} Modelo de IA
             </label>
             <select id="ia-model-select" class="form-select">
-              <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash (rápido · recomendado)</option>
+              <option value="google/gemini-3.6-flash">Gemini 3.6 Flash (rápido · recomendado)</option>
+              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
               <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-              <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+              <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
               <option value="openai/gpt-4o">GPT-4o</option>
             </select>
           </div>
