@@ -176,7 +176,7 @@ En la pestaña **IA** de Configuración:
 
 > El PDF se procesa localmente en tu navegador (PDF.js) y solo se envían las páginas renderizadas al servidor para el análisis con IA.
 
-> La api key de OpenRouter se configura como variable de entorno `OPENROUTER_API_KEY` en Vercel.
+> Las API keys se configuran como variables de entorno en Vercel. La principal es `GEMINI_API_KEY` (gratis en [AI Studio](https://aistudio.google.com)); `OPENROUTER_API_KEY` es opcional y se usa como respaldo cuando Gemini está agotado o no está configurada.
 
 ### Alternativa manual: copiar prompt
 

@@ -1,4 +1,10 @@
-const FALLBACK_MODELS = [
+const GEMINI_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+];
+
+const OPENROUTER_MODELS = [
   'google/gemini-3.6-flash',
   'google/gemini-2.5-flash',
   'google/gemini-2.5-pro',
@@ -6,13 +12,51 @@ const FALLBACK_MODELS = [
   'openai/gpt-4o',
 ];
 
-function isRecoverableError(status, message) {
-  if ([402, 429, 502, 503, 404].includes(status)) return true;
-  const msg = (message || '').toLowerCase();
-  return ['rate limit', 'key limit', 'insufficient credits', 'no endpoints', 'overloaded', 'unavailable'].some((k) => msg.includes(k));
+function parseDataUrl(url) {
+  const m = /^data:([^;,]+);base64,(.+)$/.exec(url || '');
+  if (!m) return null;
+  return { mimeType: m[1], data: m[2] };
 }
 
-async function callModel(apiKey, model, prompt, imgs, origin) {
+function isRecoverableError(status, message) {
+  const msg = (message || '').toLowerCase();
+  if (['rate limit', 'key limit', 'insufficient credits', 'no endpoints', 'overloaded', 'unavailable', 'resource exhausted', 'quota', '429'].some((k) => msg.includes(k))) return true;
+  if ([402, 429, 502, 503, 404, 500].includes(status)) return true;
+  return false;
+}
+
+async function callGemini(apiKey, model, prompt, imgs, origin) {
+  const parts = [{ text: prompt }];
+  for (const url of imgs) {
+    const parsed = parseDataUrl(url);
+    if (!parsed) return { ok: false, status: 400, content: '', error: 'Imagen inválida' };
+    parts.push({ inline_data: { mime_type: parsed.mimeType, data: parsed.data } });
+  }
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 4096,
+          responseMimeType: 'application/json',
+        },
+      }),
+    }
+  );
+  const data = await response.json().catch(() => ({}));
+  const message = data?.error?.message || `Error de Gemini: ${response.status}`;
+  const content = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
+  return { ok: response.ok, status: response.status, content, error: response.ok ? '' : message };
+}
+
+async function callOpenRouter(apiKey, model, prompt, imgs, origin) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -37,7 +81,9 @@ async function callModel(apiKey, model, prompt, imgs, origin) {
     }),
   });
   const data = await response.json().catch(() => ({}));
-  return { ok: response.ok, status: response.status, data };
+  const message = data?.error?.message || `Error de OpenRouter: ${response.status}`;
+  const content = data?.choices?.[0]?.message?.content || '';
+  return { ok: response.ok, status: response.status, content, error: response.ok ? '' : message };
 }
 
 export default async function handler(req, res) {
@@ -53,9 +99,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'OPENROUTER_API_KEY no configurada en el servidor' });
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (!geminiKey && !openRouterKey) {
+    return res.status(500).json({ error: 'No hay API keys configuradas (GEMINI_API_KEY u OPENROUTER_API_KEY)' });
   }
 
   const { image, images, model } = req.body;
@@ -112,31 +159,41 @@ VALIDACIÓN FINAL:
 
 INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ].`;
 
-  const requestedModel = model || FALLBACK_MODELS[0];
-  const attempts = [requestedModel, ...FALLBACK_MODELS.filter((m) => m !== requestedModel)].slice(0, FALLBACK_MODELS.length);
+  const requestedModel = model || 'google/gemini-3.6-flash';
+  const attempts = [];
+
+  if (geminiKey) {
+    const geminiAlias = requestedModel.replace(/^google\//, '');
+    attempts.push(...[geminiAlias, ...GEMINI_MODELS].filter((m, i, arr) => arr.indexOf(m) === i).map((m) => ({ provider: 'gemini', model: m })));
+  }
+  if (openRouterKey) {
+    attempts.push(...OPENROUTER_MODELS.filter((m) => m !== requestedModel).map((m) => ({ provider: 'openrouter', model: m })));
+  }
+  if (attempts.length > 6) attempts.length = 6;
 
   let lastError = null;
-  for (const selectedModel of attempts) {
+  for (const attempt of attempts) {
     let result;
     try {
-      result = await callModel(apiKey, selectedModel, prompt, imgs, req.headers.origin);
+      if (attempt.provider === 'gemini') {
+        result = await callGemini(geminiKey, attempt.model, prompt, imgs, req.headers.origin);
+      } else {
+        result = await callOpenRouter(openRouterKey, attempt.model, prompt, imgs, req.headers.origin);
+      }
     } catch (e) {
       lastError = { status: 500, message: e.message || 'Error desconocido' };
       continue;
     }
 
     if (!result.ok) {
-      const message = result.data?.error?.message || `Error de OpenRouter: ${result.status}`;
-      if (isRecoverableError(result.status, message)) {
-        lastError = { status: result.status, message };
+      if (isRecoverableError(result.status, result.error)) {
+        lastError = { status: result.status, message: result.error };
         continue;
       }
-      return res.status(result.status).json({ error: message });
+      return res.status(result.status).json({ error: result.error });
     }
 
-    const content = result.data.choices?.[0]?.message?.content || '';
-
-    let raw = content.replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
+    const raw = (result.content || '').replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
     let courses;
     try {
       courses = JSON.parse(raw);
@@ -148,12 +205,12 @@ INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin e
       return res.status(422).json({ error: 'La respuesta no es un array válido' });
     }
 
-    const valid = courses.filter(c => c && c.name);
-    return res.status(200).json({ courses: valid, total: courses.length, model: selectedModel });
+    const valid = courses.filter((c) => c && c.name);
+    return res.status(200).json({ courses: valid, total: courses.length, model: attempt.model });
   }
 
   return res.status(lastError?.status || 500).json({
     error: lastError?.message || 'No se pudo generar el horario con ningún modelo disponible',
-    triedModels: attempts,
+    triedModels: attempts.map((a) => a.model),
   });
 }
