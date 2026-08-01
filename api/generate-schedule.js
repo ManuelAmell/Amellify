@@ -1,3 +1,45 @@
+const FALLBACK_MODELS = [
+  'google/gemini-3.6-flash',
+  'google/gemini-2.5-flash',
+  'google/gemini-2.5-pro',
+  'anthropic/claude-sonnet-4.5',
+  'openai/gpt-4o',
+];
+
+function isRecoverableError(status, message) {
+  if ([402, 429, 502, 503, 404].includes(status)) return true;
+  const msg = (message || '').toLowerCase();
+  return ['rate limit', 'key limit', 'insufficient credits', 'no endpoints', 'overloaded', 'unavailable'].some((k) => msg.includes(k));
+}
+
+async function callModel(apiKey, model, prompt, imgs, origin) {
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': origin || 'https://amellify.app',
+      'X-Title': 'Amellify Schedule Import',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            ...imgs.map((url) => ({ type: 'image_url', image_url: { url } })),
+          ],
+        },
+      ],
+      max_tokens: 4096,
+      temperature: 0.1,
+    }),
+  });
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok, status: response.status, data };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -70,57 +112,48 @@ VALIDACIÓN FINAL:
 
 INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ].`;
 
-  const selectedModel = model || 'google/gemini-3.6-flash';
+  const requestedModel = model || FALLBACK_MODELS[0];
+  const attempts = [requestedModel, ...FALLBACK_MODELS.filter((m) => m !== requestedModel)].slice(0, FALLBACK_MODELS.length);
 
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': req.headers.origin || 'https://amellify.app',
-        'X-Title': 'Amellify Schedule Import',
-      },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: [
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: prompt },
-              ...imgs.map(url => ({ type: 'image_url', image_url: { url } })),
-            ],
-          },
-        ],
-        max_tokens: 4096,
-        temperature: 0.1,
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      return res.status(response.status).json({
-        error: err.error?.message || `Error de OpenRouter: ${response.status}`,
-      });
+  let lastError = null;
+  for (const selectedModel of attempts) {
+    let result;
+    try {
+      result = await callModel(apiKey, selectedModel, prompt, imgs, req.headers.origin);
+    } catch (e) {
+      lastError = { status: 500, message: e.message || 'Error desconocido' };
+      continue;
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
+    if (!result.ok) {
+      const message = result.data?.error?.message || `Error de OpenRouter: ${result.status}`;
+      if (isRecoverableError(result.status, message)) {
+        lastError = { status: result.status, message };
+        continue;
+      }
+      return res.status(result.status).json({ error: message });
+    }
+
+    const content = result.data.choices?.[0]?.message?.content || '';
 
     let raw = content.replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
-    const courses = JSON.parse(raw);
+    let courses;
+    try {
+      courses = JSON.parse(raw);
+    } catch (e) {
+      return res.status(422).json({ error: 'La IA devolvió un JSON inválido. Intentá con otro modelo.' });
+    }
 
     if (!Array.isArray(courses)) {
       return res.status(422).json({ error: 'La respuesta no es un array válido' });
     }
 
     const valid = courses.filter(c => c && c.name);
-    return res.status(200).json({ courses: valid, total: courses.length });
-  } catch (e) {
-    const msg = e.message || 'Error desconocido';
-    if (msg.includes('JSON')) {
-      return res.status(422).json({ error: 'La IA devolvió un JSON inválido. Intentá con otro modelo.' });
-    }
-    return res.status(500).json({ error: msg });
+    return res.status(200).json({ courses: valid, total: courses.length, model: selectedModel });
   }
+
+  return res.status(lastError?.status || 500).json({
+    error: lastError?.message || 'No se pudo generar el horario con ningún modelo disponible',
+    triedModels: attempts,
+  });
 }

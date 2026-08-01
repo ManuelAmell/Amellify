@@ -738,7 +738,7 @@ export function installFeatures(AmellifyApp) {
         return;
       }
       this._pendingImport = courses;
-      this._showAIResults(courses);
+      this._showAIResults(courses, data.model, model);
     } catch (e) {
       loadingEl.hidden = true;
       this.showAlert(e.message || 'Error al conectar con la IA', 'error');
@@ -746,16 +746,20 @@ export function installFeatures(AmellifyApp) {
     }
   };
 
-  proto._showAIResults = function (courses) {
+  proto._showAIResults = function (courses, usedModel, requestedModel) {
     const container = document.getElementById('ia-results');
     if (!container) return;
     const invalid = courses.filter((c) => !c?.name);
+    const fallbackNote = usedModel && requestedModel && usedModel !== requestedModel
+      ? `<p class="ia-fallback-note">${icon('refresh', 'icon-sm')} El modelo ${escapeHtml(requestedModel)} estaba agotado. Se usó ${escapeHtml(usedModel)} automáticamente.</p>`
+      : '';
     container.hidden = false;
     container.innerHTML = `
       <div class="ia-results-header">
         <h4>${icon('check', 'icon-sm')} Análisis completado</h4>
         <p class="muted" style="margin-top:4px;">${courses.length} materias detectadas${invalid.length ? ` · <span style="color:var(--error)">${invalid.length} inválidas</span>` : ''}.</p>
       </div>
+      ${fallbackNote}
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button type="button" class="btn btn-primary" onclick="app.confirmImport()">Confirmar importación</button>
         <button type="button" class="btn btn-secondary" onclick="app.cancelImportPreview()">Cancelar</button>

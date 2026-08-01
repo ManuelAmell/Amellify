@@ -2541,6 +2541,19 @@ html.grid-compact .grid-schedule {
   margin-top: 4px;
 }
 
+.ia-fallback-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--warning);
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--warning);
+  background: transparent;
+}
+
 .ia-loading {
   display: flex;
   align-items: center;
