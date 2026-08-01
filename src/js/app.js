@@ -1571,6 +1571,7 @@ class AmellifyApp {
       { id: 'horario', label: 'Horario', icon: 'calendar' },
       { id: 'notificaciones', label: 'Notificaciones', icon: 'bell' },
       { id: 'calculadora', label: 'Calculadora', icon: 'calculator' },
+      { id: 'ia', label: 'IA', icon: 'photo' },
       { id: 'datos', label: 'Datos', icon: 'folder' },
     ];
 

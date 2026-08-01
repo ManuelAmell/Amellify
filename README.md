@@ -91,7 +91,7 @@ No necesitás instalar nada: abrí el link y empezá a usar. Tus datos quedan gu
     </td>
     <td width="50%">
       <h3>🤖 Importar desde IA</h3>
-      <p>Pegale el prompt a ChatGPT o Claude junto con la foto de tu horario y obtené el JSON listo para importar.</p>
+      <p>Cargá una foto de tu horario y la IA lo analiza automáticamente. También podés pegar el prompt en ChatGPT o Claude.</p>
     </td>
   </tr>
   <tr>
@@ -156,14 +156,29 @@ Después abrí **http://localhost:8080** en tu navegador. Listo, no hace falta i
 | **Arrastrar clases** | Activar/desactivar drag & drop en el grid |
 | **Tema visual** | 10 temas de color |
 | **Notificaciones** | Recordatorio de la próxima clase |
-| **Importar JSON** | Desde IA o archivo |
+| **Importar desde IA** | Cargar foto con IA o archivo JSON |
 | **Exportar ICS** | A Google Calendar, Apple Calendar u Outlook |
 
 ---
 
 ## 🤖 Importar desde IA
 
-Amellify puede generar tu horario automáticamente a partir de una foto o descripción, usando el JSON que devuelve un asistente como ChatGPT o Claude.
+Amellify puede generar tu horario automáticamente a partir de **una foto de tu horario** usando IA.
+
+### Cargar foto con IA (recomendado)
+
+En la pestaña **IA** de Configuración:
+
+1. Hacé clic en **Seleccionar foto** y elegí una imagen de tu horario (JPG, PNG, WebP — máx. 5 MB).
+2. Seleccioná el modelo de IA (por defecto se usa **Gemini 2.0 Flash**, rápido y preciso).
+3. Hacé clic en **Analizar horario con IA**. La IA procesará la imagen y detectará las materias.
+4. Revisá el preview y confirmá la importación.
+
+> La api key de OpenRouter se configura como variable de entorno `OPENROUTER_API_KEY` en Vercel.
+
+### Alternativa manual: copiar prompt
+
+Si preferís usar ChatGPT o Claude directamente:
 
 <details>
   <summary><b>📋 Ver el prompt para copiar y pegar</b></summary>

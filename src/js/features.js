@@ -559,7 +559,11 @@ export function installFeatures(AmellifyApp) {
     try {
       const data = await api.importCourses(this._pendingImport);
       this._pendingImport = null;
-      document.getElementById('import-preview').hidden = true;
+      const p = document.getElementById('import-preview');
+      if (p) p.hidden = true;
+      const iaResults = document.getElementById('ia-results');
+      if (iaResults) { iaResults.hidden = true; iaResults.innerHTML = ''; }
+      this._resetAIPhotoState();
       await this.fetchCourses();
       this.renderAll();
       this.showAlert(`${data.imported} importadas · ${data.skipped} omitidas`, 'success');
@@ -570,6 +574,122 @@ export function installFeatures(AmellifyApp) {
     this._pendingImport = null;
     const p = document.getElementById('import-preview');
     if (p) p.hidden = true;
+    this._resetAIPhotoState();
+  };
+
+  proto._resetAIPhotoState = function () {
+    this._pendingPhotoData = null;
+    const iaResults = document.getElementById('ia-results');
+    if (iaResults) { iaResults.hidden = true; iaResults.innerHTML = ''; }
+    const iaLoading = document.getElementById('ia-loading');
+    if (iaLoading) iaLoading.hidden = true;
+    const analyzeBtn = document.getElementById('ia-analyze-container');
+    if (analyzeBtn) analyzeBtn.hidden = false;
+  };
+
+  proto.triggerPhotoUpload = function () {
+    document.getElementById('ia-photo-input')?.click();
+  };
+
+  proto.handlePhotoSelect = async function (input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      this.showAlert('Formato de imagen no soportado (JPG, PNG, WebP)', 'error');
+      input.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.showAlert('Imagen demasiado grande (máximo 5 MB)', 'error');
+      input.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      this._pendingPhotoData = e.target.result;
+      const img = document.getElementById('ia-image-preview');
+      if (img) img.src = e.target.result;
+      document.getElementById('ia-image-preview-container').hidden = false;
+      document.getElementById('ia-model-select-container').hidden = false;
+      document.getElementById('ia-analyze-container').hidden = false;
+      const results = document.getElementById('ia-results');
+      if (results) { results.hidden = true; results.innerHTML = ''; }
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  };
+
+  proto.resetPhotoUpload = function () {
+    this._pendingPhotoData = null;
+    const input = document.getElementById('ia-photo-input');
+    if (input) input.value = '';
+    const img = document.getElementById('ia-image-preview');
+    if (img) img.src = '';
+    document.getElementById('ia-image-preview-container').hidden = true;
+    document.getElementById('ia-model-select-container').hidden = true;
+    document.getElementById('ia-analyze-container').hidden = true;
+    const results = document.getElementById('ia-results');
+    if (results) { results.hidden = true; results.innerHTML = ''; }
+  };
+
+  proto.analyzePhotoWithIA = async function () {
+    if (!this._pendingPhotoData) {
+      this.showAlert('Primero seleccioná una foto', 'error');
+      return;
+    }
+    const modelSelect = document.getElementById('ia-model-select');
+    const model = modelSelect?.value || 'google/gemini-2.0-flash-001';
+    const loadingEl = document.getElementById('ia-loading');
+    const analyzeContainer = document.getElementById('ia-analyze-container');
+    loadingEl.hidden = false;
+    analyzeContainer.hidden = true;
+    try {
+      const response = await fetch('/api/generate-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: this._pendingPhotoData,
+          model: model,
+        }),
+      });
+      loadingEl.hidden = true;
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        this.showAlert(err.error || 'Error al analizar la imagen', 'error');
+        analyzeContainer.hidden = false;
+        return;
+      }
+      const data = await response.json();
+      const courses = data.courses || [];
+      if (!courses.length) {
+        this.showAlert('No se detectaron materias en la imagen. Intentá con otro modelo.', 'warning');
+        analyzeContainer.hidden = false;
+        return;
+      }
+      this._pendingImport = courses;
+      this._showAIResults(courses);
+    } catch (e) {
+      loadingEl.hidden = true;
+      this.showAlert(e.message || 'Error al conectar con la IA', 'error');
+      analyzeContainer.hidden = false;
+    }
+  };
+
+  proto._showAIResults = function (courses) {
+    const container = document.getElementById('ia-results');
+    if (!container) return;
+    const invalid = courses.filter((c) => !c?.name);
+    container.hidden = false;
+    container.innerHTML = `
+      <div class="ia-results-header">
+        <h4>${icon('check', 'icon-sm')} Análisis completado</h4>
+        <p class="muted" style="margin-top:4px;">${courses.length} materias detectadas${invalid.length ? ` · <span style="color:var(--error)">${invalid.length} inválidas</span>` : ''}.</p>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" class="btn btn-primary" onclick="app.confirmImport()">Confirmar importación</button>
+        <button type="button" class="btn btn-secondary" onclick="app.cancelImportPreview()">Cancelar</button>
+      </div>`;
   };
 
   proto._settingsToggleBtn = function (label, iconName, onclick) {
@@ -653,13 +773,54 @@ export function installFeatures(AmellifyApp) {
           <input type="file" id="import-file" accept=".json" hidden>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar .ics</button>
           <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar horario</button>
-        </div>
-        <details class="settings-section" style="margin-top:12px;">
-          <summary style="cursor:pointer;font-weight:600;font-size:14px;padding:8px 0;">${icon('search', 'icon-sm')} Generar desde IA (prompt)</summary>
-          <div style="display:flex;gap:8px;margin-top:8px;align-items:start;">
-            <button class="btn btn-secondary btn-small" id="copy-prompt-btn" onclick="navigator.clipboard.writeText(document.getElementById('ai-prompt-text').textContent).then(()=>{const b=document.getElementById('copy-prompt-btn');const o=b.innerHTML;b.innerHTML='Copiado!';setTimeout(()=>b.innerHTML=o,2000)})">${icon('copy', 'icon-sm')} Copiar prompt</button>
+        </div>`;
+    }
+
+    if (tab === 'ia') {
+      return `
+        <div class="settings-section">
+          <h3 class="settings-section-title">${icon('photo', 'icon-sm')} Cargar horario con IA</h3>
+          <p class="muted" style="font-size:13px;line-height:1.6;">Subí una foto de tu horario de clases y la IA lo analizará automáticamente, extrayendo las materias y horarios en formato JSON listo para importar.</p>
+          <div class="ia-upload-area" id="ia-upload-area">
+            <input type="file" id="ia-photo-input" accept="image/*" hidden>
+            <button type="button" class="btn btn-secondary" onclick="app.triggerPhotoUpload()">
+              ${icon('upload', 'icon-sm')} Seleccionar foto
+            </button>
+            <div class="ia-upload-hint">Formatos: JPG, PNG, WebP · Máx. 5 MB</div>
           </div>
-          <div id="ai-prompt-text" style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);white-space:pre-wrap;font-family:var(--font-mono);">Quiero que actúes como un generador de horarios universitarios en formato JSON. Te voy a pasar una descripción (texto o imagen) de mi horario de clases y vos debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin explicaciones, sin texto adicional.
+          <div id="ia-image-preview-container" hidden class="ia-image-wrapper">
+            <img id="ia-image-preview" class="ia-image-preview" alt="Vista previa de la foto">
+            <button type="button" class="btn btn-secondary btn-small" onclick="app.resetPhotoUpload()" style="margin-top:8px;">
+              ${icon('trash', 'icon-sm')} Cambiar foto
+            </button>
+          </div>
+          <div id="ia-model-select-container" hidden style="margin-top:12px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+              ${icon('settings', 'icon-sm')} Modelo de IA
+            </label>
+            <select id="ia-model-select" class="form-select">
+              <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash (rápido · recomendado)</option>
+              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+              <option value="anthropic/claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+              <option value="openai/gpt-4o">GPT-4o</option>
+            </select>
+          </div>
+          <div id="ia-analyze-container" hidden style="margin-top:16px;">
+            <button type="button" class="btn btn-primary" onclick="app.analyzePhotoWithIA()">
+              ${icon('zap', 'icon-sm')} Analizar horario con IA
+            </button>
+          </div>
+          <div id="ia-loading" class="ia-loading" hidden>
+            <div class="ia-loading-spinner">${icon('refresh', 'icon-sm')}</div>
+            <span class="ia-loading-text">Analizando horario con IA…</span>
+          </div>
+          <div id="ia-results" class="ia-results" hidden></div>
+          <details class="settings-section" style="margin-top:16px;">
+            <summary style="cursor:pointer;font-weight:600;font-size:14px;padding:8px 0;">${icon('search', 'icon-sm')} Copiar prompt (alternativa manual)</summary>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="btn btn-secondary btn-small" id="copy-prompt-btn" onclick="navigator.clipboard.writeText(document.getElementById('ai-prompt-text').textContent).then(()=>{const b=document.getElementById('copy-prompt-btn');const o=b.innerHTML;b.innerHTML='Copiado';setTimeout(()=>b.innerHTML=o,2000)})">${icon('copy', 'icon-sm')} Copiar prompt</button>
+            </div>
+            <div id="ai-prompt-text" style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);white-space:pre-wrap;font-family:var(--font-mono);">Quiero que actúes como un generador de horarios universitarios en formato JSON. Te voy a pasar una descripción (texto o imagen) de mi horario de clases y debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin explicaciones, sin texto adicional.
 
 FORMATO EXACTO DE SALIDA:
 [
@@ -703,10 +864,29 @@ VALIDACIÓN FINAL:
 - El JSON debe ser parseable sin errores.
 
 INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ]. Si necesitás aclarar algo preguntá primero, si está claro producí el JSON directamente.</div>
-        </details>`;
+          </details>`;
+    }
+
+    if (tab === 'datos') {
+      return `
+        <div class="settings-section">
+          <h3 class="settings-section-title">${icon('folder', 'icon-sm')} Gestión de datos</h3>
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportData()">${icon('download', 'icon-sm')} Exportar JSON</button>
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.triggerImport()">${icon('upload', 'icon-sm')} Importar JSON</button>
+          <input type="file" id="import-file" accept=".json" hidden>
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar .ics</button>
+          <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar horario</button>
+        </div>`;
     }
 
     return `<p class="muted">Sección no encontrada.</p>`;
+  };
+
+  const _bindSettingsTabEvents = proto._bindSettingsTabEvents;
+  proto._bindSettingsTabEvents = function (modal, tab) {
+    _bindSettingsTabEvents.call(this, modal, tab);
+    const iaInput = modal.querySelector('#ia-photo-input');
+    if (iaInput) iaInput.onchange = function () { app.handlePhotoSelect(this); };
   };
 
   const _setupEventListeners = proto.setupEventListeners;

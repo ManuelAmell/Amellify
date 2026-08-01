@@ -2470,3 +2470,85 @@ html.grid-compact .grid-schedule {
     justify-content: center;
   }
 }
+
+/* IA Photo Import */
+.ia-upload-area {
+  margin-top: 12px;
+  padding: 20px;
+  border: 2px dashed var(--glass-border-subtle);
+  border-radius: var(--radius-md);
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.ia-upload-area:hover {
+  border-color: var(--accent);
+}
+
+.ia-upload-hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+.ia-image-wrapper {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.ia-image-preview {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: var(--radius-md);
+  object-fit: contain;
+  border: 1px solid var(--glass-border-subtle);
+}
+
+.ia-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  margin-top: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+}
+
+.ia-loading-spinner {
+  animation: spin 1s linear infinite;
+  display: inline-flex;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ia-loading-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.ia-results {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border-subtle);
+}
+
+.ia-results-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ia-results h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
