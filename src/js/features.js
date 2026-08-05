@@ -692,61 +692,66 @@ export function installFeatures(AmellifyApp) {
 
   proto.resetPhotoUpload = function () {
     this._pendingPhotoData = null;
+    this._pendingPdfText = null;
     this._pendingIsPdf = false;
     const input = document.getElementById('ia-photo-input');
     if (input) input.value = '';
-    const img = document.getElementById('ia-image-preview');
-    if (img) img.src = '';
-    document.getElementById('ia-image-preview-container').hidden = true;
+    const imgContainer = document.getElementById('ia-image-preview-container');
+    if (imgContainer) { imgContainer.hidden = true; imgContainer.innerHTML = ''; }
     const pdfPreview = document.getElementById('ia-pdf-preview');
     if (pdfPreview) { pdfPreview.hidden = true; pdfPreview.innerHTML = ''; }
-    document.getElementById('ia-model-select-container').hidden = true;
-    document.getElementById('ia-analyze-container').hidden = true;
+    const analyzeBtn = document.getElementById('ia-analyze-container');
+    if (analyzeBtn) analyzeBtn.hidden = true;
     const results = document.getElementById('ia-results');
     if (results) { results.hidden = true; results.innerHTML = ''; }
   };
 
   proto.analyzePhotoWithIA = async function () {
-    if (!this._pendingPhotoData) {
+    if (!this._pendingPhotoData && !this._pendingPdfText) {
       this.showAlert('Primero seleccioná un archivo', 'error');
       return;
     }
     const modelSelect = document.getElementById('ia-model-select');
-    const model = modelSelect?.value || 'google/gemini-3.6-flash';
+    const model = modelSelect?.value || 'auto';
     const loadingEl = document.getElementById('ia-loading');
     const analyzeContainer = document.getElementById('ia-analyze-container');
-    loadingEl.hidden = false;
-    analyzeContainer.hidden = true;
-    const images = Array.isArray(this._pendingPhotoData) ? this._pendingPhotoData : [this._pendingPhotoData];
+    if (loadingEl) loadingEl.hidden = false;
+    if (analyzeContainer) analyzeContainer.hidden = true;
+
+    const payload = { model };
+    if (this._pendingPhotoData) {
+      payload.images = Array.isArray(this._pendingPhotoData) ? this._pendingPhotoData : [this._pendingPhotoData];
+    }
+    if (this._pendingPdfText) {
+      payload.text = this._pendingPdfText;
+    }
+
     try {
       const response = await fetch('/api/generate-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          images: images,
-          model: model,
-        }),
+        body: JSON.stringify(payload),
       });
-      loadingEl.hidden = true;
+      if (loadingEl) loadingEl.hidden = true;
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         this.showAlert(err.error || 'Error al analizar el archivo', 'error');
-        analyzeContainer.hidden = false;
+        if (analyzeContainer) analyzeContainer.hidden = false;
         return;
       }
       const data = await response.json();
       const courses = data.courses || [];
       if (!courses.length) {
         this.showAlert('No se detectaron materias en el archivo. Intentá con otro modelo.', 'warning');
-        analyzeContainer.hidden = false;
+        if (analyzeContainer) analyzeContainer.hidden = false;
         return;
       }
       this._pendingImport = courses;
       this._showAIResults(courses, data.model, model);
     } catch (e) {
-      loadingEl.hidden = true;
+      if (loadingEl) loadingEl.hidden = true;
       this.showAlert(e.message || 'Error al conectar con la IA', 'error');
-      analyzeContainer.hidden = false;
+      if (analyzeContainer) analyzeContainer.hidden = false;
     }
   };
 
@@ -845,29 +850,52 @@ export function installFeatures(AmellifyApp) {
   proto._processPdf = async function (file) {
     const loadingEl = document.getElementById('ia-loading');
     try {
-      loadingEl.hidden = false;
-      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-      const maxPages = 2;
+      if (loadingEl) loadingEl.hidden = false;
+      const buffer = await file.arrayBuffer();
+      const dataArray = new Uint8Array(buffer);
+      const pdf = await pdfjsLib.getDocument({ data: dataArray }).promise;
+      const maxPages = 4;
       const pageCount = Math.min(pdf.numPages, maxPages);
       const images = [];
+      let pdfText = '';
+
       for (let i = 1; i <= pageCount; i++) {
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2 });
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        images.push(canvas.toDataURL('image/jpeg', 0.85));
-        canvas.remove();
+        try {
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          images.push(canvas.toDataURL('image/jpeg', 0.8));
+          canvas.remove();
+        } catch (renderErr) {
+          console.warn(`Canvas render fallback for PDF page ${i}:`, renderErr);
+        }
+
+        try {
+          const textContent = await page.getTextContent();
+          const pageStr = textContent.items.map((it) => it.str).join(' ').trim();
+          if (pageStr) pdfText += `\n--- PÁGINA ${i} ---\n` + pageStr;
+        } catch (textErr) {
+          console.warn(`Text content extraction error on page ${i}:`, textErr);
+        }
       }
+
       await pdf.cleanup();
-      loadingEl.hidden = true;
-      if (!images.length) {
-        this.showAlert('No se pudo extraer contenido del PDF', 'error');
+      if (loadingEl) loadingEl.hidden = true;
+
+      if (!images.length && !pdfText.trim()) {
+        this.showAlert('No se pudo extraer texto ni imágenes del PDF. Verifica que no esté protegido.', 'error');
         return;
       }
-      this._pendingPhotoData = images;
+
+      this._pendingPhotoData = images.length ? images : null;
+      this._pendingPdfText = pdfText.trim() || null;
+
       const pdfPreview = document.getElementById('ia-pdf-preview');
       if (pdfPreview) {
         pdfPreview.hidden = false;
@@ -875,21 +903,25 @@ export function installFeatures(AmellifyApp) {
           <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--success);margin-top:8px;">
             <div class="ia-pdf-icon" style="color:var(--success);">${icon('check', 'icon-md')}</div>
             <div class="ia-pdf-label" style="font-size:13px;">
-              <strong style="color:var(--text-primary);">✓ PDF procesado: ${pageCount} página${pageCount === 1 ? '' : 's'} listas para analizar</strong>
-              <div style="color:var(--text-secondary);font-size:12px;">Archivo: ${escapeHtml(file.name)}</div>
+              <strong style="color:var(--text-primary);">✓ PDF procesado: ${pageCount} página${pageCount === 1 ? '' : 's'} listas</strong>
+              <div style="color:var(--text-secondary);font-size:12px;">${escapeHtml(file.name)} (${images.length ? `${images.length} imágenes` : 'Texto extraído'})</div>
               ${pdf.numPages > maxPages ? `<span class="ia-pdf-warn" style="color:var(--warning);font-size:11px;">(El PDF tiene ${pdf.numPages} páginas; se analizaron las primeras ${maxPages})</span>` : ''}
             </div>
+            <button type="button" class="btn btn-secondary btn-small" onclick="app.resetPhotoUpload()" style="margin-left:auto;">
+              ${icon('trash', 'icon-sm')} Cambiar
+            </button>
           </div>`;
       }
-      document.getElementById('ia-image-preview-container').hidden = true;
-      document.getElementById('ia-model-select-container').hidden = false;
-      document.getElementById('ia-analyze-container').hidden = false;
+      const imgContainer = document.getElementById('ia-image-preview-container');
+      if (imgContainer) imgContainer.hidden = true;
+      const analyzeContainer = document.getElementById('ia-analyze-container');
+      if (analyzeContainer) analyzeContainer.hidden = false;
       const results = document.getElementById('ia-results');
       if (results) { results.hidden = true; results.innerHTML = ''; }
     } catch (e) {
-      loadingEl.hidden = true;
+      if (loadingEl) loadingEl.hidden = true;
       console.error('PDF processing error:', e);
-      this.showAlert('No se pudo leer el PDF. Asegurate de que sea un archivo válido.', 'error');
+      this.showAlert(`No se pudo leer el PDF: ${e.message || 'Archivo dañado o protegido'}`, 'error');
     }
   };
 
