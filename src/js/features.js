@@ -66,6 +66,9 @@ export function installFeatures(AmellifyApp) {
     document.documentElement.classList.toggle('list-compact', !!this.settings.listCompact);
     document.documentElement.classList.toggle('grid-fit-screen', !!this.settings.gridFitScreen);
     
+    const uiScaleVal = (Number(this.settings.uiScale) || 100) / 100;
+    document.documentElement.style.setProperty('--ui-scale', uiScaleVal);
+
     const rawWidth = this.settings.gridWidth || '1100px';
     const widthMap = { small: '1100px', compact: '1100px', normal: '1400px', wide: '1750px', full: '98vw' };
     const formattedWidth = widthMap[rawWidth] || (rawWidth.endsWith('px') || rawWidth.endsWith('%') || rawWidth.endsWith('vw') ? rawWidth : `${rawWidth}px`);
@@ -83,6 +86,14 @@ export function installFeatures(AmellifyApp) {
     }
     this.updateHeaderClassStatus();
     this.refreshNotifications?.();
+  };
+
+  proto.setUiScale = function (scale) {
+    if (!scale) return;
+    this.settings.uiScale = Number(scale) || 100;
+    this.saveSettingsToServer();
+    this.applySettings();
+    if (this.currentView === 'grid') this.renderGridView();
   };
 
   proto.toggleGridFitScreen = function () {
@@ -1168,6 +1179,7 @@ export function installFeatures(AmellifyApp) {
         <div class="settings-section">
           <h3 class="settings-section-title">${icon('palette', 'icon-sm')} Apariencia</h3>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.cycleTheme()">${icon('palette', 'icon-sm')} Tema actual: <strong>${activeThemeName}</strong> (Click para cambiar)</button>
+          ${this._renderUiScaleField()}
           <div class="settings-row" style="margin-top:10px;">
             <span class="settings-row-label">${icon('file-text', 'icon-sm')} Tamaño de texto</span>
             <div class="settings-btn-group">
@@ -1199,6 +1211,7 @@ export function installFeatures(AmellifyApp) {
               <option value="sunday" ${s.weekStartsOn === 'sunday' ? 'selected' : ''}>Domingo</option>
             </select>
           </div>
+          ${this._renderUiScaleField()}
           ${this._renderGridWidthField()}
           ${this._settingsToggleBtn(s.gridFitScreen ? 'Modo Scroll normal' : '⚡ Ajustar todo a pantalla sin scroll', s.gridFitScreen ? 'maximize' : 'minimize', 'app.toggleGridFitScreen()')}
           ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
