@@ -20,8 +20,8 @@ function parseDataUrl(url) {
 
 function isRecoverableError(status, message) {
   const msg = (message || '').toLowerCase();
-  if (['rate limit', 'key limit', 'insufficient credits', 'no endpoints', 'overloaded', 'unavailable', 'resource exhausted', 'quota', '429'].some((k) => msg.includes(k))) return true;
-  if ([402, 429, 502, 503, 404, 500].includes(status)) return true;
+  if (['rate limit', 'key limit', 'insufficient credits', 'no endpoints', 'overloaded', 'unavailable', 'resource exhausted', 'quota', '429', '401', '402', '403', 'unauthorized', 'invalid', 'exceeded', 'user not found'].some((k) => msg.includes(k))) return true;
+  if ([401, 402, 403, 429, 502, 503, 404, 500].includes(status)) return true;
   return false;
 }
 
@@ -51,7 +51,7 @@ async function callGemini(apiKey, model, prompt, imgs, origin) {
     }
   );
   const data = await response.json().catch(() => ({}));
-  const message = data?.error?.message || `Error de Gemini: ${response.status}`;
+  const message = data?.error?.message || `Error de Gemini (${response.status})`;
   const content = data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
   return { ok: response.ok, status: response.status, content, error: response.ok ? '' : message };
 }
@@ -81,7 +81,7 @@ async function callOpenRouter(apiKey, model, prompt, imgs, origin) {
     }),
   });
   const data = await response.json().catch(() => ({}));
-  const message = data?.error?.message || `Error de OpenRouter: ${response.status}`;
+  const message = data?.error?.message || `Error de OpenRouter (${response.status})`;
   const content = data?.choices?.[0]?.message?.content || '';
   return { ok: response.ok, status: response.status, content, error: response.ok ? '' : message };
 }
@@ -99,10 +99,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const geminiKey = process.env.GEMINI_API_KEY;
-  const openRouterKey = process.env.OPENROUTER_API_KEY;
-  if (!geminiKey && !openRouterKey) {
-    return res.status(500).json({ error: 'No hay API keys configuradas (GEMINI_API_KEY u OPENROUTER_API_KEY)' });
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.GEMINI_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY || process.env.OPENROUTER_KEY;
+  const genericKey = process.env.API_KEY || process.env.AI_API_KEY;
+
+  const effectiveGeminiKey = geminiKey || (genericKey && genericKey.startsWith('AIza') ? genericKey : null);
+  const effectiveOpenRouterKey = openRouterKey || (genericKey && genericKey.startsWith('sk-or-') ? genericKey : genericKey);
+
+  if (!effectiveGeminiKey && !effectiveOpenRouterKey) {
+    return res.status(500).json({ error: 'No hay API keys configuradas en Vercel (GEMINI_API_KEY o OPENROUTER_API_KEY)' });
   }
 
   const { image, images, text, model } = req.body;
@@ -160,23 +165,34 @@ INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin e
   const requestedModel = model || 'google/gemini-3.6-flash';
   const attempts = [];
 
-  if (geminiKey) {
+  if (effectiveOpenRouterKey) {
+    attempts.push({ provider: 'openrouter', key: effectiveOpenRouterKey, model: requestedModel });
+  }
+  if (effectiveGeminiKey) {
     const geminiAlias = requestedModel.replace(/^google\//, '');
-    attempts.push(...[geminiAlias, ...GEMINI_MODELS].filter((m, i, arr) => arr.indexOf(m) === i).map((m) => ({ provider: 'gemini', model: m })));
+    const gModels = [geminiAlias, ...GEMINI_MODELS].filter((m, i, arr) => arr.indexOf(m) === i);
+    for (const gm of gModels) {
+      attempts.push({ provider: 'gemini', key: effectiveGeminiKey, model: gm });
+    }
   }
-  if (openRouterKey) {
-    attempts.push(...OPENROUTER_MODELS.filter((m) => m !== requestedModel).map((m) => ({ provider: 'openrouter', model: m })));
+  if (effectiveOpenRouterKey) {
+    for (const om of OPENROUTER_MODELS) {
+      if (om !== requestedModel) {
+        attempts.push({ provider: 'openrouter', key: effectiveOpenRouterKey, model: om });
+      }
+    }
   }
-  if (attempts.length > 6) attempts.length = 6;
+
+  if (attempts.length > 8) attempts.length = 8;
 
   let lastError = null;
   for (const attempt of attempts) {
     let result;
     try {
       if (attempt.provider === 'gemini') {
-        result = await callGemini(geminiKey, attempt.model, prompt, imgs, req.headers.origin);
+        result = await callGemini(attempt.key, attempt.model, prompt, imgs, req.headers.origin);
       } else {
-        result = await callOpenRouter(openRouterKey, attempt.model, prompt, imgs, req.headers.origin);
+        result = await callOpenRouter(attempt.key, attempt.model, prompt, imgs, req.headers.origin);
       }
     } catch (e) {
       lastError = { status: 500, message: e.message || 'Error desconocido' };
