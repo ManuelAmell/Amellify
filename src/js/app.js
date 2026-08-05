@@ -1602,9 +1602,16 @@ class AmellifyApp {
     document.getElementById('shortcuts-modal').classList.add('active');
   }
 
+  openSettingsModal(tab = 'apariencia') {
+    this.showDataMenu(tab);
+  }
+
+  openSettings(tab = 'apariencia') {
+    this.showDataMenu(tab);
+  }
+
   showDataMenu(tab = 'apariencia') {
-    const existing = document.getElementById('settings-modal');
-    if (existing) { existing.remove(); return; }
+    document.querySelectorAll('.settings-modal, #settings-modal').forEach(el => el.remove());
 
     const tabs = [
       { id: 'apariencia', label: 'Apariencia', icon: 'palette' },
