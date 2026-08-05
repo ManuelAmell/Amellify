@@ -64,7 +64,10 @@ export function installFeatures(AmellifyApp) {
   proto.applySettings = function () {
     document.documentElement.classList.toggle('grid-compact', !!this.settings.gridCompact);
     document.documentElement.classList.toggle('list-compact', !!this.settings.listCompact);
-    document.documentElement.setAttribute('data-grid-width', this.settings.gridWidth || 'wide');
+    const rawWidth = this.settings.gridWidth || '1800px';
+    const widthMap = { compact: '1200px', normal: '1400px', wide: '1800px', full: '98vw' };
+    const formattedWidth = widthMap[rawWidth] || (rawWidth.endsWith('px') || rawWidth.endsWith('%') || rawWidth.endsWith('vw') ? rawWidth : `${rawWidth}px`);
+    document.documentElement.style.setProperty('--custom-grid-width', formattedWidth);
     this.applyFontSize();
     if (this.settings.theme) {
       document.documentElement.setAttribute('data-theme', this.settings.theme);
@@ -75,20 +78,41 @@ export function installFeatures(AmellifyApp) {
     this.refreshNotifications?.();
   };
 
-  proto.setGridWidth = function (mode) {
-    if (!['compact', 'normal', 'wide', 'full'].includes(mode)) return;
-    this.settings.gridWidth = mode;
+  proto.setGridWidth = function (val) {
+    if (!val) return;
+    this.settings.gridWidth = val;
     this.saveSettingsToServer();
     this.applySettings();
     if (this.currentView === 'grid') this.renderGridView();
-    document.getElementById('settings-modal')?.remove();
   };
 
   proto.cycleGridWidth = function () {
-    const modes = ['compact', 'normal', 'wide', 'full'];
-    const current = this.settings.gridWidth || 'wide';
+    const modes = ['1200px', '1500px', '1800px', '100%'];
+    const current = this.settings.gridWidth || '1800px';
     const nextIdx = (modes.indexOf(current) + 1) % modes.length;
     this.setGridWidth(modes[nextIdx]);
+  };
+
+  proto._renderGridWidthField = function () {
+    const s = this.settings;
+    const currentVal = s.gridWidth || '1800px';
+    const numericVal = parseInt(currentVal) || (currentVal === 'compact' ? 1200 : (currentVal === 'normal' ? 1400 : (currentVal === 'full' ? 2400 : 1800)));
+    const displayLabel = currentVal === 'full' || currentVal === '100%' ? '100% (Pantalla completa)' : `${numericVal}px`;
+    return `
+      <div class="settings-field" style="margin-top:12px;background:var(--bg-secondary);padding:12px;border-radius:var(--radius-md);border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <label style="margin:0;font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;">${icon('maximize', 'icon-sm')} Ancho del Grid</label>
+          <span id="grid-width-val-display" style="font-size:12px;font-weight:700;color:var(--accent);">${escapeHtml(displayLabel)}</span>
+        </div>
+        <input type="range" class="form-range" min="1000" max="2400" step="50" value="${numericVal}" 
+               oninput="document.getElementById('grid-width-val-display').textContent = this.value + 'px'; app.setGridWidth(this.value + 'px')" style="width:100%;margin-bottom:8px;accent-color:var(--accent);">
+        <div class="settings-btn-group" style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button type="button" class="btn ${currentVal === 'compact' || currentVal === '1200px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('1200px')">1200px (Original)</button>
+          <button type="button" class="btn ${currentVal === 'normal' || currentVal === '1500px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('1500px')">1500px (Estándar)</button>
+          <button type="button" class="btn ${currentVal === 'wide' || currentVal === '1800px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('1800px')">1800px (Amplio)</button>
+          <button type="button" class="btn ${currentVal === 'full' || currentVal === '100%' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('100%')">100% (Pantalla)</button>
+        </div>
+      </div>`;
   };
 
   proto.getScheduleDays = function () {
@@ -1107,15 +1131,7 @@ export function installFeatures(AmellifyApp) {
               <button type="button" class="btn ${s.fontSize === 'large' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setFontSize('large')">Grande</button>
             </div>
           </div>
-          <div class="settings-field" style="margin-top:10px;">
-            <label>${icon('maximize', 'icon-sm')} Ancho de pantalla del Grid</label>
-            <select class="form-select" onchange="app.setGridWidth(this.value)">
-              <option value="compact" ${(s.gridWidth || 'wide') === 'compact' ? 'selected' : ''}>Original (1200px)</option>
-              <option value="normal" ${(s.gridWidth || 'wide') === 'normal' ? 'selected' : ''}>Estándar (1400px)</option>
-              <option value="wide" ${(s.gridWidth || 'wide') === 'wide' ? 'selected' : ''}>Amplio (1800px · Recomendado)</option>
-              <option value="full" ${(s.gridWidth || 'wide') === 'full' ? 'selected' : ''}>Pantalla Completa (100%)</option>
-            </select>
-          </div>
+          ${this._renderGridWidthField()}
           ${this._settingsToggleBtn(s.gridCompact ? 'Grid altura normal' : 'Grid compacto', s.gridCompact ? 'maximize' : 'minimize', 'app.toggleGridCompact()')}
           ${this._settingsToggleBtn(s.listCompact ? 'Lista altura normal' : 'Lista compacta', s.listCompact ? 'maximize' : 'minimize', 'app.toggleListCompact()')}
           ${this._settingsToggleBtn(s.showClassBadge !== false ? 'Ocultar badge "En clase"' : 'Mostrar badge "En clase"', 'clock', 'app.toggleShowClassBadge()')}
@@ -1137,15 +1153,7 @@ export function installFeatures(AmellifyApp) {
               <option value="sunday" ${s.weekStartsOn === 'sunday' ? 'selected' : ''}>Domingo</option>
             </select>
           </div>
-          <div class="settings-field">
-            <label>${icon('maximize', 'icon-sm')} Ancho del Grid</label>
-            <select class="form-select" onchange="app.setGridWidth(this.value)">
-              <option value="compact" ${(s.gridWidth || 'wide') === 'compact' ? 'selected' : ''}>Original (1200px)</option>
-              <option value="normal" ${(s.gridWidth || 'wide') === 'normal' ? 'selected' : ''}>Estándar (1400px)</option>
-              <option value="wide" ${(s.gridWidth || 'wide') === 'wide' ? 'selected' : ''}>Amplio (1800px)</option>
-              <option value="full" ${(s.gridWidth || 'wide') === 'full' ? 'selected' : ''}>Pantalla Completa (100%)</option>
-            </select>
-          </div>
+          ${this._renderGridWidthField()}
           ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
           ${this._settingsToggleBtn(s.gridHourRange === 'full' ? 'Mostrar solo horas con clase' : 'Mostrar 24 horas completas', 'clock', 'app.toggleGridHourRange()')}
           ${this._settingsToggleBtn(s.gridDragDisabled ? 'Activar arrastrar materias' : 'Desactivar arrastrar materias', s.gridDragDisabled ? 'edit' : 'lock', 'app.toggleGridDragDisabled()')}

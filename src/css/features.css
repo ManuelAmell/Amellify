@@ -2361,24 +2361,13 @@ html.grid-compact .grid-schedule {
     background: #ffffff !important;
   }
 
-html[data-grid-width="wide"] .container,
-html[data-grid-width="wide"] .header-content {
-  max-width: 1800px !important;
+.container,
+.header-content {
+  max-width: var(--custom-grid-width, 1800px) !important;
 }
 
-html[data-grid-width="full"] .container,
-html[data-grid-width="full"] .header-content {
-  max-width: 98vw !important;
-}
-
-html[data-grid-width="compact"] .container,
-html[data-grid-width="compact"] .header-content {
-  max-width: 1200px !important;
-}
-
-html[data-grid-width="normal"] .container,
-html[data-grid-width="normal"] .header-content {
-  max-width: 1400px !important;
+#grid-timeline {
+  min-width: var(--custom-grid-width, 1800px) !important;
 }
 
 .class-cell-prof {
