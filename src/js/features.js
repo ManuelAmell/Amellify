@@ -1219,6 +1219,10 @@ export function installFeatures(AmellifyApp) {
     this.applySettings();
   };
 
+  proto._settingsToggleBtn = function (label, iconName, onclick) {
+    return `<button type="button" class="btn btn-secondary settings-action-btn" onclick="${onclick}">${icon(iconName, 'icon-sm')} ${label}</button>`;
+  };
+
   proto._renderGridDensityField = function () {
     const density = this.settings.gridDensity || 'comfortable';
     return `
