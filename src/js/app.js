@@ -959,13 +959,14 @@ class AmellifyApp {
     ` : '';
 
     const widthLabelMap = {
+      compact: 'Ancho: Original (1200px)',
       normal: 'Ancho: Estándar (1400px)',
       wide: 'Ancho: Amplio (1800px)',
       full: 'Ancho: Completo (100%)',
     };
     const currentWidth = this.settings.gridWidth || 'wide';
     const widthBtnLabel = widthLabelMap[currentWidth] || 'Ancho: Amplio (1800px)';
-    const minWidthVal = currentWidth === 'full' ? '100%' : (currentWidth === 'normal' ? '1400px' : '1800px');
+    const minWidthVal = currentWidth === 'full' ? '100%' : (currentWidth === 'compact' ? '1200px' : (currentWidth === 'normal' ? '1400px' : '1800px'));
 
     const hourRangeLabel = this.settings.gridHourRange === 'active' ? 'Solo horas activas' : 'Ver 24 horas completas';
     const gridToolbar = `

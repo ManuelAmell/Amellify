@@ -76,7 +76,7 @@ export function installFeatures(AmellifyApp) {
   };
 
   proto.setGridWidth = function (mode) {
-    if (!['normal', 'wide', 'full'].includes(mode)) return;
+    if (!['compact', 'normal', 'wide', 'full'].includes(mode)) return;
     this.settings.gridWidth = mode;
     this.saveSettingsToServer();
     this.applySettings();
@@ -85,7 +85,7 @@ export function installFeatures(AmellifyApp) {
   };
 
   proto.cycleGridWidth = function () {
-    const modes = ['normal', 'wide', 'full'];
+    const modes = ['compact', 'normal', 'wide', 'full'];
     const current = this.settings.gridWidth || 'wide';
     const nextIdx = (modes.indexOf(current) + 1) % modes.length;
     this.setGridWidth(modes[nextIdx]);
@@ -1110,6 +1110,7 @@ export function installFeatures(AmellifyApp) {
           <div class="settings-field" style="margin-top:10px;">
             <label>${icon('maximize', 'icon-sm')} Ancho de pantalla del Grid</label>
             <select class="form-select" onchange="app.setGridWidth(this.value)">
+              <option value="compact" ${(s.gridWidth || 'wide') === 'compact' ? 'selected' : ''}>Original (1200px)</option>
               <option value="normal" ${(s.gridWidth || 'wide') === 'normal' ? 'selected' : ''}>Estándar (1400px)</option>
               <option value="wide" ${(s.gridWidth || 'wide') === 'wide' ? 'selected' : ''}>Amplio (1800px · Recomendado)</option>
               <option value="full" ${(s.gridWidth || 'wide') === 'full' ? 'selected' : ''}>Pantalla Completa (100%)</option>
@@ -1139,6 +1140,7 @@ export function installFeatures(AmellifyApp) {
           <div class="settings-field">
             <label>${icon('maximize', 'icon-sm')} Ancho del Grid</label>
             <select class="form-select" onchange="app.setGridWidth(this.value)">
+              <option value="compact" ${(s.gridWidth || 'wide') === 'compact' ? 'selected' : ''}>Original (1200px)</option>
               <option value="normal" ${(s.gridWidth || 'wide') === 'normal' ? 'selected' : ''}>Estándar (1400px)</option>
               <option value="wide" ${(s.gridWidth || 'wide') === 'wide' ? 'selected' : ''}>Amplio (1800px)</option>
               <option value="full" ${(s.gridWidth || 'wide') === 'full' ? 'selected' : ''}>Pantalla Completa (100%)</option>

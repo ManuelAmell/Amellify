@@ -2371,6 +2371,11 @@ html[data-grid-width="full"] .header-content {
   max-width: 98vw !important;
 }
 
+html[data-grid-width="compact"] .container,
+html[data-grid-width="compact"] .header-content {
+  max-width: 1200px !important;
+}
+
 html[data-grid-width="normal"] .container,
 html[data-grid-width="normal"] .header-content {
   max-width: 1400px !important;
