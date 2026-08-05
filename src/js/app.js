@@ -806,7 +806,6 @@ class AmellifyApp {
     }
 
     const SLOT_MIN = 10;
-    const SLOT_H = this.settings.gridCompact ? 10 : 16;
 
     const timeToMin = (t) => {
       const [h, m] = t.split(':').map(Number);
@@ -835,6 +834,11 @@ class AmellifyApp {
 
     const originMin = startHour * 60;
     const totalSlots = (endHour * 60 - originMin) / SLOT_MIN;
+
+    let SLOT_H = this.settings.gridCompact ? 10 : 16;
+    if (this.settings.gridFitScreen) {
+      SLOT_H = Math.max(6, Math.min(14, Math.floor((window.innerHeight - 250) / totalSlots)));
+    }
 
     const timeToRow = (t) => {
       const min = timeToMin(t);

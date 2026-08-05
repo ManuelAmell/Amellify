@@ -2370,6 +2370,29 @@ html.grid-compact .grid-schedule {
   min-width: var(--custom-grid-width, 1800px) !important;
 }
 
+html.grid-fit-screen .grid-schedule {
+  max-height: calc(100vh - 220px) !important;
+  overflow: hidden !important;
+}
+
+html.grid-fit-screen .class-cell {
+  padding: 2px 4px !important;
+}
+
+html.grid-fit-screen .class-cell-code {
+  font-size: 11px !important;
+  font-weight: 700;
+}
+
+html.grid-fit-screen .class-cell-name {
+  font-size: 10px !important;
+  line-height: 1.2;
+}
+
+html.grid-fit-screen .class-cell-prof {
+  display: none !important;
+}
+
 .class-cell-prof {
   font-size: 11px;
   opacity: 0.85;

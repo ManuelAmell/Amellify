@@ -64,6 +64,7 @@ export function installFeatures(AmellifyApp) {
   proto.applySettings = function () {
     document.documentElement.classList.toggle('grid-compact', !!this.settings.gridCompact);
     document.documentElement.classList.toggle('list-compact', !!this.settings.listCompact);
+    document.documentElement.classList.toggle('grid-fit-screen', !!this.settings.gridFitScreen);
     const rawWidth = this.settings.gridWidth || '1800px';
     const widthMap = { compact: '1200px', normal: '1400px', wide: '1800px', full: '98vw' };
     const formattedWidth = widthMap[rawWidth] || (rawWidth.endsWith('px') || rawWidth.endsWith('%') || rawWidth.endsWith('vw') ? rawWidth : `${rawWidth}px`);
@@ -76,6 +77,14 @@ export function installFeatures(AmellifyApp) {
     }
     this.updateHeaderClassStatus();
     this.refreshNotifications?.();
+  };
+
+  proto.toggleGridFitScreen = function () {
+    this.settings.gridFitScreen = !this.settings.gridFitScreen;
+    this.saveSettingsToServer();
+    this.applySettings();
+    if (this.currentView === 'grid') this.renderGridView();
+    document.getElementById('settings-modal')?.remove();
   };
 
   proto.setGridWidth = function (val) {
@@ -1132,6 +1141,7 @@ export function installFeatures(AmellifyApp) {
             </div>
           </div>
           ${this._renderGridWidthField()}
+          ${this._settingsToggleBtn(s.gridFitScreen ? 'Modo Scroll normal' : '⚡ Ajustar todo a pantalla sin scroll', s.gridFitScreen ? 'maximize' : 'minimize', 'app.toggleGridFitScreen()')}
           ${this._settingsToggleBtn(s.gridCompact ? 'Grid altura normal' : 'Grid compacto', s.gridCompact ? 'maximize' : 'minimize', 'app.toggleGridCompact()')}
           ${this._settingsToggleBtn(s.listCompact ? 'Lista altura normal' : 'Lista compacta', s.listCompact ? 'maximize' : 'minimize', 'app.toggleListCompact()')}
           ${this._settingsToggleBtn(s.showClassBadge !== false ? 'Ocultar badge "En clase"' : 'Mostrar badge "En clase"', 'clock', 'app.toggleShowClassBadge()')}
@@ -1154,6 +1164,7 @@ export function installFeatures(AmellifyApp) {
             </select>
           </div>
           ${this._renderGridWidthField()}
+          ${this._settingsToggleBtn(s.gridFitScreen ? 'Modo Scroll normal' : '⚡ Ajustar todo a pantalla sin scroll', s.gridFitScreen ? 'maximize' : 'minimize', 'app.toggleGridFitScreen()')}
           ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
           ${this._settingsToggleBtn(s.gridHourRange === 'full' ? 'Mostrar solo horas con clase' : 'Mostrar 24 horas completas', 'clock', 'app.toggleGridHourRange()')}
           ${this._settingsToggleBtn(s.gridDragDisabled ? 'Activar arrastrar materias' : 'Desactivar arrastrar materias', s.gridDragDisabled ? 'edit' : 'lock', 'app.toggleGridDragDisabled()')}
