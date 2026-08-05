@@ -1070,9 +1070,6 @@ export function installFeatures(AmellifyApp) {
     return `<p class="muted">Sección no encontrada.</p>`;
   };
 
-    return `<p class="muted">Sección no encontrada.</p>`;
-  };
-
   const _bindSettingsTabEvents = proto._bindSettingsTabEvents;
   proto._bindSettingsTabEvents = function (modal, tab) {
     _bindSettingsTabEvents.call(this, modal, tab);
