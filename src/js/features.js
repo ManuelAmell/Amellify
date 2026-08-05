@@ -32,15 +32,19 @@ export function installFeatures(AmellifyApp) {
   };
 
   proto._bootstrapFeaturesAfterAuth = async function () {
-    this.maybeShowOnboarding();
-    this.updateHeaderClassStatus();
-    await this.notifications.requestPermission();
-    this.notifications.schedule(this.courses);
-    this.loadSettingsFromLocal();
-    this.applySettings();
-    const dv = this.settings.defaultView;
-    if (dv && VIEW_OPTIONS.some((v) => v.id === dv)) {
-      this.switchView(dv);
+    try {
+      this.maybeShowOnboarding();
+      this.updateHeaderClassStatus();
+      await this.notifications.requestPermission();
+      this.notifications.schedule(this.courses);
+      this.loadSettingsFromLocal();
+      this.applySettings();
+      const dv = this.settings.defaultView;
+      if (dv && VIEW_OPTIONS.some((v) => v.id === dv)) {
+        this.switchView(dv);
+      }
+    } catch (err) {
+      console.error('Error bootstrapping features:', err);
     }
   };
 
@@ -766,6 +770,115 @@ export function installFeatures(AmellifyApp) {
       </div>`;
   };
 
+  proto._compressImage = function (file, maxDim = 1280, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width: w, height: h } = img;
+        if (w > maxDim || h > maxDim) {
+          const ratio = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  proto.generateWithAI = async function (event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      this.showAlert('El archivo es demasiado grande (máx 10MB)', 'error');
+      event.target.value = '';
+      return;
+    }
+    const statusEl = document.getElementById('ai-import-status');
+    const uploadBtn = document.getElementById('ai-upload-btn');
+    if (uploadBtn) uploadBtn.disabled = true;
+    const isPdf = file.type === 'application/pdf' || file.name.endsWith('.pdf');
+    if (statusEl) statusEl.innerHTML = `${icon('clock', 'icon-sm')} Procesando ${isPdf ? 'PDF' : 'imagen'} con IA...`;
+    try {
+      let b64;
+      if (isPdf) {
+        b64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } else {
+        b64 = await this._compressImage(file);
+      }
+      const res = await fetch('/api/generate-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: b64 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Error del servidor (${res.status})`);
+      }
+      if (!Array.isArray(data.courses) || data.courses.length === 0) {
+        throw new Error(`La IA no encontró materias en el ${isPdf ? 'PDF' : 'archivo'}`);
+      }
+      const result = await api.importCourses(data.courses);
+      if (statusEl) statusEl.innerHTML = `${icon('check', 'icon-sm')} ${result.imported} materias importadas${result.skipped > 0 ? `, ${result.skipped} omitidas` : ''}`;
+      await this.fetchCourses();
+      this.renderAll();
+      this.showAlert(`${result.imported} materias importadas desde IA`, 'success');
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = `${icon('warning', 'icon-sm')} Error: ${escapeHtml(e.message)}`;
+      this.showAlert(e.message || 'Error al procesar con IA', 'error');
+    } finally {
+      if (uploadBtn) uploadBtn.disabled = false;
+      event.target.value = '';
+    }
+  };
+
+  proto.generateWithAIText = async function () {
+    const input = document.getElementById('ai-text-input');
+    const text = input?.value.trim();
+    if (!text) {
+      this.showAlert('Escribí la descripción de tu horario primero', 'error');
+      return;
+    }
+    const statusEl = document.getElementById('ai-import-status');
+    if (statusEl) statusEl.innerHTML = `${icon('clock', 'icon-sm')} Procesando descripción con IA...`;
+    try {
+      const res = await fetch('/api/generate-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || `Error del servidor (${res.status})`);
+      }
+      if (!Array.isArray(data.courses) || data.courses.length === 0) {
+        throw new Error('La IA no encontró materias en la descripción');
+      }
+      const result = await api.importCourses(data.courses);
+      if (statusEl) statusEl.innerHTML = `${icon('check', 'icon-sm')} ${result.imported} materias importadas${result.skipped > 0 ? `, ${result.skipped} omitidas` : ''}`;
+      input.value = '';
+      await this.fetchCourses();
+      this.renderAll();
+      this.showAlert(`${result.imported} materias importadas desde IA`, 'success');
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = `${icon('warning', 'icon-sm')} Error: ${escapeHtml(e.message)}`;
+      this.showAlert(e.message || 'Error al procesar con IA', 'error');
+    }
+  };
+
   proto._settingsToggleBtn = function (label, iconName, onclick) {
     return `<button type="button" class="btn btn-secondary settings-action-btn" onclick="${onclick}">${icon(iconName, 'icon-sm')} ${label}</button>`;
   };
@@ -847,6 +960,11 @@ export function installFeatures(AmellifyApp) {
           <input type="file" id="import-file" accept=".json" hidden>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar .ics</button>
           <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar horario</button>
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;">
+            <h3 class="settings-section-title">${icon('settings', 'icon-sm')} Opciones</h3>
+            ${this._settingsToggleBtn(s.showClassBadge !== false ? 'Ocultar badge "En clase"' : 'Mostrar badge "En clase"', 'clock', "app.toggleShowClassBadge()")}
+            ${this._settingsToggleBtn(s.confirmDeleteCourse !== false ? 'Desactivar confirmación al borrar' : 'Activar confirmación al borrar', 'warning', "app.toggleConfirmDeleteCourse()")}
+          </div>
         </div>`;
     }
 
@@ -940,19 +1058,55 @@ VALIDACIÓN FINAL:
 - El JSON debe ser parseable sin errores.
 
 INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ]. Si necesitás aclarar algo preguntá primero, si está claro producí el JSON directamente.</div>
+            </details>
           </details>`;
     }
 
-    if (tab === 'datos') {
-      return `
-        <div class="settings-section">
-          <h3 class="settings-section-title">${icon('folder', 'icon-sm')} Gestión de datos</h3>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportData()">${icon('download', 'icon-sm')} Exportar JSON</button>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.triggerImport()">${icon('upload', 'icon-sm')} Importar JSON</button>
-          <input type="file" id="import-file" accept=".json" hidden>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar .ics</button>
-          <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar horario</button>
-        </div>`;
+FORMATO EXACTO DE SALIDA:
+[
+  {
+    "code": "CALCVEC",
+    "name": "Cálculo Vectorial",
+    "professor": "Juan Pérez",
+    "email": "",
+    "faculty": "Ingeniería de Sistemas",
+    "semester": "2025-1",
+    "credits": 3,
+    "status": "active",
+    "color": "blue",
+    "schedules": [
+      { "day": "Lunes", "start_time": "08:40", "end_time": "10:20", "room": "A-301" }
+    ],
+    "partials": []
+  }
+]
+
+REGLAS POR CAMPO:
+- code: Obligatorio. Máx 8 caracteres, solo mayúsculas, sin espacios, sin acentos. Inventar sigla si no se sabe. NUNCA vacío.
+- name: Obligatorio. Nombre completo exacto.
+- professor, email, faculty, semester: Opcional, string vacío si no se sabe.
+- credits: Obligatorio. Entero 1-6. Default 3.
+- status: Siempre "active".
+- color: "blue", "red", "green", "orange", "purple", "teal". Default "blue". Distribuir distintos.
+- schedules: Array con UNO o MÁS objetos. Una materia que se ve varios días tiene un objeto por cada día.
+  - day: Valor EXACTO: "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo". Con mayúscula y tilde. NUNCA en inglés.
+  - start_time / end_time: "HH:MM" en 24h, siempre dos dígitos. Ej: "07:00", "08:40", "14:30". Incorrecto: "7:00", "3pm".
+  - room: Opcional, string vacío.
+- partials: Siempre [].
+
+VALIDACIÓN FINAL:
+- Todos los name presentes y no vacíos.
+- Todos los code mayúsculas, sin espacios ni acentos, máx 8 chars.
+- Todos los day escritos exactamente como en la lista (con mayúscula y tilde).
+- Todas las horas en formato "HH:MM" con dos dígitos.
+- Días en español, NO en inglés.
+- partials siempre [], status siempre "active".
+- El JSON debe ser parseable sin errores.
+
+INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ]. Si necesitás aclarar algo preguntá primero, si está claro producí el JSON directamente.</div>
+            </details>
+          </details>`;
+    }
     }
 
     return `<p class="muted">Sección no encontrada.</p>`;

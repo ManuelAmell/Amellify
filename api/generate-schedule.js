@@ -105,16 +105,14 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'No hay API keys configuradas (GEMINI_API_KEY u OPENROUTER_API_KEY)' });
   }
 
-  const { image, images, model } = req.body;
+  const { image, images, text, model } = req.body;
   const imgs = Array.isArray(images) && images.length ? images : (image ? [image] : []);
-  if (!imgs.length) {
-    return res.status(400).json({ error: 'Falta la imagen o el PDF' });
-  }
-  if (imgs.length > 8) {
-    return res.status(400).json({ error: 'Máximo 8 imágenes por petición' });
+  if (!imgs.length && !text) {
+    return res.status(400).json({ error: 'Falta la imagen, el PDF o la descripción' });
   }
 
-  const prompt = `Quiero que actúes como un generador de horarios universitarios en formato JSON. Te paso una o más imágenes de mi horario de clases (si son varias, pueden ser páginas de un PDF) y debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin explicaciones, sin texto adicional.
+  const promptText = text ? `\n\nDESCRIPCIÓN DEL HORARIO:\n${text}` : '';
+  const prompt = `Quiero que actúes como un generador de horarios universitarios en formato JSON. Te ${imgs.length ? 'paso imagen(es) / PDF de' : 'describo'} mi horario de clases y debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin explicaciones, sin texto adicional.${promptText}
 
 FORMATO EXACTO DE SALIDA:
 [
@@ -193,12 +191,20 @@ INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin e
       return res.status(result.status).json({ error: result.error });
     }
 
-    const raw = (result.content || '').replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
+    let raw = (result.content || '').trim();
+    const firstBracket = raw.indexOf('[');
+    const lastBracket = raw.lastIndexOf(']');
     let courses;
     try {
+      if (firstBracket !== -1 && lastBracket > firstBracket) {
+        raw = raw.substring(firstBracket, lastBracket + 1);
+      } else {
+        raw = raw.replace(/```(?:json)?\s*([\s\S]*?)```/gi, '$1').trim();
+      }
       courses = JSON.parse(raw);
     } catch (e) {
-      return res.status(422).json({ error: 'La IA devolvió un JSON inválido. Intentá con otro modelo.' });
+      lastError = { status: 422, message: 'La IA devolvió un JSON inválido.' };
+      continue;
     }
 
     if (!Array.isArray(courses)) {

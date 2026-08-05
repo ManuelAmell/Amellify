@@ -125,38 +125,7 @@ input:-moz-placeholder {
     background: rgba(255, 255, 255, 0.05);
 }
 
-/* Success Button */
-.btn-success {
-    background: linear-gradient(135deg, #30d158 0%, #34c759 100%);
-    color: white;
-    box-shadow: 0 2px 8px rgba(52, 199, 89, 0.3);
-}
 
-.btn-success:hover {
-    opacity: 0.95;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(52, 199, 89, 0.4);
-}
-
-.btn-success:active {
-    transform: scale(0.97);
-}
-
-/* Warning Button */
-.btn-warning {
-    background: linear-gradient(135deg, #ff9f0a 0%, #ff9500 100%);
-    color: white;
-    box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
-}
-
-.btn-warning:hover {
-    opacity: 0.95;
-    transform: translateY(-1px);
-}
-
-.btn-warning:active {
-    transform: scale(0.97);
-}
 
 /* Danger Button */
 .btn-danger {
@@ -634,26 +603,7 @@ textarea.form-input {
 .stagger-3 { animation-delay: 0.15s; opacity: 0; }
 .stagger-4 { animation-delay: 0.2s; opacity: 0; }
 
-/* Import Section */
-.import-section {
-    background: var(--bg-tertiary);
-    border-radius: var(--radius-md);
-    padding: 20px;
-    margin-top: 20px;
-}
 
-.import-title {
-    font-size: 16px;
-    font-weight: 600;
-    margin-bottom: 12px;
-}
-
-.import-help {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    line-height: 1.6;
-}
 
 /* Shortcuts Modal */
 #shortcuts-modal .modal-content {
@@ -799,48 +749,8 @@ kbd {
     font-size: 13px;
 }
 
-.partial-item .btn-remove {
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: var(--text-tertiary);
-    cursor: pointer;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: var(--transition-fast);
-}
-
-.partial-item .btn-remove:hover {
-    background: rgba(255, 59, 48, 0.1);
-    color: var(--danger);
-}
-
 /* Grade result display */
 #grade-result {
     background: rgba(0, 122, 255, 0.08);
     border: 1px solid rgba(0, 122, 255, 0.2);
-}
-
-#grade-result.excellent {
-    background: rgba(52, 199, 89, 0.1);
-    border-color: rgba(52, 199, 89, 0.3);
-}
-
-#grade-result.good {
-    background: rgba(0, 122, 255, 0.1);
-    border-color: rgba(0, 122, 255, 0.3);
-}
-
-#grade-result.warning {
-    background: rgba(255, 149, 0, 0.1);
-    border-color: rgba(255, 149, 0, 0.3);
-}
-
-#grade-result.danger {
-    background: rgba(255, 59, 48, 0.1);
-    border-color: rgba(255, 59, 48, 0.3);
 }
