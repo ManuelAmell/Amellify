@@ -1322,13 +1322,6 @@ export function installFeatures(AmellifyApp) {
           ${this._settingsToggleBtn(s.confirmDeleteCourse !== false ? 'Desactivar confirmación al borrar' : 'Activar confirmación al borrar', 'warning', 'app.toggleConfirmDeleteCourse()')}
         </div>`;
     }
-          ${this._settingsToggleBtn(s.gridFitScreen ? 'Modo Scroll normal' : '⚡ Ajustar todo a pantalla sin scroll', s.gridFitScreen ? 'maximize' : 'minimize', 'app.toggleGridFitScreen()')}
-          ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
-          ${this._settingsToggleBtn(s.gridHourRange === 'full' ? 'Mostrar solo horas con clase' : 'Mostrar 24 horas completas', 'clock', 'app.toggleGridHourRange()')}
-          ${this._settingsToggleBtn(s.gridDragDisabled ? 'Activar arrastrar materias' : 'Desactivar arrastrar materias', s.gridDragDisabled ? 'edit' : 'lock', 'app.toggleGridDragDisabled()')}
-          ${this._settingsToggleBtn(s.confirmDeleteCourse !== false ? 'Desactivar confirmación al borrar' : 'Activar confirmación al borrar', 'warning', 'app.toggleConfirmDeleteCourse()')}
-        </div>`;
-    }
 
     if (tab === 'notificaciones') {
       return `
