@@ -754,19 +754,35 @@ export function installFeatures(AmellifyApp) {
     const container = document.getElementById('ia-results');
     if (!container) return;
     const invalid = courses.filter((c) => !c?.name);
-    const fallbackNote = usedModel && requestedModel && usedModel !== requestedModel
-      ? `<p class="ia-fallback-note">${icon('refresh', 'icon-sm')} El modelo ${escapeHtml(requestedModel)} estaba agotado. Se usó ${escapeHtml(usedModel)} automáticamente.</p>`
-      : '';
+    const validCourses = courses.filter((c) => c && c.name);
+    
+    let modelBadge = '';
+    if (usedModel) {
+      const isFallback = requestedModel && requestedModel !== 'auto' && usedModel !== requestedModel;
+      if (isFallback) {
+        modelBadge = `<div class="ia-fallback-note" style="margin-top:6px;font-size:12px;color:var(--warning);display:flex;align-items:center;gap:4px;">${icon('refresh', 'icon-sm')} El modelo ${escapeHtml(requestedModel)} no respondió. Se usó <strong>${escapeHtml(usedModel)}</strong> automáticamente.</div>`;
+      } else {
+        modelBadge = `<div class="ia-fallback-note" style="margin-top:6px;font-size:12px;color:var(--success);display:flex;align-items:center;gap:4px;">${icon('check', 'icon-sm')} Procesado exitosamente con <strong>${escapeHtml(usedModel)}</strong></div>`;
+      }
+    }
+
+    const courseListHtml = validCourses.map(c => 
+      `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:var(--bg-secondary);border:1px solid var(--border);font-size:12px;font-weight:600;margin:2px;">${escapeHtml(c.code || c.name)}</span>`
+    ).join('');
+
     container.hidden = false;
     container.innerHTML = `
-      <div class="ia-results-header">
-        <h4>${icon('check', 'icon-sm')} Análisis completado</h4>
-        <p class="muted" style="margin-top:4px;">${courses.length} materias detectadas${invalid.length ? ` · <span style="color:var(--error)">${invalid.length} inválidas</span>` : ''}.</p>
-      </div>
-      ${fallbackNote}
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <button type="button" class="btn btn-primary" onclick="app.confirmImport()">Confirmar importación</button>
-        <button type="button" class="btn btn-secondary" onclick="app.cancelImportPreview()">Cancelar</button>
+      <div class="ia-results-header" style="background:var(--bg-secondary);padding:12px;border-radius:var(--radius-md);border:1px solid var(--border);">
+        <h4 style="font-size:15px;margin:0 0 6px 0;color:var(--text-primary);">${icon('check', 'icon-sm')} ¡Información extraída con éxito!</h4>
+        <div style="font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
+          Se encontraron <strong>${validCourses.length}</strong> materias en tu horario:
+        </div>
+        <div style="margin-bottom:8px;">${courseListHtml}</div>
+        ${modelBadge}
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <button type="button" class="btn btn-primary" onclick="app.confirmImport()">${icon('check', 'icon-sm')} Confirmar e importar (${validCourses.length})</button>
+          <button type="button" class="btn btn-secondary" onclick="app.cancelImportPreview()">Cancelar</button>
+        </div>
       </div>`;
   };
 
@@ -778,7 +794,7 @@ export function installFeatures(AmellifyApp) {
       return;
     }
     const modelSelect = document.getElementById('ia-model-select');
-    const model = modelSelect?.value || 'google/gemini-3.6-flash';
+    const model = modelSelect?.value || 'auto';
     const loadingEl = document.getElementById('ia-loading');
     if (loadingEl) loadingEl.hidden = false;
     try {
@@ -824,6 +840,104 @@ export function installFeatures(AmellifyApp) {
       img.onerror = reject;
       img.src = URL.createObjectURL(file);
     });
+  };
+
+  proto._processPdf = async function (file) {
+    const loadingEl = document.getElementById('ia-loading');
+    try {
+      loadingEl.hidden = false;
+      const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      const maxPages = 2;
+      const pageCount = Math.min(pdf.numPages, maxPages);
+      const images = [];
+      for (let i = 1; i <= pageCount; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        images.push(canvas.toDataURL('image/jpeg', 0.85));
+        canvas.remove();
+      }
+      await pdf.cleanup();
+      loadingEl.hidden = true;
+      if (!images.length) {
+        this.showAlert('No se pudo extraer contenido del PDF', 'error');
+        return;
+      }
+      this._pendingPhotoData = images;
+      const pdfPreview = document.getElementById('ia-pdf-preview');
+      if (pdfPreview) {
+        pdfPreview.hidden = false;
+        pdfPreview.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--success);margin-top:8px;">
+            <div class="ia-pdf-icon" style="color:var(--success);">${icon('check', 'icon-md')}</div>
+            <div class="ia-pdf-label" style="font-size:13px;">
+              <strong style="color:var(--text-primary);">✓ PDF procesado: ${pageCount} página${pageCount === 1 ? '' : 's'} listas para analizar</strong>
+              <div style="color:var(--text-secondary);font-size:12px;">Archivo: ${escapeHtml(file.name)}</div>
+              ${pdf.numPages > maxPages ? `<span class="ia-pdf-warn" style="color:var(--warning);font-size:11px;">(El PDF tiene ${pdf.numPages} páginas; se analizaron las primeras ${maxPages})</span>` : ''}
+            </div>
+          </div>`;
+      }
+      document.getElementById('ia-image-preview-container').hidden = true;
+      document.getElementById('ia-model-select-container').hidden = false;
+      document.getElementById('ia-analyze-container').hidden = false;
+      const results = document.getElementById('ia-results');
+      if (results) { results.hidden = true; results.innerHTML = ''; }
+    } catch (e) {
+      loadingEl.hidden = true;
+      console.error('PDF processing error:', e);
+      this.showAlert('No se pudo leer el PDF. Asegurate de que sea un archivo válido.', 'error');
+    }
+  };
+
+  proto.handlePhotoSelect = async function (input) {
+    const file = input.files?.[0];
+    if (!file) return;
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      this.showAlert('Formato de archivo no soportado (JPG, PNG, WebP, PDF)', 'error');
+      input.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.showAlert('Archivo demasiado grande (máximo 5 MB)', 'error');
+      input.value = '';
+      return;
+    }
+    this._pendingIsPdf = file.type === 'application/pdf';
+    if (this._pendingIsPdf) {
+      await this._processPdf(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this._pendingPhotoData = e.target.result;
+        const imgContainer = document.getElementById('ia-image-preview-container');
+        if (imgContainer) {
+          imgContainer.hidden = false;
+          imgContainer.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-secondary);border-radius:var(--radius-md);border:1px solid var(--success);margin-top:8px;">
+              <img id="ia-image-preview" src="${e.target.result}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+              <div style="font-size:13px;">
+                <strong style="color:var(--text-primary);">✓ Imagen lista para analizar</strong>
+                <div style="color:var(--text-secondary);font-size:12px;">${escapeHtml(file.name)}</div>
+              </div>
+              <button type="button" class="btn btn-secondary btn-small" onclick="app.resetPhotoUpload()" style="margin-left:auto;">
+                ${icon('trash', 'icon-sm')} Cambiar
+              </button>
+            </div>`;
+        }
+        document.getElementById('ia-pdf-preview').hidden = true;
+        document.getElementById('ia-model-select-container').hidden = false;
+        document.getElementById('ia-analyze-container').hidden = false;
+        const results = document.getElementById('ia-results');
+        if (results) { results.hidden = true; results.innerHTML = ''; }
+      };
+      reader.readAsDataURL(file);
+    }
+    input.value = '';
   };
 
   proto.generateWithAI = async function (event) {
@@ -1012,58 +1126,59 @@ export function installFeatures(AmellifyApp) {
 
     if (tab === 'ia') {
       return `
-        <div class="settings-section">
-          <h3 class="settings-section-title">${icon('zap', 'icon-sm')} Cargar Horario con IA</h3>
-          <p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:12px;">Podés cargar tu horario automáticamente usando una <strong>Foto / PDF</strong> o escribiendo una <strong>Descripción en Texto</strong>.</p>
-          
-          <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);margin-bottom:16px;">
-            <h4 style="font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">${icon('upload', 'icon-sm')} Opción 1: Subir Foto o PDF</h4>
-            <div class="ia-upload-area" id="ia-upload-area">
+        <div class="settings-section" style="padding-bottom:0;">
+          <h3 class="settings-section-title" style="margin-bottom:6px;">${icon('zap', 'icon-sm')} Cargar Horario con IA</h3>
+          <p class="muted" style="font-size:12px;line-height:1.4;margin-bottom:10px;">Subí una foto/PDF o escribí tu horario. La IA extraerá automáticamente las materias.</p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+            <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius-md);border:1px solid var(--border);">
+              <label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;margin-bottom:6px;">${icon('upload', 'icon-sm')} 1. Foto o PDF</label>
               <input type="file" id="ia-photo-input" accept="image/*,application/pdf" hidden>
-              <button type="button" class="btn btn-secondary" onclick="app.triggerPhotoUpload()">
-                ${icon('upload', 'icon-sm')} Seleccionar Foto / PDF
+              <button type="button" class="btn btn-secondary btn-small" onclick="app.triggerPhotoUpload()" style="width:100%;">
+                ${icon('upload', 'icon-sm')} Seleccionar archivo
               </button>
-              <div class="ia-upload-hint">Soporta JPG, PNG, WebP, PDF (Máx. 5 MB)</div>
+              <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;text-align:center;">JPG, PNG, WebP, PDF</div>
             </div>
-            <div id="ia-image-preview-container" hidden class="ia-image-wrapper">
-              <img id="ia-image-preview" class="ia-image-preview" alt="Vista previa">
-              <button type="button" class="btn btn-secondary btn-small" onclick="app.resetPhotoUpload()" style="margin-top:8px;">
-                ${icon('trash', 'icon-sm')} Cambiar archivo
-              </button>
-            </div>
-            <div id="ia-pdf-preview" class="ia-pdf-preview" hidden></div>
-            <div id="ia-model-select-container" hidden style="margin-top:12px;">
-              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">
-                ${icon('settings', 'icon-sm')} Modelo de IA a utilizar
-              </label>
-              <select id="ia-model-select" class="form-select">
-                <option value="google/gemini-3.6-flash">Gemini 3.6 Flash (recomendado)</option>
+
+            <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius-md);border:1px solid var(--border);">
+              <label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;margin-bottom:6px;">${icon('settings', 'icon-sm')} 2. Modelo de IA</label>
+              <select id="ia-model-select" class="form-select" style="font-size:12px;padding:4px 8px;">
+                <option value="auto" selected>⚡ Auto-detectar modelo</option>
+                <option value="google/gemini-3.6-flash">Gemini 3.6 Flash</option>
                 <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
                 <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
                 <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
                 <option value="openai/gpt-4o">GPT-4o</option>
               </select>
-            </div>
-            <div id="ia-analyze-container" hidden style="margin-top:14px;">
-              <button type="button" class="btn btn-primary" onclick="app.analyzePhotoWithIA()">
-                ${icon('zap', 'icon-sm')} Analizar archivo con IA
-              </button>
+              <div style="font-size:11px;color:var(--text-tertiary);margin-top:4px;text-align:center;">Conmuta si se agota cuota</div>
             </div>
           </div>
 
-          <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);">
-            <h4 style="font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">${icon('file-text', 'icon-sm')} Opción 2: Describir en Texto</h4>
-            <textarea id="ia-text-input" class="form-input" placeholder="Ej: Lunes y Miércoles 08:40-10:20 Cálculo Vectorial salón A-301, Martes 10:30-12:10 Física II..." style="min-height:80px;font-size:13px;margin-bottom:10px;"></textarea>
-            <button type="button" class="btn btn-primary btn-small" onclick="app.analyzeTextWithIA()">
-              ${icon('zap', 'icon-sm')} Generar desde Texto
+          <div id="ia-image-preview-container" hidden></div>
+          <div id="ia-pdf-preview" class="ia-pdf-preview" hidden></div>
+
+          <div id="ia-analyze-container" hidden style="margin-top:8px;">
+            <button type="button" class="btn btn-primary" onclick="app.analyzePhotoWithIA()" style="width:100%;">
+              ${icon('zap', 'icon-sm')} Analizar archivo seleccionado con IA
             </button>
           </div>
 
-          <div id="ia-loading" class="ia-loading" hidden style="margin-top:14px;">
+          <details style="margin-top:8px;background:var(--bg-secondary);padding:8px 10px;border-radius:var(--radius-md);border:1px solid var(--border);">
+            <summary style="cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;">
+              ${icon('file-text', 'icon-sm')} O describir horario en texto
+            </summary>
+            <div style="margin-top:8px;">
+              <textarea id="ia-text-input" class="form-input" placeholder="Ej: Lunes 8:40-10:20 Cálculo Vectorial A-301, Martes 10:30-12:10 Física II..." style="min-height:50px;font-size:12px;margin-bottom:6px;"></textarea>
+              <button type="button" class="btn btn-primary btn-small" onclick="app.analyzeTextWithIA()">${icon('zap', 'icon-sm')} Analizar texto con IA</button>
+            </div>
+          </details>
+
+          <div id="ia-loading" class="ia-loading" hidden style="margin-top:8px;padding:10px;">
             <div class="ia-loading-spinner">${icon('refresh', 'icon-sm')}</div>
-            <span class="ia-loading-text">Procesando horario con IA…</span>
+            <span class="ia-loading-text" style="font-size:13px;">Procesando horario con IA…</span>
           </div>
-          <div id="ia-results" class="ia-results" hidden style="margin-top:14px;"></div>
+
+          <div id="ia-results" class="ia-results" hidden style="margin-top:8px;padding:0;"></div>
         </div>`;
     }
 

@@ -162,7 +162,7 @@ VALIDACIÓN FINAL:
 
 INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ].`;
 
-  const requestedModel = model || 'google/gemini-3.6-flash';
+  const requestedModel = (!model || model === 'auto') ? 'google/gemini-3.6-flash' : model;
   const attempts = [];
 
   if (effectiveOpenRouterKey) {
