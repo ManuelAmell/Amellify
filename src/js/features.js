@@ -1272,8 +1272,9 @@ export function installFeatures(AmellifyApp) {
   };
 
   proto._buildSettingsTabContent = function (tab) {
+    if (!this.settings) this.settings = {};
     const s = this.settings;
-    const pg = this.getPassingGrade();
+    const pg = typeof this.getPassingGrade === 'function' ? this.getPassingGrade() : 3.0;
     const viewOpts = VIEW_OPTIONS.map((v) => `<option value="${v.id}" ${(s.defaultView || 'grid') === v.id ? 'selected' : ''}>${v.label}</option>`).join('');
 
     if (tab === 'apariencia') {

@@ -1624,7 +1624,7 @@ class AmellifyApp {
 
     const modal = document.createElement('div');
     modal.id = 'settings-modal';
-    modal.className = 'settings-modal';
+    modal.className = 'settings-modal settings-modal--open';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
     modal.setAttribute('aria-label', 'Configuración');
@@ -1648,7 +1648,6 @@ class AmellifyApp {
       </div>`;
 
     document.body.appendChild(modal);
-    requestAnimationFrame(() => modal.classList.add('settings-modal--open'));
 
     const close = () => modal.remove();
     modal.querySelectorAll('[data-close-settings]').forEach((el) => { el.addEventListener('click', close); });
@@ -1670,16 +1669,27 @@ class AmellifyApp {
       });
     });
 
-    this._bindSettingsTabEvents(modal, tab);
+    try {
+      this._bindSettingsTabEvents(modal, tab);
+    } catch (e) {
+      console.warn("Non-fatal issue binding settings events:", e);
+    }
     const escHandler = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
     document.addEventListener('keydown', escHandler);
   }
 
   _renderSettingsTab(tab) {
-    if (typeof this._buildSettingsTabContent === 'function') {
-      return this._buildSettingsTabContent(tab);
+    try {
+      if (typeof this._buildSettingsTabContent === 'function') {
+        return this._buildSettingsTabContent(tab);
+      }
+      return `<p class="muted">Sección en construcción.</p>`;
+    } catch (err) {
+      console.error("Error al renderizar pestaña de configuración:", err);
+      return `<div style="padding:20px;color:var(--danger);background:var(--bg-secondary);border-radius:12px;border:1px solid var(--border);">
+        <strong>⚠️ No se pudo cargar esta sección:</strong> ${escapeHtml(err.message || String(err))}
+      </div>`;
     }
-    return `<p class="muted">Sección en construcción.</p>`;
   }
 
   _bindSettingsTabEvents(modal, tab) {
