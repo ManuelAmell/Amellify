@@ -572,8 +572,10 @@ export function installFeatures(AmellifyApp) {
       if (iaResults) { iaResults.hidden = true; iaResults.innerHTML = ''; }
       this._resetAIPhotoState();
       await this.fetchCourses();
+      this.currentView = 'grid';
       this.renderAll();
-      this.showAlert(`${data.imported} importadas · ${data.skipped} omitidas`, 'success');
+      document.getElementById('settings-modal')?.remove();
+      this.showAlert(`✓ ${data.imported} materias importadas al horario`, 'success');
     } catch (e) { this.showAlert(e.message || 'Error al importar', 'error'); }
   };
 

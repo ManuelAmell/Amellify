@@ -979,6 +979,8 @@ class AmellifyApp {
           ${hourLines}
           ${hourLabels}
           ${currentTimeIndicator}
+          ${classBlocks}
+        </div>
       </div>
       ${emptyOverlay}`;
 
