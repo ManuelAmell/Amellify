@@ -22,9 +22,10 @@ body {
 .mono { font-family: var(--font-mono); }
 
 .container {
-    max-width: 1200px;
+    max-width: 1750px;
+    width: 96%;
     margin: 0 auto;
-    padding: var(--space-5);
+    padding: var(--space-4) var(--space-5);
     position: relative;
     z-index: 1;
 }
