@@ -12,9 +12,7 @@ export function setupGridDragDrop(app) {
   const grid = document.getElementById('grid-timeline');
   if (!grid) return;
 
-  const days = getScheduleDays(app);
-
-  const slotH = app.settings?.gridCompact ? 8 : 12;
+  const slotH = app.settings?.gridCompact ? 10 : 16;
   let dragged = null;
   let didDrag = false;
 
@@ -122,7 +120,8 @@ function getRowFromY(grid, clientY, slotH) {
   const rect = grid.getBoundingClientRect();
   const scrollTop = container?.scrollTop || 0;
   const relY = clientY - rect.top + scrollTop;
-  const headerApprox = slotH * 1.2;
-  const row = Math.floor((relY - headerApprox) / slotH) + 2;
+  const firstHeader = grid.querySelector('.grid-header-cell');
+  const headerHeight = firstHeader ? firstHeader.getBoundingClientRect().height : 36;
+  const row = Math.floor((relY - headerHeight) / slotH) + 2;
   return Math.max(2, Math.min(row, 2 + (24 * 60) / SLOT_MIN));
 }

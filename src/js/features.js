@@ -770,6 +770,39 @@ export function installFeatures(AmellifyApp) {
       </div>`;
   };
 
+  proto.analyzeTextWithIA = async function () {
+    const input = document.getElementById('ia-text-input');
+    const text = input?.value.trim();
+    if (!text) {
+      this.showAlert('Escribí la descripción de tu horario primero', 'error');
+      return;
+    }
+    const modelSelect = document.getElementById('ia-model-select');
+    const model = modelSelect?.value || 'google/gemini-3.6-flash';
+    const loadingEl = document.getElementById('ia-loading');
+    if (loadingEl) loadingEl.hidden = false;
+    try {
+      const response = await fetch('/api/generate-schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, model }),
+      });
+      if (loadingEl) loadingEl.hidden = true;
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al procesar la descripción');
+      }
+      if (!Array.isArray(data.courses) || data.courses.length === 0) {
+        throw new Error('La IA no encontró materias en la descripción');
+      }
+      this._pendingImport = data.courses;
+      this._showAIResults(data.courses, data.model, model);
+    } catch (e) {
+      if (loadingEl) loadingEl.hidden = true;
+      this.showAlert(e.message || 'Error al conectar con la IA', 'error');
+    }
+  };
+
   proto._compressImage = function (file, maxDim = 1280, quality = 0.8) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -879,6 +912,13 @@ export function installFeatures(AmellifyApp) {
     }
   };
 
+  proto.toggleGridHourRange = function () {
+    this.settings.gridHourRange = this.settings.gridHourRange === 'full' ? 'active' : 'full';
+    this.saveSettingsToServer();
+    if (this.currentView === 'grid') this.renderGridView();
+    document.getElementById('settings-modal')?.remove();
+  };
+
   proto._settingsToggleBtn = function (label, iconName, onclick) {
     return `<button type="button" class="btn btn-secondary settings-action-btn" onclick="${onclick}">${icon(iconName, 'icon-sm')} ${label}</button>`;
   };
@@ -889,11 +929,12 @@ export function installFeatures(AmellifyApp) {
     const viewOpts = VIEW_OPTIONS.map((v) => `<option value="${v.id}" ${(s.defaultView || 'grid') === v.id ? 'selected' : ''}>${v.label}</option>`).join('');
 
     if (tab === 'apariencia') {
+      const activeThemeName = (document.documentElement.getAttribute('data-theme') || 'light').toUpperCase();
       return `
         <div class="settings-section">
           <h3 class="settings-section-title">${icon('palette', 'icon-sm')} Apariencia</h3>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.cycleTheme()">${icon('palette', 'icon-sm')} Cambiar tema (4 modos)</button>
-          <div class="settings-row">
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.cycleTheme()">${icon('palette', 'icon-sm')} Tema actual: <strong>${activeThemeName}</strong> (Click para cambiar)</button>
+          <div class="settings-row" style="margin-top:10px;">
             <span class="settings-row-label">${icon('file-text', 'icon-sm')} Tamaño de texto</span>
             <div class="settings-btn-group">
               <button type="button" class="btn ${s.fontSize === 'small' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setFontSize('small')">Pequeño</button>
@@ -901,40 +942,43 @@ export function installFeatures(AmellifyApp) {
               <button type="button" class="btn ${s.fontSize === 'large' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setFontSize('large')">Grande</button>
             </div>
           </div>
-          ${this._settingsToggleBtn(s.gridCompact ? 'Grid normal' : 'Grid compacto', s.gridCompact ? 'maximize' : 'minimize', 'app.toggleGridCompact()')}
-          ${this._settingsToggleBtn(s.listCompact ? 'Lista normal' : 'Lista compacta', s.listCompact ? 'maximize' : 'minimize', 'app.toggleListCompact()')}
+          ${this._settingsToggleBtn(s.gridCompact ? 'Grid altura normal' : 'Grid compacto', s.gridCompact ? 'maximize' : 'minimize', 'app.toggleGridCompact()')}
+          ${this._settingsToggleBtn(s.listCompact ? 'Lista altura normal' : 'Lista compacta', s.listCompact ? 'maximize' : 'minimize', 'app.toggleListCompact()')}
+          ${this._settingsToggleBtn(s.showClassBadge !== false ? 'Ocultar badge "En clase"' : 'Mostrar badge "En clase"', 'clock', 'app.toggleShowClassBadge()')}
         </div>`;
     }
 
     if (tab === 'horario') {
       return `
         <div class="settings-section">
-          <h3 class="settings-section-title">${icon('calendar', 'icon-sm')} Horario</h3>
+          <h3 class="settings-section-title">${icon('calendar', 'icon-sm')} Configuración de Horario</h3>
           <div class="settings-field">
-            <label>${icon('grid', 'icon-sm')} Vista inicial</label>
+            <label>${icon('grid', 'icon-sm')} Vista inicial predeterminada</label>
             <select class="form-select" onchange="app.setDefaultView(this.value)">${viewOpts}</select>
           </div>
           <div class="settings-field">
-            <label>${icon('calendar', 'icon-sm')} Inicio de semana</label>
+            <label>${icon('calendar', 'icon-sm')} Primer día de la semana</label>
             <select class="form-select" onchange="app.setWeekStartsOn(this.value)">
               <option value="monday" ${s.weekStartsOn !== 'sunday' ? 'selected' : ''}>Lunes</option>
               <option value="sunday" ${s.weekStartsOn === 'sunday' ? 'selected' : ''}>Domingo</option>
             </select>
           </div>
-          ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
-          ${this._settingsToggleBtn(s.gridDragDisabled ? 'Activar arrastrar clases' : 'Desactivar arrastrar clases', s.gridDragDisabled ? 'edit' : 'lock', 'app.toggleGridDragDisabled()')}
+          ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
+          ${this._settingsToggleBtn(s.gridHourRange === 'full' ? 'Mostrar solo horas con clase' : 'Mostrar 24 horas completas', 'clock', 'app.toggleGridHourRange()')}
+          ${this._settingsToggleBtn(s.gridDragDisabled ? 'Activar arrastrar materias' : 'Desactivar arrastrar materias', s.gridDragDisabled ? 'edit' : 'lock', 'app.toggleGridDragDisabled()')}
+          ${this._settingsToggleBtn(s.confirmDeleteCourse !== false ? 'Desactivar confirmación al borrar' : 'Activar confirmación al borrar', 'warning', 'app.toggleConfirmDeleteCourse()')}
         </div>`;
     }
 
     if (tab === 'notificaciones') {
       return `
         <div class="settings-section">
-          <h3 class="settings-section-title">${icon('bell', 'icon-sm')} Notificaciones</h3>
-          ${this._settingsToggleBtn(s.notifications === false ? 'Activar notificaciones de clase' : 'Desactivar notificaciones de clase', s.notifications === false ? 'bell' : 'bell-off', 'app.toggleNotifications()')}
+          <h3 class="settings-section-title">${icon('bell', 'icon-sm')} Notificaciones de Clase</h3>
+          ${this._settingsToggleBtn(s.notifications === false ? 'Activar notificaciones' : 'Desactivar notificaciones', s.notifications === false ? 'bell' : 'bell-off', 'app.toggleNotifications()')}
           <div class="settings-field">
-            <label>${icon('clock', 'icon-sm')} Recordatorio antes de clase</label>
+            <label>${icon('clock', 'icon-sm')} Avisarme antes de cada clase</label>
             <select class="form-select" onchange="app.setNotifyMinutes(Number(this.value))">
-              ${[5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${(s.notifyMinutesBefore ?? 15) === m ? 'selected' : ''}>${m} minutos</option>`).join('')}
+              ${[5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${(s.notifyMinutesBefore ?? 15) === m ? 'selected' : ''}>${m} minutos antes</option>`).join('')}
             </select>
           </div>
         </div>`;
@@ -943,10 +987,11 @@ export function installFeatures(AmellifyApp) {
     if (tab === 'calculadora') {
       return `
         <div class="settings-section">
-          <h3 class="settings-section-title">${icon('calculator', 'icon-sm')} Calculadora</h3>
+          <h3 class="settings-section-title">${icon('calculator', 'icon-sm')} Promedios y Umbrales</h3>
           <div class="settings-field">
-            <label>${icon('target', 'icon-sm')} Umbral de aprobación</label>
-            <input type="number" class="form-input" value="${pg}" min="${GRADE_MIN}" max="${GRADE_MAX}" step="0.01" onchange="app.setPassingGrade(this.value)">
+            <label>${icon('target', 'icon-sm')} Nota mínima para aprobar</label>
+            <input type="number" class="form-input" value="${pg}" min="${GRADE_MIN}" max="${GRADE_MAX}" step="0.1" onchange="app.setPassingGrade(this.value)">
+            <p class="muted" style="font-size:12px;margin-top:4px;">Las notas iguales o superiores a este umbral se mostrarán en verde.</p>
           </div>
         </div>`;
     }
@@ -954,16 +999,13 @@ export function installFeatures(AmellifyApp) {
     if (tab === 'datos') {
       return `
         <div class="settings-section">
-          <h3 class="settings-section-title">${icon('folder', 'icon-sm')} Gestión de datos</h3>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportData()">${icon('download', 'icon-sm')} Exportar JSON</button>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.triggerImport()">${icon('upload', 'icon-sm')} Importar JSON</button>
+          <h3 class="settings-section-title">${icon('folder', 'icon-sm')} Copias de Seguridad y Datos</h3>
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportData()">${icon('download', 'icon-sm')} Exportar copia JSON</button>
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.triggerImport()">${icon('upload', 'icon-sm')} Importar copia JSON</button>
           <input type="file" id="import-file" accept=".json" hidden>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar .ics</button>
-          <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar horario</button>
-          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;">
-            <h3 class="settings-section-title">${icon('settings', 'icon-sm')} Opciones</h3>
-            ${this._settingsToggleBtn(s.showClassBadge !== false ? 'Ocultar badge "En clase"' : 'Mostrar badge "En clase"', 'clock', "app.toggleShowClassBadge()")}
-            ${this._settingsToggleBtn(s.confirmDeleteCourse !== false ? 'Desactivar confirmación al borrar' : 'Activar confirmación al borrar', 'warning', "app.toggleConfirmDeleteCourse()")}
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar a Calendario (.ics)</button>
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+            <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar todas las materias</button>
           </div>
         </div>`;
     }
@@ -971,96 +1013,62 @@ export function installFeatures(AmellifyApp) {
     if (tab === 'ia') {
       return `
         <div class="settings-section">
-          <h3 class="settings-section-title">${icon('photo', 'icon-sm')} Cargar horario con IA</h3>
-          <p class="muted" style="font-size:13px;line-height:1.6;">Subí una foto o un PDF de tu horario de clases y la IA lo analizará automáticamente, extrayendo las materias y horarios en formato JSON listo para importar.</p>
-          <div class="ia-upload-area" id="ia-upload-area">
-            <input type="file" id="ia-photo-input" accept="image/*,application/pdf" hidden>
-            <button type="button" class="btn btn-secondary" onclick="app.triggerPhotoUpload()">
-              ${icon('upload', 'icon-sm')} Seleccionar archivo
-            </button>
-            <div class="ia-upload-hint">Formatos: JPG, PNG, WebP, PDF · Máx. 5 MB</div>
-          </div>
-          <div id="ia-image-preview-container" hidden class="ia-image-wrapper">
-            <img id="ia-image-preview" class="ia-image-preview" alt="Vista previa de la foto">
-            <button type="button" class="btn btn-secondary btn-small" onclick="app.resetPhotoUpload()" style="margin-top:8px;">
-              ${icon('trash', 'icon-sm')} Cambiar archivo
-            </button>
-          </div>
-          <div id="ia-pdf-preview" class="ia-pdf-preview" hidden></div>
-          <div id="ia-model-select-container" hidden style="margin-top:12px;">
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:8px;">
-              ${icon('settings', 'icon-sm')} Modelo de IA
-            </label>
-            <select id="ia-model-select" class="form-select">
-              <option value="google/gemini-3.6-flash">Gemini 3.6 Flash (rápido · recomendado)</option>
-              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
-              <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
-              <option value="openai/gpt-4o">GPT-4o</option>
-            </select>
-          </div>
-          <div id="ia-analyze-container" hidden style="margin-top:16px;">
-            <button type="button" class="btn btn-primary" onclick="app.analyzePhotoWithIA()">
-              ${icon('zap', 'icon-sm')} Analizar horario con IA
-            </button>
-          </div>
-          <div id="ia-loading" class="ia-loading" hidden>
-            <div class="ia-loading-spinner">${icon('refresh', 'icon-sm')}</div>
-            <span class="ia-loading-text">Analizando horario con IA…</span>
-          </div>
-          <div id="ia-results" class="ia-results" hidden></div>
-          <details class="settings-section" style="margin-top:16px;">
-            <summary style="cursor:pointer;font-weight:600;font-size:14px;padding:8px 0;">${icon('search', 'icon-sm')} Copiar prompt (alternativa manual)</summary>
-            <div style="display:flex;gap:8px;margin-top:8px;">
-              <button class="btn btn-secondary btn-small" id="copy-prompt-btn" onclick="navigator.clipboard.writeText(document.getElementById('ai-prompt-text').textContent).then(()=>{const b=document.getElementById('copy-prompt-btn');const o=b.innerHTML;b.innerHTML='Copiado';setTimeout(()=>b.innerHTML=o,2000)})">${icon('copy', 'icon-sm')} Copiar prompt</button>
+          <h3 class="settings-section-title">${icon('zap', 'icon-sm')} Cargar Horario con IA</h3>
+          <p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:12px;">Podés cargar tu horario automáticamente usando una <strong>Foto / PDF</strong> o escribiendo una <strong>Descripción en Texto</strong>.</p>
+          
+          <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);margin-bottom:16px;">
+            <h4 style="font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">${icon('upload', 'icon-sm')} Opción 1: Subir Foto o PDF</h4>
+            <div class="ia-upload-area" id="ia-upload-area">
+              <input type="file" id="ia-photo-input" accept="image/*,application/pdf" hidden>
+              <button type="button" class="btn btn-secondary" onclick="app.triggerPhotoUpload()">
+                ${icon('upload', 'icon-sm')} Seleccionar Foto / PDF
+              </button>
+              <div class="ia-upload-hint">Soporta JPG, PNG, WebP, PDF (Máx. 5 MB)</div>
             </div>
-            <div id="ai-prompt-text" style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);white-space:pre-wrap;font-family:var(--font-mono);">Quiero que actúes como un generador de horarios universitarios en formato JSON. Te voy a pasar una descripción (texto o imagen) de mi horario de clases y debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin explicaciones, sin texto adicional.
+            <div id="ia-image-preview-container" hidden class="ia-image-wrapper">
+              <img id="ia-image-preview" class="ia-image-preview" alt="Vista previa">
+              <button type="button" class="btn btn-secondary btn-small" onclick="app.resetPhotoUpload()" style="margin-top:8px;">
+                ${icon('trash', 'icon-sm')} Cambiar archivo
+              </button>
+            </div>
+            <div id="ia-pdf-preview" class="ia-pdf-preview" hidden></div>
+            <div id="ia-model-select-container" hidden style="margin-top:12px;">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-bottom:6px;">
+                ${icon('settings', 'icon-sm')} Modelo de IA a utilizar
+              </label>
+              <select id="ia-model-select" class="form-select">
+                <option value="google/gemini-3.6-flash">Gemini 3.6 Flash (recomendado)</option>
+                <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+                <option value="google/gemini-2.5-pro">Gemini 2.5 Pro</option>
+                <option value="anthropic/claude-sonnet-4.5">Claude Sonnet 4.5</option>
+                <option value="openai/gpt-4o">GPT-4o</option>
+              </select>
+            </div>
+            <div id="ia-analyze-container" hidden style="margin-top:14px;">
+              <button type="button" class="btn btn-primary" onclick="app.analyzePhotoWithIA()">
+                ${icon('zap', 'icon-sm')} Analizar archivo con IA
+              </button>
+            </div>
+          </div>
 
-FORMATO EXACTO DE SALIDA:
-[
-  {
-    "code": "CALCVEC",
-    "name": "Cálculo Vectorial",
-    "professor": "Juan Pérez",
-    "email": "",
-    "faculty": "Ingeniería de Sistemas",
-    "semester": "2025-1",
-    "credits": 3,
-    "status": "active",
-    "color": "blue",
-    "schedules": [
-      { "day": "Lunes", "start_time": "08:40", "end_time": "10:20", "room": "A-301" }
-    ],
-    "partials": []
-  }
-]
+          <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);">
+            <h4 style="font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:6px;">${icon('file-text', 'icon-sm')} Opción 2: Describir en Texto</h4>
+            <textarea id="ia-text-input" class="form-input" placeholder="Ej: Lunes y Miércoles 08:40-10:20 Cálculo Vectorial salón A-301, Martes 10:30-12:10 Física II..." style="min-height:80px;font-size:13px;margin-bottom:10px;"></textarea>
+            <button type="button" class="btn btn-primary btn-small" onclick="app.analyzeTextWithIA()">
+              ${icon('zap', 'icon-sm')} Generar desde Texto
+            </button>
+          </div>
 
-REGLAS POR CAMPO:
-- code: Obligatorio. Máx 8 caracteres, solo mayúsculas, sin espacios, sin acentos. Inventar sigla si no se sabe. NUNCA vacío.
-- name: Obligatorio. Nombre completo exacto.
-- professor, email, faculty, semester: Opcional, string vacío si no se sabe.
-- credits: Obligatorio. Entero 1-6. Default 3.
-- status: Siempre "active".
-- color: "blue", "red", "green", "orange", "purple", "teal". Default "blue". Distribuir distintos.
-- schedules: Array con UNO o MÁS objetos. Una materia que se ve varios días tiene un objeto por cada día.
-  - day: Valor EXACTO: "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo". Con mayúscula y tilde. NUNCA en inglés.
-  - start_time / end_time: "HH:MM" en 24h, siempre dos dígitos. Ej: "07:00", "08:40", "14:30". Incorrecto: "7:00", "3pm".
-  - room: Opcional, string vacío.
-- partials: Siempre [].
-
-VALIDACIÓN FINAL:
-- Todos los name presentes y no vacíos.
-- Todos los code mayúsculas, sin espacios ni acentos, máx 8 chars.
-- Todos los day escritos exactamente como en la lista (con mayúscula y tilde).
-- Todas las horas en formato "HH:MM" con dos dígitos.
-- Días en español, NO en inglés.
-- partials siempre [], status siempre "active".
-- El JSON debe ser parseable sin errores.
-
-INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ]. Si necesitás aclarar algo preguntá primero, si está claro producí el JSON directamente.</div>
-            </details>
-          </details>`;
+          <div id="ia-loading" class="ia-loading" hidden style="margin-top:14px;">
+            <div class="ia-loading-spinner">${icon('refresh', 'icon-sm')}</div>
+            <span class="ia-loading-text">Procesando horario con IA…</span>
+          </div>
+          <div id="ia-results" class="ia-results" hidden style="margin-top:14px;"></div>
+        </div>`;
     }
+
+    return `<p class="muted">Sección no encontrada.</p>`;
+  };
 
     return `<p class="muted">Sección no encontrada.</p>`;
   };

@@ -813,9 +813,27 @@ class AmellifyApp {
       return h * 60 + m;
     };
 
-    const startHour = 0;
-    const endHour = 24;
-    const originMin = 0;
+    let startHour = 0;
+    let endHour = 24;
+
+    if (this.settings.gridHourRange === 'active' && allSchedules.length > 0) {
+      let minH = 24;
+      let maxH = 0;
+      for (const s of allSchedules) {
+        const sh = parseInt(s.start_time.split(':')[0], 10);
+        const [ehStr, emStr] = s.end_time.split(':').map(Number);
+        const eh = emStr > 0 ? ehStr + 1 : ehStr;
+        if (sh < minH) minH = sh;
+        if (eh > maxH) maxH = eh;
+      }
+      startHour = Math.max(0, minH - 1);
+      endHour = Math.min(24, maxH + 1);
+    } else if (this.settings.gridHourRange === 'active') {
+      startHour = 6;
+      endHour = 22;
+    }
+
+    const originMin = startHour * 60;
     const totalSlots = (endHour * 60 - originMin) / SLOT_MIN;
 
     const timeToRow = (t) => {
@@ -838,6 +856,17 @@ class AmellifyApp {
       hourLines += `<div class="grid-hour-line" style="grid-column:1 / -1; grid-row:${row};"></div>`;
     }
 
+    let emptySlots = '';
+    for (let di = 0; di < days.length; di++) {
+      const col = di + 2;
+      for (let h = startHour; h < endHour; h++) {
+        const rowStart = Math.round((h * 60 - originMin) / SLOT_MIN) + 2;
+        const rowEnd = rowStart + slotsPerHour;
+        const timeStr = `${String(h).padStart(2, '0')}:00`;
+        emptySlots += `<div class="grid-empty-slot" style="grid-column:${col}; grid-row:${rowStart} / ${rowEnd}; cursor:pointer;" onclick="app.openAddCourseModal('${days[di]}', '${timeStr}')" title="Click para agregar materia los ${days[di]} a las ${timeStr}"></div>`;
+      }
+    }
+
     const now = new Date();
     const todayMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const todayName = todayMap[now.getDay()];
@@ -854,7 +883,7 @@ class AmellifyApp {
     daySeparators += `<div class="grid-day-separator" style="grid-column:${days.length + 2}; grid-row:2 / ${totalSlots + 2}; border-left:none; border-right:1px solid var(--border);"></div>`;
 
     let currentTimeIndicator = '';
-    if (nowMin >= 0 && nowMin < 1440) {
+    if (nowMin >= originMin && nowMin < endHour * 60) {
       const currentRow = Math.round((nowMin - originMin) / SLOT_MIN) + 2;
       const todayColumnIndex = days.indexOf(todayName);
       const circleColumn = todayColumnIndex >= 0 ? todayColumnIndex + 2 : 1;
@@ -873,6 +902,7 @@ class AmellifyApp {
       if (dayIdx === -1) continue;
       const rowStart = timeToRow(s.start_time);
       const rowEnd = timeToRow(s.end_time);
+      if (rowEnd <= 2 || rowStart >= totalSlots + 2) continue;
       const col = dayIdx + 2;
       const isToday = s.day === todayName;
       const partials = s.course.partials || [];
@@ -894,10 +924,11 @@ class AmellifyApp {
              data-start="${escapeHtml(s.start_time)}"
              data-end="${escapeHtml(s.end_time)}"
              onclick="app.showClassDetails('${escapeJsString(s.course.code)}', ${Number(s.id) || 0})"
-             title="${escapeHtml(s.course.name)}${this.settings.gridDragDisabled ? '' : ' — arrastra para mover'}"
+             title="${escapeHtml(s.course.name)}${s.course.professor ? ` · ${escapeHtml(s.course.professor)}` : ''}${this.settings.gridDragDisabled ? '' : ' — arrastra para mover'}"
              style="grid-column:${col}; grid-row:${rowStart} / ${rowEnd}; margin:1px 2px;${isToday ? ' box-shadow: var(--shadow-sm);' : ''}">
           <div class="class-cell-code">${escapeHtml(s.course.code)}</div>
           <div class="class-cell-name">${escapeHtml(s.course.name)}</div>
+          ${s.course.professor ? `<div class="class-cell-prof" style="font-size:11px;opacity:0.8;margin-top:2px;">${icon("user", "icon-sm")} ${escapeHtml(s.course.professor)}</div>` : ''}
           ${gradeHtml}
           ${s.room ? `<div class="class-cell-room meta-with-icon">${icon("building", "icon-sm")} ${escapeHtml(s.room)}</div>` : ''}
           <div style="font-size:var(--grid-cell-time-size, 14px);margin-top:auto;opacity:0.5;font-family:'IBM Plex Mono',monospace;">${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}</div>
@@ -927,20 +958,29 @@ class AmellifyApp {
       </style>
     ` : '';
 
+    const hourRangeLabel = this.settings.gridHourRange === 'active' ? 'Solo horas activas' : 'Ver 24 horas completas';
+    const gridToolbar = `
+      <div class="grid-view-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button type="button" class="btn btn-secondary btn-small" onclick="window.print()">${icon('printer', 'icon-sm')} Imprimir / PDF</button>
+          <button type="button" class="btn btn-secondary btn-small" onclick="app.toggleGridHourRange()">${icon('clock', 'icon-sm')} ${hourRangeLabel}</button>
+        </div>
+        <div class="muted" style="font-size:12px;display:flex;align-items:center;gap:4px;">${icon('info', 'icon-sm')} Tip: Click en un espacio vacío para agregar materia en ese horario</div>
+      </div>`;
+
     container.innerHTML = `
+      ${gridToolbar}
       <div class="grid-schedule" id="grid-schedule-container">
         <div class="grid-timeline" id="grid-timeline" style="display: grid; grid-template-columns: 56px repeat(${days.length}, 1fr); grid-template-rows: auto repeat(${totalSlots}, ${SLOT_H}px); min-width: 1300px; position: relative;">
           <div class="grid-header-cell" style="grid-column:1; grid-row:1;">Hora</div>
           ${dayHeaders}
           ${daySeparators}
+          ${emptySlots}
           ${hourLines}
           ${hourLabels}
           ${currentTimeIndicator}
-          ${classBlocks}
-        </div>
       </div>
-      ${emptyOverlay}
-    `;
+      ${emptyOverlay}`;
 
     const slotHeight = SLOT_H;
     setTimeout(() => {

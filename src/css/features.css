@@ -2324,3 +2324,46 @@ html.grid-compact .grid-schedule {
   align-items: center;
   gap: 8px;
 }
+
+@media print {
+  header,
+  .view-tabs,
+  .grid-view-toolbar,
+  .stats-grid,
+  #list-filters,
+  #search-modal,
+  #settings-modal,
+  #empty-state-backdrop,
+  #empty-state-overlay {
+    display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .grid-schedule {
+    overflow: visible !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .grid-timeline {
+    min-width: 100% !important;
+    background: #ffffff !important;
+  }
+
+  .class-cell {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+}
