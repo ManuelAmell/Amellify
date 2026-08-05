@@ -1168,6 +1168,27 @@ export function installFeatures(AmellifyApp) {
     return `<button type="button" class="btn btn-secondary settings-action-btn" onclick="${onclick}">${icon(iconName, 'icon-sm')} ${label}</button>`;
   };
 
+  proto._renderUiScaleField = function () {
+    const currentScale = Number(this.settings.uiScale) || 100;
+    return `
+      <div class="settings-field" style="margin-top:12px;background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <label style="margin:0;font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;color:var(--text-primary);">${icon('search', 'icon-sm')} Zoom / Escala Global de la UI</label>
+          <span id="ui-scale-val-display" style="font-size:12px;font-weight:700;color:var(--accent);">${currentScale}%</span>
+        </div>
+        <p class="muted" style="font-size:11px;line-height:1.3;margin-bottom:8px;">Reduce el tamaño de toda la interfaz (cabecera, tarjetas, botones y grid) como un zoom alejado en pantalla.</p>
+        <input type="range" class="form-range" min="70" max="110" step="5" value="${currentScale}" 
+               oninput="document.getElementById('ui-scale-val-display').textContent = this.value + '%'; app.setUiScale(this.value)" style="width:100%;margin-bottom:8px;accent-color:var(--accent);">
+        <div class="settings-btn-group" style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button type="button" class="btn ${currentScale === 100 ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setUiScale(100)">100% (Normal)</button>
+          <button type="button" class="btn ${currentScale === 90 ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setUiScale(90)">90% (Compacto)</button>
+          <button type="button" class="btn ${currentScale === 85 ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setUiScale(85)">85% (Zoom Out)</button>
+          <button type="button" class="btn ${currentScale === 80 ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setUiScale(80)">80% (Ultra Compacto)</button>
+          <button type="button" class="btn ${currentScale === 75 ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setUiScale(75)">75% (Vista Mini)</button>
+        </div>
+      </div>`;
+  };
+
   proto._buildSettingsTabContent = function (tab) {
     const s = this.settings;
     const pg = this.getPassingGrade();
