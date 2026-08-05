@@ -1062,53 +1062,6 @@ INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin e
           </details>`;
     }
 
-FORMATO EXACTO DE SALIDA:
-[
-  {
-    "code": "CALCVEC",
-    "name": "Cálculo Vectorial",
-    "professor": "Juan Pérez",
-    "email": "",
-    "faculty": "Ingeniería de Sistemas",
-    "semester": "2025-1",
-    "credits": 3,
-    "status": "active",
-    "color": "blue",
-    "schedules": [
-      { "day": "Lunes", "start_time": "08:40", "end_time": "10:20", "room": "A-301" }
-    ],
-    "partials": []
-  }
-]
-
-REGLAS POR CAMPO:
-- code: Obligatorio. Máx 8 caracteres, solo mayúsculas, sin espacios, sin acentos. Inventar sigla si no se sabe. NUNCA vacío.
-- name: Obligatorio. Nombre completo exacto.
-- professor, email, faculty, semester: Opcional, string vacío si no se sabe.
-- credits: Obligatorio. Entero 1-6. Default 3.
-- status: Siempre "active".
-- color: "blue", "red", "green", "orange", "purple", "teal". Default "blue". Distribuir distintos.
-- schedules: Array con UNO o MÁS objetos. Una materia que se ve varios días tiene un objeto por cada día.
-  - day: Valor EXACTO: "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo". Con mayúscula y tilde. NUNCA en inglés.
-  - start_time / end_time: "HH:MM" en 24h, siempre dos dígitos. Ej: "07:00", "08:40", "14:30". Incorrecto: "7:00", "3pm".
-  - room: Opcional, string vacío.
-- partials: Siempre [].
-
-VALIDACIÓN FINAL:
-- Todos los name presentes y no vacíos.
-- Todos los code mayúsculas, sin espacios ni acentos, máx 8 chars.
-- Todos los day escritos exactamente como en la lista (con mayúscula y tilde).
-- Todas las horas en formato "HH:MM" con dos dígitos.
-- Días en español, NO en inglés.
-- partials siempre [], status siempre "active".
-- El JSON debe ser parseable sin errores.
-
-INSTRUCCIÓN: Devolvé SOLAMENTE el arreglo JSON. Sin comillas invertidas, sin explicaciones, sin saludos. Solo [ ... ]. Si necesitás aclarar algo preguntá primero, si está claro producí el JSON directamente.</div>
-            </details>
-          </details>`;
-    }
-    }
-
     return `<p class="muted">Sección no encontrada.</p>`;
   };
 
