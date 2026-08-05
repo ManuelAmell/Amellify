@@ -958,29 +958,10 @@ class AmellifyApp {
       </style>
     ` : '';
 
-    const widthLabelMap = {
-      compact: 'Ancho: Original (1200px)',
-      normal: 'Ancho: Estándar (1400px)',
-      wide: 'Ancho: Amplio (1800px)',
-      full: 'Ancho: Completo (100%)',
-    };
     const currentWidth = this.settings.gridWidth || 'wide';
-    const widthBtnLabel = widthLabelMap[currentWidth] || 'Ancho: Amplio (1800px)';
     const minWidthVal = currentWidth === 'full' ? '100%' : (currentWidth === 'compact' ? '1200px' : (currentWidth === 'normal' ? '1400px' : '1800px'));
 
-    const hourRangeLabel = this.settings.gridHourRange === 'active' ? 'Solo horas activas' : 'Ver 24 horas completas';
-    const gridToolbar = `
-      <div class="grid-view-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:8px;">
-          <button type="button" class="btn btn-secondary btn-small" onclick="window.print()">${icon('printer', 'icon-sm')} Imprimir / PDF</button>
-          <button type="button" class="btn btn-secondary btn-small" onclick="app.toggleGridHourRange()">${icon('clock', 'icon-sm')} ${hourRangeLabel}</button>
-          <button type="button" class="btn btn-secondary btn-small" onclick="app.cycleGridWidth()">${icon('maximize', 'icon-sm')} ${widthBtnLabel}</button>
-        </div>
-        <div class="muted" style="font-size:12px;display:flex;align-items:center;gap:4px;">${icon('info', 'icon-sm')} Tip: Click en un espacio vacío para agregar materia en ese horario</div>
-      </div>`;
-
     container.innerHTML = `
-      ${gridToolbar}
       <div class="grid-schedule" id="grid-schedule-container">
         <div class="grid-timeline" id="grid-timeline" style="display: grid; grid-template-columns: 56px repeat(${days.length}, 1fr); grid-template-rows: auto repeat(${totalSlots}, ${SLOT_H}px); min-width: ${minWidthVal}; position: relative;">
           <div class="grid-header-cell" style="grid-column:1; grid-row:1;">Hora</div>

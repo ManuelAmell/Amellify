@@ -1187,6 +1187,7 @@ export function installFeatures(AmellifyApp) {
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.triggerImport()">${icon('upload', 'icon-sm')} Importar copia JSON</button>
           <input type="file" id="import-file" accept=".json" hidden>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar a Calendario (.ics)</button>
+          <button type="button" class="btn btn-secondary settings-action-btn" onclick="window.print()">${icon('printer', 'icon-sm')} Imprimir o Guardar en PDF</button>
           <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
             <button type="button" class="btn btn-danger settings-action-btn" onclick="app.deleteAllCourses()">${icon('trash', 'icon-sm')} Borrar todas las materias</button>
           </div>
