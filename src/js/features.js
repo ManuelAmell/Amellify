@@ -64,6 +64,7 @@ export function installFeatures(AmellifyApp) {
   proto.applySettings = function () {
     document.documentElement.classList.toggle('grid-compact', !!this.settings.gridCompact);
     document.documentElement.classList.toggle('list-compact', !!this.settings.listCompact);
+    document.documentElement.setAttribute('data-grid-width', this.settings.gridWidth || 'wide');
     this.applyFontSize();
     if (this.settings.theme) {
       document.documentElement.setAttribute('data-theme', this.settings.theme);
@@ -72,6 +73,22 @@ export function installFeatures(AmellifyApp) {
     }
     this.updateHeaderClassStatus();
     this.refreshNotifications?.();
+  };
+
+  proto.setGridWidth = function (mode) {
+    if (!['normal', 'wide', 'full'].includes(mode)) return;
+    this.settings.gridWidth = mode;
+    this.saveSettingsToServer();
+    this.applySettings();
+    if (this.currentView === 'grid') this.renderGridView();
+    document.getElementById('settings-modal')?.remove();
+  };
+
+  proto.cycleGridWidth = function () {
+    const modes = ['normal', 'wide', 'full'];
+    const current = this.settings.gridWidth || 'wide';
+    const nextIdx = (modes.indexOf(current) + 1) % modes.length;
+    this.setGridWidth(modes[nextIdx]);
   };
 
   proto.getScheduleDays = function () {
@@ -1090,6 +1107,14 @@ export function installFeatures(AmellifyApp) {
               <button type="button" class="btn ${s.fontSize === 'large' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setFontSize('large')">Grande</button>
             </div>
           </div>
+          <div class="settings-field" style="margin-top:10px;">
+            <label>${icon('maximize', 'icon-sm')} Ancho de pantalla del Grid</label>
+            <select class="form-select" onchange="app.setGridWidth(this.value)">
+              <option value="normal" ${(s.gridWidth || 'wide') === 'normal' ? 'selected' : ''}>Estándar (1400px)</option>
+              <option value="wide" ${(s.gridWidth || 'wide') === 'wide' ? 'selected' : ''}>Amplio (1800px · Recomendado)</option>
+              <option value="full" ${(s.gridWidth || 'wide') === 'full' ? 'selected' : ''}>Pantalla Completa (100%)</option>
+            </select>
+          </div>
           ${this._settingsToggleBtn(s.gridCompact ? 'Grid altura normal' : 'Grid compacto', s.gridCompact ? 'maximize' : 'minimize', 'app.toggleGridCompact()')}
           ${this._settingsToggleBtn(s.listCompact ? 'Lista altura normal' : 'Lista compacta', s.listCompact ? 'maximize' : 'minimize', 'app.toggleListCompact()')}
           ${this._settingsToggleBtn(s.showClassBadge !== false ? 'Ocultar badge "En clase"' : 'Mostrar badge "En clase"', 'clock', 'app.toggleShowClassBadge()')}
@@ -1109,6 +1134,14 @@ export function installFeatures(AmellifyApp) {
             <select class="form-select" onchange="app.setWeekStartsOn(this.value)">
               <option value="monday" ${s.weekStartsOn !== 'sunday' ? 'selected' : ''}>Lunes</option>
               <option value="sunday" ${s.weekStartsOn === 'sunday' ? 'selected' : ''}>Domingo</option>
+            </select>
+          </div>
+          <div class="settings-field">
+            <label>${icon('maximize', 'icon-sm')} Ancho del Grid</label>
+            <select class="form-select" onchange="app.setGridWidth(this.value)">
+              <option value="normal" ${(s.gridWidth || 'wide') === 'normal' ? 'selected' : ''}>Estándar (1400px)</option>
+              <option value="wide" ${(s.gridWidth || 'wide') === 'wide' ? 'selected' : ''}>Amplio (1800px)</option>
+              <option value="full" ${(s.gridWidth || 'wide') === 'full' ? 'selected' : ''}>Pantalla Completa (100%)</option>
             </select>
           </div>
           ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}

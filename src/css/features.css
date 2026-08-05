@@ -2361,9 +2361,23 @@ html.grid-compact .grid-schedule {
     background: #ffffff !important;
   }
 
-  .class-cell {
-    break-inside: avoid;
-    box-shadow: none !important;
-    border: 1px solid #ccc !important;
-  }
+html[data-grid-width="wide"] .container {
+  max-width: 1800px !important;
+}
+
+html[data-grid-width="full"] .container {
+  max-width: 98vw !important;
+}
+
+html[data-grid-width="normal"] .container {
+  max-width: 1400px !important;
+}
+
+.class-cell-prof {
+  font-size: 11px;
+  opacity: 0.85;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
