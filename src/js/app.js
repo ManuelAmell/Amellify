@@ -1141,9 +1141,9 @@ class AmellifyApp {
     container.innerHTML = html;
   }
 
-  openAddCourseModal() {
+  openAddCourseModal(day, startTime) {
     this.editingCode = null;
-    this.scheduleSlots = [];
+    this.scheduleSlots = day ? [{ day, start_time: startTime || '08:00', end_time: startTime ? `${String(Math.min(23, parseInt(startTime) + 2)).padStart(2, '0')}:${startTime.split(':')[1] || '00'}` : '10:00', room: '' }] : [];
     document.getElementById("course-modal-title").innerHTML = `${icon("plus", "icon-md")} Nueva Materia`;
     document.getElementById("course-form").reset();
     document.getElementById("edit-course-code").value = "";
@@ -1472,36 +1472,36 @@ class AmellifyApp {
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border);">
         <div style="width:6px;height:64px;border-radius:4px;background:var(--accent);flex-shrink:0;"></div>
         <div>
-          <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;">${course.name}</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-secondary);margin-top:4px;">${course.code}</div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;">${escapeHtml(course.name)}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text-secondary);margin-top:4px;">${escapeHtml(course.code)}</div>
         </div>
       </div>
-      ${schedule ? `<div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:16px;"><div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;" class="meta-with-icon">${icon("calendar", "icon-sm")} Horario de esta clase</div><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:15px;"><span class="meta-with-icon">${icon("calendar", "icon-sm")} ${schedule.day}</span><span class="meta-with-icon">${icon("clock", "icon-sm")} ${schedule.start_time} – ${schedule.end_time}</span>${schedule.room ? `<span class="meta-with-icon">${icon("building", "icon-sm")} ${schedule.room}</span>` : ""}</div></div>` : ""}
-      ${(course.schedules || []).length > 1 ? `<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Todos los horarios</div>${course.schedules.map((s) => `<span class="schedule-tag meta-with-icon" style="display:inline-block;margin:2px;">${icon("calendar", "icon-sm")} ${s.day} ${s.start_time}–${s.end_time}${s.room ? " · " + s.room : ""}</span>`).join("")}</div>` : ""}
+      ${schedule ? `<div style="background:var(--bg-tertiary);padding:16px;border-radius:var(--radius-sm);margin-bottom:16px;"><div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;" class="meta-with-icon">${icon("calendar", "icon-sm")} Horario de esta clase</div><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:15px;"><span class="meta-with-icon">${icon("calendar", "icon-sm")} ${escapeHtml(schedule.day)}</span><span class="meta-with-icon">${icon("clock", "icon-sm")} ${escapeHtml(schedule.start_time)} – ${escapeHtml(schedule.end_time)}</span>${schedule.room ? `<span class="meta-with-icon">${icon("building", "icon-sm")} ${escapeHtml(schedule.room)}</span>` : ""}</div></div>` : ""}
+      ${(course.schedules || []).length > 1 ? `<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Todos los horarios</div>${course.schedules.map((s) => `<span class="schedule-tag meta-with-icon" style="display:inline-block;margin:2px;">${icon("calendar", "icon-sm")} ${escapeHtml(s.day)} ${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}${s.room ? " · " + escapeHtml(s.room) : ""}</span>`).join("")}</div>` : ""}
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
-        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">CRÉDITOS</div><div style="font-size:24px;font-weight:800;">${course.credits}</div></div>
+        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">CRÉDITOS</div><div style="font-size:24px;font-weight:800;">${Number(course.credits) || 0}</div></div>
         <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">ESTADO</div><div style="font-size:18px;" class="status-with-dot">${statusDots[course.status] || statusDot("active")}</div><div style="font-size:12px;color:var(--text-secondary);">${statusLabel(course.status)}</div></div>
-        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">SEMESTRE</div><div style="font-size:13px;font-weight:600;">${course.semester || "—"}</div></div>
+        <div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);text-align:center;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">SEMESTRE</div><div style="font-size:13px;font-weight:600;">${escapeHtml(course.semester || "—")}</div></div>
       </div>
-      ${(function () {
-        var partials = course.partials || [];
+      ${(() => {
+        const partials = course.partials || [];
         if (partials.length > 0) {
-          var finalGrade = app.calculateFinalGrade(partials);
+          const finalGrade = this.calculateFinalGrade(partials);
           if (finalGrade !== null) {
-            var passed = finalGrade >= app.getPassingGrade();
-            var bgColor = passed ? 'rgba(52,199,89,0.1)' : 'rgba(255,59,48,0.1)';
-            var borderColor = passed ? 'var(--success)' : 'var(--error)';
-            var textColor = passed ? 'var(--success)' : 'var(--error)';
+            const passed = finalGrade >= this.getPassingGrade();
+            const bgColor = passed ? 'rgba(52,199,89,0.1)' : 'rgba(255,59,48,0.1)';
+            const borderColor = passed ? 'var(--success)' : 'var(--error)';
+            const textColor = passed ? 'var(--success)' : 'var(--error)';
             return '<div style="background:' + bgColor + ';padding:12px;border-radius:var(--radius-sm);text-align:center;margin-bottom:12px;border:2px solid ' + borderColor + ';"><div style="font-size:11px;color:var(--text-secondary);margin-bottom:4px;">NOTA FINAL</div><div style="font-size:28px;font-weight:800;color:' + textColor + ';">' + finalGrade.toFixed(2) + '</div><div style="font-size:12px;color:' + textColor + ';">' + (passed ? '✓ Aprobado' : '✗ Reprobado') + '</div></div>';
           }
         }
         return '';
       })()}
-      ${course.professor ? `<div style="padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-bottom:12px;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">PROFESOR</div><div style="font-weight:600;" class="meta-with-icon">${icon("user", "icon-sm")} ${course.professor}</div>${course.email ? `<div style="margin-top:4px;" class="meta-with-icon"><a href="mailto:${course.email}" style="color:var(--accent);font-size:13px;">${icon("mail", "icon-sm")} ${course.email}</a></div>` : ""}</div>` : ""}
-      ${course.faculty ? `<div class="meta-with-icon" style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">${icon("landmark", "icon-sm")} ${course.faculty}</div>` : ""}
-      ${course.notes ? `<div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);font-size:14px;color:var(--text-secondary);font-style:italic;line-height:1.6;margin-bottom:16px;" class="meta-with-icon">${icon("file-text", "icon-sm")} ${course.notes}</div>` : ""}
+      ${course.professor ? `<div style="padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);margin-bottom:12px;"><div style="font-size:11px;color:var(--text-tertiary);margin-bottom:4px;">PROFESOR</div><div style="font-weight:600;" class="meta-with-icon">${icon("user", "icon-sm")} ${escapeHtml(course.professor)}</div>${course.email ? `<div style="margin-top:4px;" class="meta-with-icon"><a href="mailto:${escapeHtml(course.email)}" style="color:var(--accent);font-size:13px;">${icon("mail", "icon-sm")} ${escapeHtml(course.email)}</a></div>` : ""}</div>` : ""}
+      ${course.faculty ? `<div class="meta-with-icon" style="font-size:14px;color:var(--text-secondary);margin-bottom:8px;">${icon("landmark", "icon-sm")} ${escapeHtml(course.faculty)}</div>` : ""}
+      ${course.notes ? `<div style="background:var(--bg-tertiary);padding:12px;border-radius:var(--radius-sm);font-size:14px;color:var(--text-secondary);font-style:italic;line-height:1.6;margin-bottom:16px;" class="meta-with-icon">${icon("file-text", "icon-sm")} ${escapeHtml(course.notes)}</div>` : ""}
       <div style="display:flex;gap:8px;margin-top:20px;">
-        <button class="btn btn-primary" onclick="app.openEditCourseModal('${course.code}')">${icon("edit")} Editar Materia</button>
+        <button class="btn btn-primary" onclick="app.openEditCourseModal('${escapeJsString(course.code)}')">${icon("edit")} Editar Materia</button>
         <button class="btn btn-secondary" onclick="document.getElementById('class-modal').classList.remove('active')">Cerrar</button>
       </div>`;
     document.getElementById("class-modal").classList.add("active");
@@ -1649,7 +1649,8 @@ class AmellifyApp {
 
     document.body.appendChild(modal);
 
-    const close = () => modal.remove();
+    const escHandler = (e) => { if (e.key === 'Escape') close(); };
+    const close = () => { modal.remove(); document.removeEventListener('keydown', escHandler); };
     modal.querySelectorAll('[data-close-settings]').forEach((el) => { el.addEventListener('click', close); });
 
     modal.querySelectorAll('[data-settings-tab]').forEach((btn) => {
@@ -1674,7 +1675,6 @@ class AmellifyApp {
     } catch (e) {
       console.warn("Non-fatal issue binding settings events:", e);
     }
-    const escHandler = (e) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escHandler); } };
     document.addEventListener('keydown', escHandler);
   }
 

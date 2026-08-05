@@ -99,7 +99,12 @@ export class AcademicNotificationManager {
         candidate.setDate(candidate.getDate() + daysUntil);
         candidate.setHours(sh, sm, 0, 0);
 
-        const notifyAt = candidate.getTime() - minutesBefore * 60 * 1000;
+        let notifyAt = candidate.getTime() - minutesBefore * 60 * 1000;
+        // ponytail: if notifyAt already passed, push to next week
+        if (notifyAt <= now) {
+          candidate.setDate(candidate.getDate() + 7);
+          notifyAt = candidate.getTime() - minutesBefore * 60 * 1000;
+        }
         const key = `class-${course.code}-${s.day}-${s.start_time}-${candidate.toDateString()}`;
         const title =
           minutesBefore > 0 ? `Clase en ${minutesBefore} min` : 'Clase ahora';

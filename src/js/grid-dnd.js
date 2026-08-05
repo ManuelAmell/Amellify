@@ -15,6 +15,7 @@ export function setupGridDragDrop(app) {
   const slotH = app.settings?.gridCompact ? 10 : 16;
   let dragged = null;
   let didDrag = false;
+  const days = getScheduleDays(app);
 
   grid.querySelectorAll('.draggable-cell').forEach((cell) => {
     cell.addEventListener('dragstart', (e) => {
@@ -103,7 +104,7 @@ function minToTime(m) {
 
 function getDayHeaders(grid) {
   const all = [...grid.querySelectorAll('.grid-header-cell')];
-  return all.slice(1, all.length - 1);
+  return all.slice(1); // ponytail: skip "Hora" header, keep all day headers
 }
 
 function getColumnFromX(grid, clientX) {

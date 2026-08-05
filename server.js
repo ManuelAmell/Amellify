@@ -12,6 +12,7 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
@@ -49,6 +50,11 @@ const server = http.createServer((req, res) => {
   }
 
   let filePath = path.join(__dirname, urlPath === '/' ? 'index.html' : urlPath);
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(__dirname)) {
+    res.writeHead(403);
+    return res.end('Forbidden');
+  }
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     filePath = path.join(__dirname, 'index.html');
   }

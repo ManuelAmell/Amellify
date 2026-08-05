@@ -668,19 +668,20 @@ export function installFeatures(AmellifyApp) {
   proto.showImportPreview = async function (input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { this.showAlert('Archivo demasiado grande (máx 2MB)', 'error'); return; }
+    if (file.size > 5 * 1024 * 1024) { this.showAlert('Archivo demasiado grande (máx 5MB)', 'error'); return; }
     try {
       let raw = await file.text();
-      raw = raw.replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
+      raw = raw.replace(/^\uFEFF/, '').replace(/```(?:json)?\s*([\s\S]*?)```/g, '$1').trim();
       const data = JSON.parse(raw);
       let courses = Array.isArray(data) ? data : data.courses;
       if (!Array.isArray(courses)) {
         const vals = Object.values(data).find(v => Array.isArray(v));
         if (vals) courses = vals;
+        else if (data && typeof data === 'object' && (data.name || data.code)) courses = [data];
         else throw new Error('Formato inválido');
       }
       courses = courses.map((c) => {
-        if (!c) return c;
+        if (!c || typeof c !== 'object') return c;
         const norm = {};
         for (const [k, v] of Object.entries(c)) {
           norm[k.toLowerCase()] = v;
@@ -688,13 +689,22 @@ export function installFeatures(AmellifyApp) {
         return { ...c, ...norm };
       });
       const invalid = courses.filter((c) => !c?.name);
-      const preview = document.getElementById('import-preview');
+      const preview = document.getElementById('import-preview-modal') || document.getElementById('import-preview');
       if (preview) {
         preview.hidden = false;
-        preview.innerHTML = `<p><strong>${courses.length}</strong> materias detectadas${invalid.length ? ` · <span style="color:var(--error)">${invalid.length} inválidas</span>` : ''}.</p><button class="btn btn-primary" onclick="app.confirmImport()">Confirmar importación</button><button class="btn btn-secondary" onclick="app.cancelImportPreview()">Cancelar</button>`;
+        preview.innerHTML = `
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:13px;color:var(--text-primary);">
+              <strong>${courses.length}</strong> materia${courses.length === 1 ? '' : 's'} detectada${courses.length === 1 ? '' : 's'}${invalid.length ? ` · <span style="color:var(--error)">${invalid.length} sin nombre</span>` : ''}
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+              <button type="button" class="btn btn-primary btn-small" onclick="app.confirmImport()">${icon('check', 'icon-sm')} Confirmar e importar (${courses.length})</button>
+              <button type="button" class="btn btn-secondary btn-small" onclick="app.cancelImportPreview()">Cancelar</button>
+            </div>
+          </div>`;
       }
       this._pendingImport = courses;
-    } catch (e) { this.showAlert('JSON inválido', 'error'); }
+    } catch (e) { this.showAlert('Error al leer JSON: ' + (e.message || 'Formato inválido'), 'error'); }
     input.value = '';
   };
 
@@ -703,8 +713,10 @@ export function installFeatures(AmellifyApp) {
     try {
       const data = await api.importCourses(this._pendingImport);
       this._pendingImport = null;
-      const p = document.getElementById('import-preview');
-      if (p) p.hidden = true;
+      const p1 = document.getElementById('import-preview-modal');
+      if (p1) { p1.hidden = true; p1.innerHTML = ''; }
+      const p2 = document.getElementById('import-preview');
+      if (p2) { p2.hidden = true; p2.innerHTML = ''; }
       const iaResults = document.getElementById('ia-results');
       if (iaResults) { iaResults.hidden = true; iaResults.innerHTML = ''; }
       this._resetAIPhotoState();
@@ -718,8 +730,10 @@ export function installFeatures(AmellifyApp) {
 
   proto.cancelImportPreview = function () {
     this._pendingImport = null;
-    const p = document.getElementById('import-preview');
-    if (p) p.hidden = true;
+    const p1 = document.getElementById('import-preview-modal');
+    if (p1) { p1.hidden = true; p1.innerHTML = ''; }
+    const p2 = document.getElementById('import-preview');
+    if (p2) { p2.hidden = true; p2.innerHTML = ''; }
     this._resetAIPhotoState();
   };
 
@@ -1361,6 +1375,7 @@ export function installFeatures(AmellifyApp) {
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportData()">${icon('download', 'icon-sm')} Exportar copia JSON</button>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.triggerImport()">${icon('upload', 'icon-sm')} Importar copia JSON</button>
           <input type="file" id="import-file" accept=".json" hidden>
+          <div id="import-preview-modal" class="import-preview glass" hidden style="margin-top:12px;padding:12px;border-radius:var(--radius-md);border:1px solid var(--border);"></div>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.exportIcs()">${icon('calendar', 'icon-sm')} Exportar a Calendario (.ics)</button>
           <button type="button" class="btn btn-secondary settings-action-btn" onclick="window.print()">${icon('printer', 'icon-sm')} Imprimir o Guardar en PDF</button>
           <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">

@@ -104,7 +104,7 @@ export default async function handler(req, res) {
   const genericKey = process.env.API_KEY || process.env.AI_API_KEY;
 
   const effectiveGeminiKey = geminiKey || (genericKey && genericKey.startsWith('AIza') ? genericKey : null);
-  const effectiveOpenRouterKey = openRouterKey || (genericKey && genericKey.startsWith('sk-or-') ? genericKey : genericKey);
+  const effectiveOpenRouterKey = openRouterKey || (genericKey && genericKey.startsWith('sk-or-') ? genericKey : null);
 
   if (!effectiveGeminiKey && !effectiveOpenRouterKey) {
     return res.status(500).json({ error: 'No hay API keys configuradas en Vercel (GEMINI_API_KEY o OPENROUTER_API_KEY)' });

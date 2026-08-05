@@ -179,21 +179,35 @@ export const api = {
   },
 
   importCourses: async (coursesData) => {
-    const list = Array.isArray(coursesData) ? coursesData : (coursesData.courses || Object.values(coursesData).find(v => Array.isArray(v)) || []);
+    let list = [];
+    if (Array.isArray(coursesData)) {
+      list = coursesData;
+    } else if (coursesData && typeof coursesData === 'object') {
+      list = coursesData.courses || Object.values(coursesData).find(v => Array.isArray(v)) || (coursesData.name ? [coursesData] : []);
+    }
     if (!Array.isArray(list)) throw new Error('Formato inválido');
     const courses = readCourses();
     const usedCodes = new Set(courses.map((c) => c.code));
     let imported = 0;
     let skipped = 0;
+
+    const padTime = (t) => {
+      if (!t) return '08:00';
+      const parts = String(t).trim().split(':');
+      if (parts.length < 2) return '08:00';
+      return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    };
+
     for (const item of list) {
+      if (!item || typeof item !== 'object') { skipped++; continue; }
       const norm = {};
-      for (const [k, v] of Object.entries(item || {})) norm[k.toLowerCase()] = v;
-      item.code = norm.code || item.code;
-      item.name = norm.name || item.name;
-      if (!item.name) { skipped++; continue; }
-      let code = item.code ? item.code.toUpperCase() : '';
+      for (const [k, v] of Object.entries(item)) norm[k.toLowerCase()] = v;
+      const name = norm.name || item.name;
+      if (!name) { skipped++; continue; }
+      const nameStr = String(name);
+      let code = (norm.code || item.code || '').toString().trim().toUpperCase();
       if (!code) {
-        code = item.name.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 8) || 'MAT';
+        code = nameStr.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 8) || 'MAT';
       }
       let finalCode = code;
       let n = 2;
@@ -202,7 +216,7 @@ export const api = {
         n++;
       }
       usedCodes.add(finalCode);
-      const body = { ...item, code: finalCode };
+      const body = { ...item, ...norm, code: finalCode, name: nameStr };
       const now = new Date().toISOString();
       courses.push({
         id: nextId(COURSE_ID_KEY),
@@ -212,7 +226,7 @@ export const api = {
         email: body.email || '',
         faculty: body.faculty || '',
         semester: body.semester || '',
-        credits: body.credits || 3,
+        credits: parseInt(body.credits, 10) || 3,
         status: body.status || 'active',
         notes: body.notes || '',
         color: body.color || 'blue',
@@ -222,9 +236,9 @@ export const api = {
           for (const [k, v] of Object.entries(s || {})) snorm[k.toLowerCase()] = v;
           return {
             id: nextId(SCHEDULE_ID_KEY),
-            day: snorm.day || s.day,
-            start_time: snorm.start_time || s.start_time,
-            end_time: snorm.end_time || s.end_time,
+            day: snorm.day || s.day || 'Lunes',
+            start_time: padTime(snorm.start_time || snorm.start || s.start_time),
+            end_time: padTime(snorm.end_time || snorm.end || s.end_time),
             room: snorm.room || s.room || '',
           };
         }),

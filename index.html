@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Amellify | University</title>
+    <meta name="description" content="Gestiona tus horarios universitarios, calcula notas y exporta tu agenda con Amellify.">
 
     <!-- CSS -->
     <link rel="stylesheet" href="src/css/variables.css">
@@ -417,7 +418,7 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group" style="margin-bottom:0;">
-                                <label class="form-label">Nombre del Profesor</label>
+                                <label class="form-label" for="course-professor">Nombre del Profesor</label>
                                 <input type="text" class="form-input" id="course-professor" placeholder="Ej: Dr. Juan Pérez">
                             </div>
                             <div class="form-group" style="margin-bottom:0;">
@@ -438,11 +439,11 @@
                         </div>
                         <div class="form-row">
                             <div class="form-group" style="margin-bottom:0;">
-                                <label class="form-label">Facultad / Carrera</label>
+                                <label class="form-label" for="course-faculty">Facultad / Carrera</label>
                                 <input type="text" class="form-input" id="course-faculty" placeholder="Ej: Ingeniería">
                             </div>
                             <div class="form-group" style="margin-bottom:0;">
-                                <label class="form-label">Semestre</label>
+                                <label class="form-label" for="course-semester">Semestre</label>
                                 <select class="form-select" id="course-semester">
                                     <option value="">Seleccionar...</option>
                                     <option value="2024-1">2024-1</option>
@@ -455,7 +456,7 @@
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom:0;margin-top:16px;">
-                            <label class="form-label">Estado</label>
+                            <label class="form-label" for="course-status">Estado</label>
                             <select class="form-select" id="course-status">
                                 <option value="active">Activa</option>
                                 <option value="paused">En pausa</option>
@@ -467,7 +468,7 @@
 
                     <!-- notas -->
                     <div class="form-group">
-                        <label class="form-label">Notas / Descripción</label>
+                        <label class="form-label" for="course-notes">Notas / Descripción</label>
                         <textarea class="form-input" id="course-notes" placeholder="Agrega notas importantes, requisitos, objetivos de la materia..." style="min-height:80px;"></textarea>
                     </div>
 

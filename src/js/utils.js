@@ -43,7 +43,7 @@ export function escapeHtml(value) {
 
 export function escapeJsString(value) {
   if (value == null) return "";
-  return String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  return String(value).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, "\\n").replace(/\r/g, "\\r");
 }
 
 /** Icono SVG desde el sprite de index.html */
@@ -243,7 +243,7 @@ export function formatTime(timeStr, use24h = true) {
 }
 
 export function validateCourseCode(code) {
-  const trimmed = (code || "").trim().toUpperCase();
+  const trimmed = String(code || "").trim().toUpperCase();
   if (!trimmed) return { valid: false, code: "", error: "El código es obligatorio" };
   if (!/^[A-Z0-9-]{3,15}$/.test(trimmed)) {
     return {
