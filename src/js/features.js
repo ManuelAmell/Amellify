@@ -1204,8 +1204,50 @@ export function installFeatures(AmellifyApp) {
     document.getElementById('settings-modal')?.remove();
   };
 
-  proto._settingsToggleBtn = function (label, iconName, onclick) {
-    return `<button type="button" class="btn btn-secondary settings-action-btn" onclick="${onclick}">${icon(iconName, 'icon-sm')} ${label}</button>`;
+  proto.setGridDensity = function (density) {
+    if (!['compact', 'comfortable', 'spacious'].includes(density)) return;
+    this.settings.gridDensity = density;
+    this.saveSettingsToServer();
+    this.applySettings();
+    if (this.currentView === 'grid') this.renderGridView();
+  };
+
+  proto.setTheme = function (theme) {
+    if (!['dark', 'light', 'contrast', 'amoled'].includes(theme)) return;
+    this.settings.theme = theme;
+    this.saveSettingsToServer();
+    this.applySettings();
+  };
+
+  proto._renderGridDensityField = function () {
+    const density = this.settings.gridDensity || 'comfortable';
+    return `
+      <div class="settings-field" style="margin-top:12px;background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:6px;color:var(--text-primary);">
+          ${icon('grid', 'icon-sm')} Modos de Vista (Densidad del Horario)
+        </div>
+        <p class="muted" style="font-size:11px;line-height:1.3;margin-bottom:8px;">Ajusta la altura de las franjas horarias y el tamaño interno de las tarjetas de materias.</p>
+        <div class="settings-btn-group" style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button type="button" class="btn ${density === 'compact' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridDensity('compact')">▫️ Compacto (Reducido)</button>
+          <button type="button" class="btn ${density === 'comfortable' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridDensity('comfortable')">🟩 Cómodo (-30% Altura)</button>
+          <button type="button" class="btn ${density === 'spacious' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridDensity('spacious')">🟦 Amplio (Detalle Grande)</button>
+        </div>
+      </div>`;
+  };
+
+  proto._renderThemeField = function () {
+    const currentTheme = this.settings.theme || 'dark';
+    return `
+      <div class="settings-field" style="margin-top:12px;background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);">
+        <div style="font-weight:700;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:6px;color:var(--text-primary);">
+          ${icon('palette', 'icon-sm')} Tema Visual de la Aplicación
+        </div>
+        <div class="settings-btn-group" style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button type="button" class="btn ${currentTheme === 'dark' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setTheme('dark')">🌙 Oscuro</button>
+          <button type="button" class="btn ${currentTheme === 'light' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setTheme('light')">☀️ Claro</button>
+          <button type="button" class="btn ${currentTheme === 'contrast' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setTheme('contrast')">⚡ Alto Contraste</button>
+        </div>
+      </div>`;
   };
 
   proto._renderUiScaleField = function () {
@@ -1235,12 +1277,13 @@ export function installFeatures(AmellifyApp) {
     const viewOpts = VIEW_OPTIONS.map((v) => `<option value="${v.id}" ${(s.defaultView || 'grid') === v.id ? 'selected' : ''}>${v.label}</option>`).join('');
 
     if (tab === 'apariencia') {
-      const activeThemeName = (document.documentElement.getAttribute('data-theme') || 'light').toUpperCase();
       return `
         <div class="settings-section">
-          <h3 class="settings-section-title">${icon('palette', 'icon-sm')} Apariencia</h3>
-          <button type="button" class="btn btn-secondary settings-action-btn" onclick="app.cycleTheme()">${icon('palette', 'icon-sm')} Tema actual: <strong>${activeThemeName}</strong> (Click para cambiar)</button>
+          <h3 class="settings-section-title">${icon('palette', 'icon-sm')} Apariencia y Modos de Vista</h3>
+          ${this._renderThemeField()}
+          ${this._renderGridDensityField()}
           ${this._renderUiScaleField()}
+          ${this._renderGridWidthField()}
           <div class="settings-row" style="margin-top:10px;">
             <span class="settings-row-label">${icon('file-text', 'icon-sm')} Tamaño de texto</span>
             <div class="settings-btn-group">
@@ -1249,10 +1292,7 @@ export function installFeatures(AmellifyApp) {
               <button type="button" class="btn ${s.fontSize === 'large' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setFontSize('large')">Grande</button>
             </div>
           </div>
-          ${this._renderGridWidthField()}
           ${this._settingsToggleBtn(s.gridFitScreen ? 'Modo Scroll normal' : '⚡ Ajustar todo a pantalla sin scroll', s.gridFitScreen ? 'maximize' : 'minimize', 'app.toggleGridFitScreen()')}
-          ${this._settingsToggleBtn(s.gridCompact ? 'Grid altura normal' : 'Grid compacto', s.gridCompact ? 'maximize' : 'minimize', 'app.toggleGridCompact()')}
-          ${this._settingsToggleBtn(s.listCompact ? 'Lista altura normal' : 'Lista compacta', s.listCompact ? 'maximize' : 'minimize', 'app.toggleListCompact()')}
           ${this._settingsToggleBtn(s.showClassBadge !== false ? 'Ocultar badge "En clase"' : 'Mostrar badge "En clase"', 'clock', 'app.toggleShowClassBadge()')}
         </div>`;
     }
@@ -1272,8 +1312,16 @@ export function installFeatures(AmellifyApp) {
               <option value="sunday" ${s.weekStartsOn === 'sunday' ? 'selected' : ''}>Domingo</option>
             </select>
           </div>
+          ${this._renderGridDensityField()}
           ${this._renderUiScaleField()}
           ${this._renderGridWidthField()}
+          ${this._settingsToggleBtn(s.gridFitScreen ? 'Modo Scroll normal' : '⚡ Ajustar todo a pantalla sin scroll', s.gridFitScreen ? 'maximize' : 'minimize', 'app.toggleGridFitScreen()')}
+          ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
+          ${this._settingsToggleBtn(s.gridHourRange === 'full' ? 'Mostrar solo horas con clase' : 'Mostrar 24 horas completas', 'clock', 'app.toggleGridHourRange()')}
+          ${this._settingsToggleBtn(s.gridDragDisabled ? 'Activar arrastrar materias' : 'Desactivar arrastrar materias', s.gridDragDisabled ? 'edit' : 'lock', 'app.toggleGridDragDisabled()')}
+          ${this._settingsToggleBtn(s.confirmDeleteCourse !== false ? 'Desactivar confirmación al borrar' : 'Activar confirmación al borrar', 'warning', 'app.toggleConfirmDeleteCourse()')}
+        </div>`;
+    }
           ${this._settingsToggleBtn(s.gridFitScreen ? 'Modo Scroll normal' : '⚡ Ajustar todo a pantalla sin scroll', s.gridFitScreen ? 'maximize' : 'minimize', 'app.toggleGridFitScreen()')}
           ${this._settingsToggleBtn(s.timeFormat24h !== false ? 'Formato 12 horas (AM/PM)' : 'Formato 24 horas', 'clock', 'app.toggleTimeFormat()')}
           ${this._settingsToggleBtn(s.gridHourRange === 'full' ? 'Mostrar solo horas con clase' : 'Mostrar 24 horas completas', 'clock', 'app.toggleGridHourRange()')}

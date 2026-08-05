@@ -157,10 +157,41 @@
     border-left-color: rgba(0, 122, 255, 0.2);
 }
 
+html[data-grid-density="compact"] {
+    --grid-cell-padding: 4px 6px 4px;
+    --grid-cell-gap: 2px;
+    --grid-cell-code-size: 11px;
+    --grid-cell-name-size: 12px;
+    --grid-cell-room-size: 10px;
+    --grid-cell-professor-size: 10px;
+    --grid-cell-time-size: 10px;
+}
+
+html[data-grid-density="comfortable"],
+html:not([data-grid-density]) {
+    --grid-cell-padding: 6px 8px 6px;
+    --grid-cell-gap: 3px;
+    --grid-cell-code-size: 12px;
+    --grid-cell-name-size: 13px;
+    --grid-cell-room-size: 11px;
+    --grid-cell-professor-size: 11px;
+    --grid-cell-time-size: 11px;
+}
+
+html[data-grid-density="spacious"] {
+    --grid-cell-padding: 10px 12px 10px;
+    --grid-cell-gap: 5px;
+    --grid-cell-code-size: 14px;
+    --grid-cell-name-size: 15px;
+    --grid-cell-room-size: 12px;
+    --grid-cell-professor-size: 12px;
+    --grid-cell-time-size: 12px;
+}
+
 /* ── Class Cell in Grid ─────────────────────────────────────────────────────── */
 .class-cell {
     border-radius: 6px;
-    padding: var(--grid-cell-padding, 12px 14px 11px);
+    padding: var(--grid-cell-padding, 6px 8px 6px);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -173,10 +204,8 @@
     overflow-wrap: break-word;
     display: flex;
     flex-direction: column;
-    gap: var(--grid-cell-gap, 5px);
+    gap: var(--grid-cell-gap, 3px);
     z-index: 10;
-
-    /* subtle inner gradient depth */
     background-image: linear-gradient(160deg, rgba(255,255,255,0.12) 0%, transparent 60%);
 }
 
@@ -203,32 +232,43 @@
 
 .class-cell-code {
     font-weight: 700;
-    font-size: var(--grid-cell-code-size, 16px);
+    font-size: var(--grid-cell-code-size, 12px);
     letter-spacing: 0.05em;
     text-transform: uppercase;
-    opacity: 0.75;
+    opacity: 0.85;
     line-height: 1.1;
 }
 
 .class-cell-name {
-    font-size: var(--grid-cell-name-size, 18px);
+    font-size: var(--grid-cell-name-size, 13px);
     font-weight: 600;
-    opacity: 0.9;
+    opacity: 0.95;
     line-height: 1.2;
     flex: 1;
 }
 
+.class-cell-prof,
+.class-cell-professor {
+    font-size: var(--grid-cell-professor-size, 11px);
+    opacity: 0.8;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .class-cell-room {
-    font-size: var(--grid-cell-room-size, 13px);
-    opacity: 0.6;
+    font-size: var(--grid-cell-room-size, 11px);
+    opacity: 0.75;
     font-family: 'IBM Plex Mono', monospace;
     margin-top: auto;
 }
 
-.class-cell-professor {
-    font-size: var(--grid-cell-professor-size, 13px);
-    opacity: 0.6;
-    margin-top: 1px;
+.class-cell-time {
+    font-size: var(--grid-cell-time-size, 11px);
+    margin-top: auto;
+    opacity: 0.65;
+    font-family: 'IBM Plex Mono', monospace;
 }
 
 /* ── Week Cards View ────────────────────────────────────────────────────────── */

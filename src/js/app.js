@@ -835,7 +835,9 @@ class AmellifyApp {
     const originMin = startHour * 60;
     const totalSlots = (endHour * 60 - originMin) / SLOT_MIN;
 
-    let SLOT_H = this.settings.gridCompact ? 10 : 16;
+    const density = this.settings.gridDensity || 'comfortable';
+    let SLOT_H = density === 'compact' ? 10 : (density === 'spacious' ? 18 : 11);
+    if (this.settings.gridCompact) SLOT_H = 10;
     if (this.settings.gridFitScreen) {
       SLOT_H = Math.max(6, Math.min(14, Math.floor((window.innerHeight - 250) / totalSlots)));
     }
@@ -935,7 +937,7 @@ class AmellifyApp {
           ${s.course.professor ? `<div class="class-cell-prof" style="font-size:11px;opacity:0.8;margin-top:2px;">${icon("user", "icon-sm")} ${escapeHtml(s.course.professor)}</div>` : ''}
           ${gradeHtml}
           ${s.room ? `<div class="class-cell-room meta-with-icon">${icon("building", "icon-sm")} ${escapeHtml(s.room)}</div>` : ''}
-          <div style="font-size:var(--grid-cell-time-size, 14px);margin-top:auto;opacity:0.5;font-family:'IBM Plex Mono',monospace;">${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}</div>
+          <div class="class-cell-time">${escapeHtml(s.start_time)}–${escapeHtml(s.end_time)}</div>
         </div>`;
     }
 
