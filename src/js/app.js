@@ -962,9 +962,8 @@ class AmellifyApp {
       </style>
     ` : '';
 
-    const rawWidthVal = this.settings.gridWidth || '1100px';
-    const numWidth = parseInt(rawWidthVal) || 1100;
-    const minWidthVal = rawWidthVal === 'full' || rawWidthVal === '100%' || numWidth <= 1200 ? '100%' : `${numWidth}px`;
+    const internalWidthVal = this.settings.internalGridWidth || '1500px';
+    const minWidthVal = internalWidthVal === '100%' ? '100%' : (internalWidthVal.endsWith('px') ? internalWidthVal : `${internalWidthVal}px`);
 
     container.innerHTML = `
       <div class="grid-schedule" id="grid-schedule-container">
