@@ -66,14 +66,21 @@ export function installFeatures(AmellifyApp) {
     document.documentElement.classList.toggle('list-compact', !!this.settings.listCompact);
     document.documentElement.classList.toggle('grid-fit-screen', !!this.settings.gridFitScreen);
     
+    // Global UI Scale
     const uiScaleVal = (Number(this.settings.uiScale) || 100) / 100;
     document.documentElement.style.setProperty('--ui-scale', uiScaleVal);
 
-    const rawWidth = this.settings.gridWidth || '1100px';
-    const widthMap = { small: '1100px', compact: '1100px', normal: '1400px', wide: '1750px', full: '98vw' };
-    const formattedWidth = widthMap[rawWidth] || (rawWidth.endsWith('px') || rawWidth.endsWith('%') || rawWidth.endsWith('vw') ? rawWidth : `${rawWidth}px`);
-    document.documentElement.style.setProperty('--custom-grid-width', formattedWidth);
+    // 1. Overall Page Container Width
+    const pageW = this.settings.pageWidth || '1400px';
+    const formattedPage = pageW === '100%' ? '100%' : (pageW.endsWith('px') || pageW.endsWith('vw') ? pageW : `${pageW}px`);
+    document.documentElement.style.setProperty('--custom-page-width', formattedPage);
 
+    // 2. External Grid Box Width (on screen)
+    const gridOuterW = this.settings.gridOuterWidth || this.settings.gridWidth || '900px';
+    const formattedGridOuter = gridOuterW === '100%' ? '100%' : (gridOuterW.endsWith('px') || gridOuterW.endsWith('%') || gridOuterW.endsWith('vw') ? gridOuterW : `${gridOuterW}px`);
+    document.documentElement.style.setProperty('--custom-grid-outer-width', formattedGridOuter);
+
+    // 3. Internal Day Columns Timeline Width (proportions)
     const internalW = this.settings.internalGridWidth || '1500px';
     const formattedInternal = internalW === '100%' ? '100%' : (internalW.endsWith('px') ? internalW : `${internalW}px`);
     document.documentElement.style.setProperty('--custom-grid-timeline-width', formattedInternal);
@@ -104,12 +111,25 @@ export function installFeatures(AmellifyApp) {
     document.getElementById('settings-modal')?.remove();
   };
 
-  proto.setGridWidth = function (val) {
+  proto.setGridOuterWidth = function (val) {
     if (!val) return;
+    this.settings.gridOuterWidth = val;
     this.settings.gridWidth = val;
     this.saveSettingsToServer();
     this.applySettings();
     if (this.currentView === 'grid') this.renderGridView();
+  };
+
+  proto.setPageWidth = function (val) {
+    if (!val) return;
+    this.settings.pageWidth = val;
+    this.saveSettingsToServer();
+    this.applySettings();
+    if (this.currentView === 'grid') this.renderGridView();
+  };
+
+  proto.setGridWidth = function (val) {
+    this.setGridOuterWidth(val);
   };
 
   proto.setInternalGridWidth = function (val) {
@@ -121,43 +141,49 @@ export function installFeatures(AmellifyApp) {
   };
 
   proto.cycleGridWidth = function () {
-    const modes = ['1100px', '1400px', '1750px', '100%'];
-    const current = this.settings.gridWidth || '1100px';
+    const modes = ['750px', '900px', '1050px', '1200px', '100%'];
+    const current = this.settings.gridOuterWidth || '900px';
     const nextIdx = (modes.indexOf(current) + 1) % modes.length;
-    this.setGridWidth(modes[nextIdx]);
+    this.setGridOuterWidth(modes[nextIdx]);
   };
 
   proto._renderGridWidthField = function () {
     const s = this.settings;
-    const outerVal = s.gridWidth || '1100px';
+    const outerVal = s.gridOuterWidth || s.gridWidth || '900px';
     const internalVal = s.internalGridWidth || '1500px';
-    const numericOuter = parseInt(outerVal) || 1100;
-    const displayOuter = outerVal === 'full' || outerVal === '100%' ? '100% (Pantalla)' : `${numericOuter}px`;
+    const pageVal = s.pageWidth || '1400px';
+
+    const numericOuter = parseInt(outerVal) || 900;
+    const displayOuter = outerVal === 'full' || outerVal === '100%' ? '100% (Ancho Página)' : `${numericOuter}px`;
 
     return `
       <div class="settings-field" style="margin-top:12px;background:var(--bg-secondary);padding:14px;border-radius:var(--radius-md);border:1px solid var(--border);">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px;display:flex;align-items:center;gap:6px;color:var(--text-primary);">
-          ${icon('maximize', 'icon-sm')} Tamaño y Proporciones del Grid
+        <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:6px;color:var(--text-primary);">
+          ${icon('maximize', 'icon-sm')} Dimensiones y Proporciones del Grid
         </div>
         
+        <!-- 1. External Grid Box Width -->
         <div style="margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <label style="margin:0;font-size:12px;font-weight:600;">Ancho exterior en pantalla (Marco)</label>
-            <span id="grid-width-val-display" style="font-size:12px;font-weight:700;color:var(--accent);">${escapeHtml(displayOuter)}</span>
+            <label style="margin:0;font-size:12px;font-weight:600;">1. Ancho externo de la Caja del Horario</label>
+            <span id="grid-outer-val-display" style="font-size:12px;font-weight:700;color:var(--accent);">${escapeHtml(displayOuter)}</span>
           </div>
-          <input type="range" class="form-range" min="950" max="2200" step="50" value="${numericOuter}" 
-                 oninput="document.getElementById('grid-width-val-display').textContent = this.value + 'px'; app.setGridWidth(this.value + 'px')" style="width:100%;margin-bottom:8px;accent-color:var(--accent);">
+          <p class="muted" style="font-size:11px;line-height:1.3;margin-bottom:6px;">Controla qué tan ancha se muestra la tarjeta del horario centrada en pantalla.</p>
+          <input type="range" class="form-range" min="600" max="1600" step="25" value="${numericOuter}" 
+                 oninput="document.getElementById('grid-outer-val-display').textContent = this.value + 'px'; app.setGridOuterWidth(this.value + 'px')" style="width:100%;margin-bottom:8px;accent-color:var(--accent);">
           <div class="settings-btn-group" style="display:flex;gap:4px;flex-wrap:wrap;">
-            <button type="button" class="btn ${outerVal === '1000px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('1000px')">1000px</button>
-            <button type="button" class="btn ${outerVal === '1100px' || outerVal === 'compact' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('1100px')">1100px (Compacto)</button>
-            <button type="button" class="btn ${outerVal === '1400px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('1400px')">1400px</button>
-            <button type="button" class="btn ${outerVal === '100%' || outerVal === 'full' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridWidth('100%')">100%</button>
+            <button type="button" class="btn ${outerVal === '750px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridOuterWidth('750px')">750px (Mini)</button>
+            <button type="button" class="btn ${outerVal === '900px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridOuterWidth('900px')">900px (Pequeño · Recomendado)</button>
+            <button type="button" class="btn ${outerVal === '1050px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridOuterWidth('1050px')">1050px (Mediano)</button>
+            <button type="button" class="btn ${outerVal === '1200px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridOuterWidth('1200px')">1200px (Grande)</button>
+            <button type="button" class="btn ${outerVal === '100%' || outerVal === 'full' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setGridOuterWidth('100%')">100% (Marco Completo)</button>
           </div>
         </div>
 
-        <div style="border-top:1px dashed var(--border);padding-top:12px;">
+        <!-- 2. Internal Day Column Proportions -->
+        <div style="border-top:1px dashed var(--border);padding-top:12px;margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-            <label style="margin:0;font-size:12px;font-weight:600;">Ancho interno (Proporción de días)</label>
+            <label style="margin:0;font-size:12px;font-weight:600;">2. Ancho interno (Proporción de días)</label>
             <span style="font-size:12px;font-weight:700;color:var(--accent);">${escapeHtml(internalVal)}</span>
           </div>
           <p class="muted" style="font-size:11px;line-height:1.3;margin-bottom:8px;">Mantiene las columnas de los días amplias y legibles sin apretar materias (con scroll horizontal interno).</p>
@@ -165,7 +191,21 @@ export function installFeatures(AmellifyApp) {
             <button type="button" class="btn ${internalVal === '1400px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setInternalGridWidth('1400px')">1400px (Legible)</button>
             <button type="button" class="btn ${internalVal === '1600px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setInternalGridWidth('1600px')">1600px (Amplio · Recomendado)</button>
             <button type="button" class="btn ${internalVal === '1800px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setInternalGridWidth('1800px')">1800px (Máximo)</button>
-            <button type="button" class="btn ${internalVal === '100%' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setInternalGridWidth('100%')">Ajustar al Marco</button>
+            <button type="button" class="btn ${internalVal === '100%' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setInternalGridWidth('100%')">Ajustar a la Caja</button>
+          </div>
+        </div>
+
+        <!-- 3. Overall Page Container Width -->
+        <div style="border-top:1px dashed var(--border);padding-top:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+            <label style="margin:0;font-size:12px;font-weight:600;">3. Ancho general de la Página (Cabecera y Stats)</label>
+            <span style="font-size:12px;font-weight:700;color:var(--accent);">${escapeHtml(pageVal)}</span>
+          </div>
+          <div class="settings-btn-group" style="display:flex;gap:4px;flex-wrap:wrap;">
+            <button type="button" class="btn ${pageVal === '1200px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setPageWidth('1200px')">1200px (Compacto)</button>
+            <button type="button" class="btn ${pageVal === '1400px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setPageWidth('1400px')">1400px (Estándar)</button>
+            <button type="button" class="btn ${pageVal === '1750px' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setPageWidth('1750px')">1750px (Amplio)</button>
+            <button type="button" class="btn ${pageVal === '100%' ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="app.setPageWidth('100%')">100% (Pantalla)</button>
           </div>
         </div>
       </div>`;

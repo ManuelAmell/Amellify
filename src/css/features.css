@@ -2363,10 +2363,13 @@ html.grid-compact .grid-schedule {
 
 .container,
 .header-content {
-  max-width: var(--custom-grid-width, 1100px) !important;
+  max-width: var(--custom-page-width, 1400px) !important;
 }
 
 .grid-schedule {
+  max-width: var(--custom-grid-outer-width, 900px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
   overflow-x: auto !important;
   overflow-y: auto !important;
 }
