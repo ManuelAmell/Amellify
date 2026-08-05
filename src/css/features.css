@@ -2363,11 +2363,11 @@ html.grid-compact .grid-schedule {
 
 .container,
 .header-content {
-  max-width: var(--custom-grid-width, 1800px) !important;
+  max-width: var(--custom-grid-width, 1100px) !important;
 }
 
 #grid-timeline {
-  min-width: var(--custom-grid-width, 1800px) !important;
+  min-width: var(--custom-grid-timeline-width, 100%) !important;
 }
 
 html.grid-fit-screen .grid-schedule {
