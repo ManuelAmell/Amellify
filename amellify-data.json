@@ -1,0 +1,164 @@
+{
+  "courses": [
+    {
+      "code": "EW",
+      "name": "JC",
+      "professor": "",
+      "email": "",
+      "faculty": "",
+      "semester": "2026-1",
+      "credits": 2,
+      "status": "active",
+      "notes": "",
+      "color": "teal",
+      "created_at": "2026-05-03T02:08:21.125Z",
+      "schedules": [
+        {
+          "id": 2,
+          "course_code": "EW",
+          "day": "Martes",
+          "start_time": "20:00",
+          "end_time": "01:00",
+          "room": ""
+        }
+      ],
+      "partials": [
+        {
+          "name": "P1",
+          "grade": 0,
+          "percent": 30
+        },
+        {
+          "name": "P2",
+          "grade": 0,
+          "percent": 30
+        },
+        {
+          "name": "P3",
+          "grade": 0,
+          "percent": 40
+        }
+      ]
+    },
+    {
+      "code": "111",
+      "name": "ALGORITMOS",
+      "professor": "",
+      "email": "",
+      "faculty": "",
+      "semester": "2026-1",
+      "credits": 2,
+      "status": "active",
+      "notes": "",
+      "color": "blue",
+      "partials": [
+        {
+          "name": "P1",
+          "grade": null,
+          "percent": 30
+        },
+        {
+          "name": "P3",
+          "grade": null,
+          "percent": 40
+        },
+        {
+          "name": "P3",
+          "grade": null,
+          "percent": null
+        }
+      ],
+      "created_at": "2026-05-04T04:40:17.358Z",
+      "schedules": [
+        {
+          "id": 3,
+          "course_code": "111",
+          "day": "Viernes",
+          "start_time": "20:00",
+          "end_time": "22:00",
+          "room": "A304"
+        }
+      ]
+    },
+    {
+      "code": "234",
+      "name": "PB",
+      "professor": "Nohemy",
+      "email": "",
+      "faculty": "",
+      "semester": "2026-1",
+      "credits": 3,
+      "status": "active",
+      "notes": "",
+      "color": "green",
+      "partials": [
+        {
+          "name": "P1",
+          "grade": 3,
+          "percent": 30
+        },
+        {
+          "name": "P2",
+          "grade": 4,
+          "percent": 30
+        },
+        {
+          "name": "P3",
+          "grade": null,
+          "percent": 40
+        }
+      ],
+      "created_at": "2026-05-04T04:41:15.337Z",
+      "schedules": [
+        {
+          "id": 4,
+          "course_code": "234",
+          "day": "Viernes",
+          "start_time": "08:00",
+          "end_time": "10:00",
+          "room": ""
+        }
+      ]
+    },
+    {
+      "code": "123",
+      "name": "AAAAAA",
+      "professor": "",
+      "email": "",
+      "faculty": "",
+      "semester": "2026-1",
+      "credits": 3,
+      "status": "active",
+      "notes": "",
+      "color": "blue",
+      "partials": [
+        {
+          "name": "P1",
+          "grade": null,
+          "percent": 30
+        },
+        {
+          "name": "P2",
+          "grade": null,
+          "percent": 30
+        },
+        {
+          "name": "P3",
+          "grade": null,
+          "percent": 40
+        }
+      ],
+      "created_at": "2026-05-09T17:24:58.175Z",
+      "schedules": [
+        {
+          "id": 5,
+          "course_code": "123",
+          "day": "Martes",
+          "start_time": "20:00",
+          "end_time": "10:00",
+          "room": ""
+        }
+      ]
+    }
+  ]
+}

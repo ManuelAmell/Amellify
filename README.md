@@ -1,320 +1,181 @@
-<h1 align="center">📚 Amellify</h1>
+<h1 align="center">📚 Amellify v2</h1>
 <p align="center">
-  <sub><b>GESTIÓN DE HORARIOS UNIVERSITARIOS</b></sub>
+  <sub><b>GESTIÓN INTELIGENTE DE HORARIOS UNIVERSITARIOS & SEGUIMIENTO ACADÉMICO</b></sub>
   <br>
-  <sub>Sin servidor · Sin registro · 100% navegador</sub>
+  <sub>Next.js 15 · Supabase PostgreSQL · Tailwind CSS · TypeScript · Vercel</sub>
 </p>
 
 <p align="center">
   <a href="https://amellify.vercel.app"><img src="https://img.shields.io/badge/demo-vercel-%23000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Demo en Vercel"></a>
-  <a href="https://github.com/ManuelAmell/Amellify/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-%23007aff?style=for-the-badge" alt="Licencia MIT"></a>
-  <img src="https://img.shields.io/badge/status-estable-%2322c55e?style=for-the-badge" alt="Estado: estable">
-  <img src="https://img.shields.io/badge/sin%20backend-100%25%20frontend-%235856d6?style=for-the-badge" alt="100% frontend">
+  <a href="https://github.com/ManuelAmell/Amellify/blob/v2/LICENSE"><img src="https://img.shields.io/badge/license-MIT-%230D9488?style=for-the-badge" alt="Licencia MIT"></a>
+  <img src="https://img.shields.io/badge/status-v2_estable-%2322c55e?style=for-the-badge" alt="Estado: v2 estable">
+  <img src="https://img.shields.io/badge/backend-Supabase_PostgreSQL-%233ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase Backend">
+  <img src="https://img.shields.io/badge/frontend-Next.js_15_App_Router-%23000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 15">
 </p>
 
 <p align="center">
-  <b>Organizá tu semestre sin depender de ningún servidor.</b><br>
-  Horario visual, calculadora de notas y estadísticas — todo corre en tu navegador y se guarda en tu equipo.
+  <b>Organiza tu semestre universitario con sincronización en la nube en tiempo real.</b><br>
+  Horario visual interactivo con línea de tiempo en vivo, calculadora de notas ponderadas con simulador de aprobación, estadísticas de carga horaria y extracción automática de horarios con Inteligencia Artificial (Gemini 2.0 Flash).
 </p>
-
-<p align="center">
-  <a href="#-demo">Demo</a> ·
-  <a href="#-características">Características</a> ·
-  <a href="#-inicio-rápido">Inicio rápido</a> ·
-  <a href="#-importar-desde-ia">Importar desde IA</a> ·
-  <a href="#%EF%B8%8F-estructura-del-proyecto">Estructura</a> ·
-  <a href="#-licencia">Licencia</a>
-</p>
-
-<br>
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center" width="120">📅<br><small>Grid<br>Semanal</small></td>
-      <td align="center" width="120">📋<br><small>Lista de<br>Materias</small></td>
-      <td align="center" width="120">🧮<br><small>Calculadora<br>de Notas</small></td>
-      <td align="center" width="120">📊<br><small>Estadísticas</small></td>
-      <td align="center" width="120">📤<br><small>Exportar<br>ICS</small></td>
-      <td align="center" width="120">🎨<br><small>Temas<br>Visuales</small></td>
-    </tr>
-  </table>
-</div>
-
-<br>
 
 ---
 
-## 🚀 Demo
-
-<div align="center">
-  <br>
-  <a href="https://amellify.vercel.app">
-    <img src="https://img.shields.io/badge/🌐%20Abrir%20Amellify-007aff?style=for-the-badge&logo=vercel&logoColor=white&labelColor=%23000" height="48" alt="Abrir demo">
-  </a>
-  <br><br>
-  <code>https://amellify.vercel.app</code>
-  <br><br>
-</div>
-
-No necesitás instalar nada: abrí el link y empezá a usar. Tus datos quedan guardados localmente en tu navegador (`localStorage`), nunca se envían a ningún servidor.
-
----
-
-## ✨ Características
+## ✨ Características Principales
 
 <table>
   <tr>
     <td width="50%">
-      <h3>📅 Vista Grid Semanal</h3>
-      <p>Arrastrá y soltá materias, colores por materia, días exactos con nombres en español.</p>
+      <h3>📅 Grid Semanal Interactivo</h3>
+      <p>Línea de tiempo con ranuras de 10 min, marcador de hora actual en vivo, clic directo para registrar clases y colores temáticos por materia.</p>
     </td>
     <td width="50%">
-      <h3>🧮 Calculadora de Notas</h3>
-      <p>Promedios ponderados, simulación de notas y cálculo de la nota mínima necesaria para pasar.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3>📊 Estadísticas</h3>
-      <p>Créditos activos, horas semanales, distribución por día y rendimiento académico.</p>
-    </td>
-    <td width="50%">
-      <h3>📤 Exportar a ICS</h3>
-      <p>Exportá tu horario a cualquier calendario: Google, Apple u Outlook.</p>
+      <h3>🧮 Calculadora de Notas & Simulador</h3>
+      <p>Promedios ponderados en tiempo real, presets de porcentajes (30/30/40, 50/50, 3x33%), cálculo automático de "¿Qué nota necesito para pasar?" y escalas configurables (0-5, 0-7, 0-10).</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <h3>🎨 Temas Visuales</h3>
-      <p>10 temas: Claro, Oscuro, Azul, Púrpura, Verde, Naranja, Rosa, Vidrio, Sepia y Alto Contraste.</p>
+      <h3>📊 Estadísticas & Analítica</h3>
+      <p>Créditos inscritos, carga horaria semanal distribuida por día, promedio general acumulado y ranking de rendimiento por materia.</p>
     </td>
     <td width="50%">
-      <h3>🤖 Importar desde IA</h3>
-      <p>Cargá una foto o un PDF de tu horario y la IA lo analiza automáticamente. También podés pegar el prompt en ChatGPT o Claude.</p>
+      <h3>🤖 Escáner de Horarios con IA</h3>
+      <p>Sube una foto (JPG, PNG, WebP) o captura de tu horario y Gemini 2.0 Flash extraerá automáticamente materias, docentes, salones y horarios con confirmación previa.</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <h3>🔔 Notificaciones</h3>
-      <p>Recordatorios de clases próximas con notificaciones nativas del navegador.</p>
+      <h3>🔒 Auth & Seguridad con Supabase RLS</h3>
+      <p>Inicio de sesión seguro con Google y GitHub OAuth. Aislamiento total de datos por usuario mediante Row Level Security (RLS) en PostgreSQL.</p>
     </td>
     <td width="50%">
-      <h3>📱 100% Responsive</h3>
-      <p>Funciona en PC, tablet y celular. Se puede instalar como app (PWA).</p>
+      <h3>🎨 Design System (ui-ux-pro-max)</h3>
+      <p>Paleta moderna Teal + Tokyo Night, soporte completo para Modo Claro / Oscuro / Sistema, glassmorphism sutil y accesibilidad WCAG AA.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>📤 Exportar a Calendario (.ICS)</h3>
+      <p>Exporta tu horario con reglas de recurrencia semanal (RFC 5545) compatibles con Google Calendar, Apple Calendar y Outlook.</p>
+    </td>
+    <td width="50%">
+      <h3>📱 100% Responsivo & Mobile First</h3>
+      <p>Navegación adaptativa con barra inferior en celulares y barra lateral en escritorio. Diseñado como Progressive Web App (PWA).</p>
     </td>
   </tr>
 </table>
 
 ---
 
-## 🛠️ Tecnologías
+## 🛠️ Stack Tecnológico
 
-<p align="center">
-  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white" alt="HTML5">
-  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white" alt="CSS3">
-  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript">
-  <img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel">
-  <img src="https://img.shields.io/badge/localStorage-FF6F00?style=for-the-badge&logo=googlechrome&logoColor=white" alt="localStorage">
-</p>
-
-Sin frameworks, sin build step, sin dependencias de backend: HTML, CSS y JavaScript puro (vanilla), pensado para ser fácil de leer, modificar y desplegar en cualquier hosting estático.
+- **Frontend:** Next.js 15 (App Router, Server Components & Server Actions), React 19, TypeScript (Strict).
+- **Estilos & UI:** Tailwind CSS, shadcn/ui (Radix UI primitives), Lucide Icons, `next-themes`.
+- **Backend as a Service:** Supabase (Auth OAuth Google/GitHub, PostgreSQL Database, Row Level Security).
+- **Inteligencia Artificial:** Google Gemini 2.0 Flash / OpenRouter cascade API.
+- **Despliegue:** Vercel (SSR + Edge).
 
 ---
 
-## 📦 Inicio rápido
+## 🚀 Puesta en Marcha Local
+
+### 1. Clonar el repositorio y cambiar a la rama `v2`
 
 ```bash
 git clone https://github.com/ManuelAmell/Amellify.git
 cd Amellify
+git checkout v2
 ```
 
-Levantá un servidor estático con la herramienta que prefieras:
+### 2. Instalar dependencias
 
 ```bash
-# Con Python
-python3 -m http.server 8080
-
-# Con Node.js
-npx serve .
-
-# Con PHP
-php -S localhost:8080
+npm install
 ```
 
-Después abrí **http://localhost:8080** en tu navegador. Listo, no hace falta instalar dependencias ni compilar nada.
+### 3. Configurar variables de entorno
+
+Crea un archivo `.env.local` en la raíz del proyecto:
+
+```env
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-supabase-anon-key
+
+# Inteligencia Artificial (para el escáner de horarios)
+GEMINI_API_KEY=tu-api-key-de-gemini-ai-studio
+OPENROUTER_API_KEY=tu-api-key-de-openrouter # opcional como respaldo
+```
+
+### 4. Ejecutar las migraciones en Supabase
+
+Ejecuta el archivo `supabase/migrations/001_initial_schema.sql` en el SQL Editor de tu Dashboard de Supabase (o mediante `npx supabase db push`).
+
+### 5. Iniciar el servidor de desarrollo
+
+```bash
+npm run dev
+```
+
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ---
 
-## ⚙️ Configuración
+## 🗄️ Esquema de Base de Datos (Supabase PostgreSQL)
 
-| Función | Descripción |
-|---|---|
-| **Tamaño de fuente** | Pequeño / Normal / Grande |
-| **Compactar grid** | Reduce el alto de las celdas para ver más horas |
-| **Día de inicio** | Lunes o Domingo |
-| **Arrastrar clases** | Activar/desactivar drag & drop en el grid |
-| **Tema visual** | 10 temas de color |
-| **Notificaciones** | Recordatorio de la próxima clase |
-| **Importar desde IA** | Cargar foto o PDF con IA, o archivo JSON |
-| **Exportar ICS** | A Google Calendar, Apple Calendar u Outlook |
+```sql
+-- Perfiles de usuario (extiende auth.users)
+CREATE TABLE public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  display_name TEXT,
+  university TEXT,
+  faculty TEXT,
+  current_semester TEXT,
+  passing_grade NUMERIC(3,2) DEFAULT 3.00,
+  max_grade NUMERIC(3,2) DEFAULT 5.00,
+  preferences JSONB
+);
 
----
+-- Materias
+CREATE TABLE public.courses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  code VARCHAR(8) NOT NULL,
+  name TEXT NOT NULL,
+  professor TEXT,
+  email TEXT,
+  faculty TEXT,
+  semester TEXT,
+  credits INTEGER DEFAULT 3,
+  status TEXT DEFAULT 'active',
+  color TEXT DEFAULT 'blue'
+);
 
-## 🤖 Importar desde IA
+-- Bloques de horario
+CREATE TABLE public.schedules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  day TEXT NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  room TEXT
+);
 
-Amellify puede generar tu horario automáticamente a partir de **una foto o un PDF de tu horario** usando IA.
-
-### Cargar foto o PDF con IA (recomendado)
-
-En la pestaña **IA** de Configuración:
-
-1. Hacé clic en **Seleccionar archivo** y elegí una imagen (JPG, PNG, WebP) o un PDF de tu horario (máx. 5 MB). Si elegís un PDF, se escanean hasta las 2 primeras páginas.
-2. Seleccioná el modelo de IA (por defecto se usa **Gemini 2.0 Flash**, rápido y preciso).
-3. Hacé clic en **Analizar horario con IA**. La IA procesará el archivo y detectará las materias.
-4. Revisá el preview y confirmá la importación.
-
-> El PDF se procesa localmente en tu navegador (PDF.js) y solo se envían las páginas renderizadas al servidor para el análisis con IA.
-
-> Las API keys se configuran como variables de entorno en Vercel. La principal es `GEMINI_API_KEY` (gratis en [AI Studio](https://aistudio.google.com)); `OPENROUTER_API_KEY` es opcional y se usa como respaldo cuando Gemini está agotado o no está configurada.
-
-### Alternativa manual: copiar prompt
-
-Si preferís usar ChatGPT o Claude directamente:
-
-<details>
-  <summary><b>📋 Ver el prompt para copiar y pegar</b></summary>
-
-Copiá esto y pegáselo a ChatGPT o Claude junto con la foto de tu horario:
-
+-- Notas parciales
+CREATE TABLE public.partials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  grade NUMERIC(4,2),
+  percent NUMERIC(5,2) NOT NULL,
+  sort_order INTEGER DEFAULT 0
+);
 ```
-Quiero que actúes como un generador de horarios universitarios en formato JSON.
-Te voy a pasar una descripción (texto o imagen) de mi horario de clases y vos
-debés devolver SOLO un arreglo JSON válido, sin markdown fences, sin
-explicaciones, sin texto adicional.
-
-FORMATO EXACTO DE SALIDA:
-[
-  {
-    "code": "CALCVEC",
-    "name": "Cálculo Vectorial",
-    "professor": "Juan Pérez",
-    "email": "",
-    "faculty": "Ingeniería de Sistemas",
-    "semester": "2025-1",
-    "credits": 3,
-    "status": "active",
-    "color": "blue",
-    "schedules": [
-      { "day": "Lunes", "start_time": "08:40", "end_time": "10:20", "room": "A-301" }
-    ],
-    "partials": []
-  }
-]
-
-Reglas:
-- code: máx. 8 caracteres, mayúsculas, sin espacios. Nunca vacío.
-- name: obligatorio.
-- credits: entero 1-6. Default 3.
-- status: siempre "active".
-- color: "blue", "red", "green", "orange", "purple", "teal".
-- day: "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo".
-- start_time / end_time: "HH:MM" en formato 24h. Incorrecto: "7:00", "3pm".
-- partials: siempre [].
-```
-
-</details>
-
-Luego pegá el JSON resultante en la sección **Importar JSON** de la app.
-
----
-
-## 🧪 Ejemplo: calculadora de notas
-
-Así se estructuran las notas parciales que usa la calculadora internamente:
-
-```js
-const partials = [
-  { name: "P1",    grade: 3.5,  percent: 30 },
-  { name: "P2",    grade: 4.0,  percent: 30 },
-  { name: "Final", grade: null, percent: 40 } // null = nota aún no definida
-];
-```
-
-La calculadora usa esto para mostrar el promedio actual, simular escenarios y calcular la nota mínima que necesitás en el `Final` para aprobar.
-
----
-
-## 🏗️ Estructura del proyecto
-
-```
-Amellify/
-├── index.html                 ← Entry point (SPA)
-├── favicon.svg                ← Ícono principal
-├── manifest.json               ← PWA manifest
-├── vercel.json                 ← Config de Vercel
-└── src/
-    ├── css/
-    │   ├── variables.css       ← Tokens de diseño
-    │   ├── base.css            ← Reset y tipografía
-    │   ├── layout.css          ← Layout principal
-    │   ├── components.css      ← Componentes reutilizables
-    │   ├── schedule.css        ← Grid y horarios
-    │   ├── colors.css          ← Paletas de color
-    │   ├── glass.css           ← Efecto vidrio
-    │   ├── features.css        ← Características adicionales
-    │   └── themes-extra.css    ← Temas extra
-    └── js/
-        ├── app.js              ← Core de la aplicación
-        ├── api.js              ← Capa de datos (localStorage)
-        ├── features.js         ← Funcionalidades principales
-        ├── features-advanced.js← Features avanzadas
-        ├── grid-dnd.js         ← Drag & drop en grid
-        ├── ics.js              ← Exportación ICS
-        ├── notifications.js    ← Notificaciones
-        └── utils.js            ← Utilidades
-```
-
----
-
-## 🤝 Contribuir
-
-¿Tenés una idea o encontraste un bug? Las contribuciones son bienvenidas:
-
-1. Hacé un fork del repositorio.
-2. Creá una rama para tu cambio: `git checkout -b feature/mi-mejora`.
-3. Commiteá tus cambios: `git commit -m "Agrega mi mejora"`.
-4. Subí la rama: `git push origin feature/mi-mejora`.
-5. Abrí un Pull Request.
-
-Para bugs o sugerencias, también podés abrir un [issue](https://github.com/ManuelAmell/Amellify/issues).
 
 ---
 
 ## 📄 Licencia
 
-<div align="center">
-  <br>
-  <strong>MIT</strong> — hacé lo que quieras con este código.
-  <br><br>
-  <sub>Hecho con ❤️ para estudiantes universitarios</sub>
-  <br>
-  <sub>Manuel Amell · 2026</sub>
-  <br>
-</div>
-
----
-
-<div align="center">
-  <a href="https://amellify.vercel.app">
-    <img src="https://img.shields.io/badge/🚀%20Probar%20Amellify-007aff?style=for-the-badge" alt="Probar Amellify">
-  </a>
-  &nbsp;
-  <a href="https://github.com/ManuelAmell/Amellify/issues">
-    <img src="https://img.shields.io/badge/🐛%20Reportar%20Bug-ef4444?style=for-the-badge" alt="Reportar Bug">
-  </a>
-  &nbsp;
-  <a href="https://github.com/ManuelAmell/Amellify">
-    <img src="https://img.shields.io/badge/⭐%20Star%20en%20GitHub-22c55e?style=for-the-badge" alt="Star en GitHub">
-  </a>
-</div>
+MIT License — Creado con ❤️ por [Manuel Francisco Amell Gil](https://github.com/ManuelAmell) · 2026

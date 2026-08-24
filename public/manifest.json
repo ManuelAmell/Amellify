@@ -1,0 +1,18 @@
+{
+  "name": "Amellify — Gestión de Horarios Universitarios",
+  "short_name": "Amellify",
+  "description": "Gestor inteligente de horarios universitarios y calculadora de notas",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0C0A09",
+  "theme_color": "#0D9488",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
