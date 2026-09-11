@@ -16,10 +16,10 @@ Corregir `buildUserContent` en `src/lib/ai/cascade.ts` para que las imágenes vi
 
 ## Checklist
 
-- [ ] Añadir los 4 tests en `tests/unit/ai-cascade.test.ts`
-- [ ] Confirmar rojo válido (fallo de aserción, no de import/sintaxis)
-- [ ] Commit del contrato con el SHA en BASE_TESTS
-- [ ] Delegar a Antigravity vía `/implementar`
+- [x] Añadir los 4 tests en `tests/unit/ai-cascade.test.ts`
+- [x] Confirmar rojo válido (fallo de aserción, no de import/sintaxis)
+- [x] Commit del contrato con el SHA en BASE_TESTS
+- [x] Delegar a Antigravity vía `/implementar`
 
 ## Rojo esperado
 
@@ -115,4 +115,4 @@ No hizo falta andamiaje en `src/`: `buildUserContent`/`extractSchedule` ya exist
 
 ## BASE_TESTS
 
-(se llena con el SHA del commit del contrato)
+87bc0af20df4ff82921266a31505eab0f5ffdbe3

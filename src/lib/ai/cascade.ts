@@ -103,14 +103,28 @@ export interface ExtractScheduleInput {
   text?: string
 }
 
+const DATA_URL_PATTERN = /^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=]+)$/
+
+function parseDataUrl(dataUrl: string): { mediaType: string; data: string } | null {
+  const match = DATA_URL_PATTERN.exec(dataUrl.trim())
+  if (!match || !match[1] || !match[2]) return null
+  return { mediaType: match[1], data: match[2] }
+}
+
 function buildUserContent(input: ExtractScheduleInput): UserContent {
-  const parts: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = []
+  const parts: Array<
+    | { type: 'text'; text: string }
+    | { type: 'file'; mediaType: string; data: string }
+  > = []
 
   const text = input.text?.trim()
   if (text) parts.push({ type: 'text', text })
 
   for (const image of input.images ?? []) {
-    parts.push({ type: 'image', image })
+    const parsed = parseDataUrl(image)
+    if (parsed) {
+      parts.push({ type: 'file', mediaType: parsed.mediaType, data: parsed.data })
+    }
   }
 
   if (parts.length === 0) {
