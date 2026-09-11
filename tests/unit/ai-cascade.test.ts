@@ -148,4 +148,78 @@ describe('extractSchedule', () => {
 
     expect(JSON.stringify(result)).not.toContain('sk-super-secret')
   })
+
+  // Regression coverage for a real bug found by manually testing the AI
+  // import flow against the live Google Generative Language API: sending
+  // an image as the AI SDK's deprecated `{ type: 'image', image }` content
+  // part produced an HTTP 400 "Unable to process input image" as soon as
+  // structured output (this module's generateObject + responseSchema) was
+  // involved - confirmed by sending the exact same image bytes directly to
+  // Google's REST endpoint, which succeeded. The fix is the SDK's current
+  // `{ type: 'file', data, mediaType }` shape.
+  describe('image content parts sent to the model', () => {
+    function messageContentOf(callIndex = 0) {
+      const callArgs = generateObjectMock.mock.calls[callIndex]?.[0] as {
+        messages: Array<{ role: string; content: unknown }>
+      }
+      return callArgs.messages[0]?.content as Array<Record<string, unknown>>
+    }
+
+    it('sends a single image as a file part with mediaType and bare base64 data, not a deprecated image part', async () => {
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+      await extractSchedule(
+        { images: [`data:image/png;base64,${pngBase64}`] },
+        { providers: [fakeProvider('a')] }
+      )
+
+      const content = messageContentOf()
+      expect(content).toEqual([{ type: 'file', mediaType: 'image/png', data: pngBase64 }])
+    })
+
+    it('sends each image in a multi-image upload as its own file part with its own mediaType', async () => {
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      await extractSchedule(
+        {
+          images: ['data:image/png;base64,AAAA', 'data:image/jpeg;base64,BBBB'],
+        },
+        { providers: [fakeProvider('a')] }
+      )
+
+      const content = messageContentOf()
+      expect(content).toEqual([
+        { type: 'file', mediaType: 'image/png', data: 'AAAA' },
+        { type: 'file', mediaType: 'image/jpeg', data: 'BBBB' },
+      ])
+    })
+
+    it('keeps a text part alongside the file part when both text and an image are provided', async () => {
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      await extractSchedule(
+        { text: 'Horario del segundo semestre', images: ['data:image/webp;base64,CCCC'] },
+        { providers: [fakeProvider('a')] }
+      )
+
+      const content = messageContentOf()
+      expect(content).toEqual([
+        { type: 'text', text: 'Horario del segundo semestre' },
+        { type: 'file', mediaType: 'image/webp', data: 'CCCC' },
+      ])
+    })
+
+    it('ignores a malformed data URL instead of sending a corrupt content part', async () => {
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      await extractSchedule(
+        { images: ['not-a-data-url', 'data:image/png;base64,VALID'] },
+        { providers: [fakeProvider('a')] }
+      )
+
+      const content = messageContentOf()
+      expect(content).toEqual([{ type: 'file', mediaType: 'image/png', data: 'VALID' }])
+    })
+  })
 })
