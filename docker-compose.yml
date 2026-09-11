@@ -1,0 +1,98 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-amellify}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-amellify}
+      POSTGRES_DB: ${POSTGRES_DB:-amellify}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-amellify}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No host port published by default — the app reaches it over the
+    # compose network only. Uncomment to inspect the DB from the host:
+    # ports:
+    #   - '127.0.0.1:5432:5432'
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    command: sh -c "pnpm db:migrate"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-amellify}:${POSTGRES_PASSWORD:-amellify}@db:5432/${POSTGRES_DB:-amellify}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-amellify}:${POSTGRES_PASSWORD:-amellify}@db:5432/${POSTGRES_DB:-amellify}
+    ports:
+      - '3000:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Optional reverse proxy with automatic HTTPS once you have a domain
+  # (or a free sslip.io hostname — see docs/DEPLOY.md). Enable with:
+  #   docker compose --profile proxy up -d
+  caddy:
+    image: caddy:2-alpine
+    profiles: ['proxy']
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  # Optional daily pg_dump backup. Enable with:
+  #   docker compose --profile backup up -d
+  backup:
+    image: postgres:17-alpine
+    profiles: ['backup']
+    restart: unless-stopped
+    entrypoint: ['/scripts/backup.sh']
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-amellify}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-amellify}
+      PGDATABASE: ${POSTGRES_DB:-amellify}
+      BACKUP_RETENTION_DAYS: '14'
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./backups:/backups
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

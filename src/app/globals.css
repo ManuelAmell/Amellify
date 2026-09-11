@@ -1,120 +1,88 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-@layer base {
-  :root {
-    /* Base Modern Teal Palette (ui-ux-pro-max generated) */
-    --background: 168 76% 97%; /* #F0FDFA */
-    --foreground: 175 77% 19%; /* #134E4A */
+@custom-variant dark (&:where(.dark, .dark *));
 
-    --card: 0 0% 100%;
-    --card-foreground: 175 77% 19%;
+/*
+ * NOTE: this is a transitional token set for the v3 foundation (Phase 0).
+ * The full Liquid Glass design system (surfaces, glass tiers, subject
+ * tokens in oklch, motion tokens) is owned by Design-system agent (Fase 1 · B)
+ * and replaces this file's contents per plan section 2.1.
+ */
+@theme {
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 175 77% 19%;
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
-    --primary: 174 86% 32%; /* #0D9488 */
-    --primary-foreground: 0 0% 100%;
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
 
-    --secondary: 174 80% 40%; /* #14B8A6 */
-    --secondary-foreground: 0 0% 100%;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
 
-    --muted: 195 24% 93%; /* #E8F1F4 */
-    --muted-foreground: 175 35% 40%;
+:root {
+  --background: 168 76% 97%;
+  --foreground: 175 77% 19%;
+  --card: 0 0% 100%;
+  --card-foreground: 175 77% 19%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 175 77% 19%;
+  --primary: 174 86% 32%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 174 80% 40%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 195 24% 93%;
+  --muted-foreground: 175 35% 32%;
+  --accent: 21 89% 48%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 168 40% 85%;
+  --input: 168 40% 85%;
+  --ring: 174 86% 32%;
+  --radius: 0.75rem;
+  color-scheme: light;
+}
 
-    --accent: 21 89% 48%; /* #EA580C */
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%; /* #DC2626 */
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 168 83% 78%; /* #99F6E4 */
-    --input: 168 83% 78%;
-    --ring: 174 86% 32%;
-
-    --radius: 0.75rem;
-
-    /* Subject Color Tokens (Light Mode) */
-    --sub-blue-bg: #DBEAFE;
-    --sub-blue-text: #1E40AF;
-    --sub-blue-border: #93C5FD;
-
-    --sub-red-bg: #FEE2E2;
-    --sub-red-text: #991B1B;
-    --sub-red-border: #FCA5A5;
-
-    --sub-green-bg: #DCFCE7;
-    --sub-green-text: #166534;
-    --sub-green-border: #86EFAC;
-
-    --sub-orange-bg: #FED7AA;
-    --sub-orange-text: #9A3412;
-    --sub-orange-border: #FDBA74;
-
-    --sub-purple-bg: #F3E8FF;
-    --sub-purple-text: #6B21A8;
-    --sub-purple-border: #D8B4FE;
-
-    --sub-teal-bg: #CCFBF1;
-    --sub-teal-text: #115E59;
-    --sub-teal-border: #5EEAD4;
-  }
-
-  .dark {
-    --background: 24 10% 4%; /* #0C0A09 Deep Dark */
-    --foreground: 168 76% 97%; /* #F0FDFA */
-
-    --card: 24 9% 8%; /* #171412 */
-    --card-foreground: 168 76% 97%;
-
-    --popover: 24 9% 8%;
-    --popover-foreground: 168 76% 97%;
-
-    --primary: 174 86% 40%; /* #14B8A6 */
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 174 86% 32%;
-    --secondary-foreground: 0 0% 100%;
-
-    --muted: 24 6% 14%; /* #24201D */
-    --muted-foreground: 175 20% 70%;
-
-    --accent: 21 89% 52%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 175 60% 16%;
-    --input: 175 60% 16%;
-    --ring: 174 86% 40%;
-
-    /* Subject Color Tokens (Dark Mode) */
-    --sub-blue-bg: rgba(30, 58, 95, 0.7);
-    --sub-blue-text: #93C5FD;
-    --sub-blue-border: rgba(147, 197, 253, 0.4);
-
-    --sub-red-bg: rgba(95, 30, 30, 0.7);
-    --sub-red-text: #FCA5A5;
-    --sub-red-border: rgba(252, 165, 165, 0.4);
-
-    --sub-green-bg: rgba(30, 61, 43, 0.7);
-    --sub-green-text: #86EFAC;
-    --sub-green-border: rgba(134, 239, 172, 0.4);
-
-    --sub-orange-bg: rgba(77, 38, 18, 0.7);
-    --sub-orange-text: #FDBA74;
-    --sub-orange-border: rgba(253, 186, 116, 0.4);
-
-    --sub-purple-bg: rgba(59, 30, 95, 0.7);
-    --sub-purple-text: #D8B4FE;
-    --sub-purple-border: rgba(216, 180, 254, 0.4);
-
-    --sub-teal-bg: rgba(30, 61, 59, 0.7);
-    --sub-teal-text: #5EEAD4;
-    --sub-teal-border: rgba(94, 234, 212, 0.4);
-  }
+.dark {
+  --background: 24 10% 4%;
+  --foreground: 168 76% 97%;
+  --card: 24 9% 8%;
+  --card-foreground: 168 76% 97%;
+  --popover: 24 9% 8%;
+  --popover-foreground: 168 76% 97%;
+  --primary: 174 86% 40%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 174 86% 32%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 24 6% 14%;
+  --muted-foreground: 175 20% 72%;
+  --accent: 21 89% 52%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 175 40% 18%;
+  --input: 175 40% 18%;
+  --ring: 174 86% 40%;
+  color-scheme: dark;
 }
 
 @layer base {
@@ -123,40 +91,5 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
-}
-
-/* Glassmorphism utility classes */
-.glass-panel {
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.dark .glass-panel {
-  background: rgba(23, 20, 18, 0.75);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* Custom subtle scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
 }
