@@ -4,7 +4,6 @@ import * as React from 'react'
 import type { CourseWithDetails, DayOfWeek, Schedule } from '@/types/database'
 import type { SubjectColor } from '@/types/domain'
 import {
-  DAYS_OF_WEEK,
   timeToMinutes,
   formatDisplayTime,
   DEFAULT_TIMEZONE,
@@ -72,17 +71,17 @@ export function ScheduleGrid({
     return ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
   }, [includeWeekends, weekStartsOn])
 
-  // Mobile selected day for Day/Agenda view
+  // Mobile selected day for Day/Agenda view: raw user intent (only changed
+  // by explicit clicks below). `activeDays` can shrink after mount (e.g.
+  // toggling weekends off while a weekend day is selected), so every read
+  // below goes through `selectedMobileDay` clamped to the current
+  // `activeDays` rather than re-syncing this state in an effect.
   const [selectedMobileDay, setSelectedMobileDay] = React.useState<DayOfWeek>(() => {
     return activeDays.includes(currentSpanishDay) ? currentSpanishDay : activeDays[0] || 'Lunes'
   })
-
-  // Ensure selected mobile day is always part of active days
-  React.useEffect(() => {
-    if (!activeDays.includes(selectedMobileDay)) {
-      setSelectedMobileDay(activeDays[0] || 'Lunes')
-    }
-  }, [activeDays, selectedMobileDay])
+  const displayedMobileDay: DayOfWeek = activeDays.includes(selectedMobileDay)
+    ? selectedMobileDay
+    : activeDays[0] || 'Lunes'
 
   // Dynamic Hour Range: min & max with margin ±1h, bounds [5, 23], default [6, 22]
   const { startHour, endHour } = React.useMemo(() => {
@@ -185,7 +184,7 @@ export function ScheduleGrid({
     for (const course of courses) {
       if (course.status !== 'active') continue
       for (const s of course.schedules) {
-        if (s.day === selectedMobileDay) {
+        if (s.day === displayedMobileDay) {
           list.push({ course, schedule: s })
         }
       }
@@ -196,7 +195,7 @@ export function ScheduleGrid({
       return startA - startB
     })
     return list
-  }, [courses, selectedMobileDay])
+  }, [courses, displayedMobileDay])
 
   const handleCellClick = (day: DayOfWeek, hour: number) => {
     const startStr = `${hour.toString().padStart(2, '0')}:00`
@@ -222,7 +221,7 @@ export function ScheduleGrid({
   }
 
   const handlePrevDay = () => {
-    const currIndex = activeDays.indexOf(selectedMobileDay)
+    const currIndex = activeDays.indexOf(displayedMobileDay)
     if (currIndex > 0) {
       setSelectedMobileDay(activeDays[currIndex - 1]!)
     } else {
@@ -231,7 +230,7 @@ export function ScheduleGrid({
   }
 
   const handleNextDay = () => {
-    const currIndex = activeDays.indexOf(selectedMobileDay)
+    const currIndex = activeDays.indexOf(displayedMobileDay)
     if (currIndex < activeDays.length - 1) {
       setSelectedMobileDay(activeDays[currIndex + 1]!)
     } else {
@@ -318,7 +317,7 @@ export function ScheduleGrid({
           {/* Day selection pills */}
           <div className="flex items-center gap-1 overflow-x-auto py-1 scrollbar-none">
             {activeDays.map((day) => {
-              const isSelected = day === selectedMobileDay
+              const isSelected = day === displayedMobileDay
               const isToday = day === currentSpanishDay
               const dayBlocksCount = dayPackedBlocks.get(day)?.length || 0
 
@@ -370,8 +369,8 @@ export function ScheduleGrid({
         <div className="space-y-2">
           <div className="flex items-center justify-between px-1">
             <h4 className="text-sm font-bold text-foreground">
-              {selectedMobileDay}
-              {selectedMobileDay === currentSpanishDay && (
+              {displayedMobileDay}
+              {displayedMobileDay === currentSpanishDay && (
                 <span className="ml-2 text-xs text-primary font-normal">(Hoy)</span>
               )}
             </h4>
@@ -383,7 +382,7 @@ export function ScheduleGrid({
           {mobileDayClasses.length === 0 ? (
             <div className="glass-card rounded-2xl p-6 text-center border border-dashed border-border/60">
               <p className="text-sm font-medium text-foreground">
-                Sin clases programadas para el {selectedMobileDay}
+                Sin clases programadas para el {displayedMobileDay}
               </p>
               <p className="text-xs text-muted-foreground mt-1 mb-3">
                 Puedes añadir un nuevo bloque de clase para este día.
@@ -391,11 +390,11 @@ export function ScheduleGrid({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => handleCellClick(selectedMobileDay, 8)}
+                onClick={() => handleCellClick(displayedMobileDay, 8)}
                 className="text-xs cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
-                Agregar clase el {selectedMobileDay}
+                Agregar clase el {displayedMobileDay}
               </Button>
             </div>
           ) : (

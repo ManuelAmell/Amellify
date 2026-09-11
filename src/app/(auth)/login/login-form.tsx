@@ -60,7 +60,6 @@ export function LoginForm() {
   const [flags, setFlags] = React.useState<AuthFeatureFlags | null>(null)
   const [loading, setLoading] = React.useState(false)
   const [oauthLoading, setOauthLoading] = React.useState<string | null>(null)
-  const [formError, setFormError] = React.useState<string | null>(null)
   const [showForgotPassword, setShowForgotPassword] = React.useState(false)
   const [forgotEmail, setForgotEmail] = React.useState('')
   const [forgotStatus, setForgotStatus] = React.useState<string | null>(null)
@@ -71,6 +70,13 @@ export function LoginForm() {
 
   const nextPath = sanitizeNextPath(searchParams.get('next'))
   const queryError = searchParams.get('error')
+
+  // Lazy initializer instead of syncing via effect: `?error=` only ever
+  // needs to seed the message once, on the redirect that carried it —
+  // afterwards `formError` is owned by the form handlers below.
+  const [formError, setFormError] = React.useState<string | null>(() =>
+    queryError ? (ERROR_MESSAGES[queryError] ?? DEFAULT_ERROR_MESSAGE) : null
+  )
 
   React.useEffect(() => {
     let cancelled = false
@@ -86,12 +92,6 @@ export function LoginForm() {
       cancelled = true
     }
   }, [])
-
-  React.useEffect(() => {
-    if (queryError) {
-      setFormError(ERROR_MESSAGES[queryError] ?? DEFAULT_ERROR_MESSAGE)
-    }
-  }, [queryError])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
