@@ -108,10 +108,10 @@ export function CalculatorView({
 
     const prevId = prevCourseIdRef.current
     if (prevId !== selectedCourseId) {
-      // Save current partials to memory draft of previous course before switching
-      if (prevId) {
-        draftsRef.current[prevId] = partials
-      }
+      // No need to save `partials` into `draftsRef.current[prevId]` here:
+      // every mutation (handleAddPartial/handleRemovePartial/handleUpdatePartial/
+      // applyPreset/handleResetDraft) already writes its own result straight
+      // into draftsRef as it happens, so the ref is already current.
       prevCourseIdRef.current = selectedCourseId
 
       // Load draft if exists, otherwise load from DB course
@@ -124,16 +124,18 @@ export function CalculatorView({
         draftsRef.current[selectedCourseId] = initial
       }
       setIsDirty(false)
-    } else {
-      // Same course, but courses prop might have updated from server
-      // ONLY update if user has NOT made local dirty edits!
-      if (!isDirty && selectedCourse) {
-        const fromServer = getCourseInitialPartials(selectedCourse)
-        setPartials(fromServer)
-        draftsRef.current[selectedCourseId] = fromServer
-      }
+    } else if (!isDirty && selectedCourse) {
+      // Same course, but `courses` (the server-fetched prop) changed —
+      // only overwrite the working draft if the user has no local dirty
+      // edits. Deliberately NOT depending on `partials` here: this branch
+      // itself calls setPartials with a fresh array reference every run,
+      // so listing `partials` as a dependency would make the effect
+      // re-fire on its own write and loop forever.
+      const fromServer = getCourseInitialPartials(selectedCourse)
+      setPartials(fromServer)
+      draftsRef.current[selectedCourseId] = fromServer
     }
-  }, [selectedCourseId, courses, getCourseInitialPartials, selectedCourse, isDirty, partials])
+  }, [selectedCourseId, courses, getCourseInitialPartials, selectedCourse, isDirty])
 
   const handleAddPartial = () => {
     setPartials((prev) => {
