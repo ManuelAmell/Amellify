@@ -17,8 +17,14 @@ vi.mock('ai', async (importOriginal) => {
   }
 })
 
-function fakeProvider(id: string): AiProviderEntry {
-  return { id, label: id, model: { modelId: id } as unknown as AiProviderEntry['model'], modelId: id }
+function fakeProvider(id: string, supportsPdf = false): AiProviderEntry {
+  return {
+    id,
+    label: id,
+    model: { modelId: id } as unknown as AiProviderEntry['model'],
+    modelId: id,
+    supportsPdf,
+  }
 }
 
 function okResult(courses: unknown[] = []) {
@@ -220,6 +226,54 @@ describe('extractSchedule', () => {
 
       const content = messageContentOf()
       expect(content).toEqual([{ type: 'file', mediaType: 'image/png', data: 'VALID' }])
+    })
+  })
+
+  // PDF support: only Google (the sole provider with `supportsPdf: true`)
+  // ever sees a PDF - no cascade fallback to vision-only providers.
+  describe('PDF uploads restrict the cascade to PDF-capable providers', () => {
+    it('only tries the provider marked supportsPdf when the upload is a PDF, skipping the rest entirely', async () => {
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      const noPdf = fakeProvider('groq', false)
+      const withPdf = fakeProvider('google', true)
+      const result = await extractSchedule(
+        { images: ['data:application/pdf;base64,AAAA'] },
+        { providers: [noPdf, withPdf] }
+      )
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('expected ok result')
+      expect(result.provider).toBe('google')
+      // 'groq' never appears in attempts because it was filtered out before
+      // the loop, not tried-and-skipped.
+      expect(result.attempts).toEqual([])
+      expect(generateObjectMock).toHaveBeenCalledTimes(1)
+    })
+
+    it('returns ok:false with no attempts when no active provider supports PDF', async () => {
+      const result = await extractSchedule(
+        { images: ['data:application/pdf;base64,AAAA'] },
+        { providers: [fakeProvider('groq', false), fakeProvider('openrouter', false)] }
+      )
+
+      expect(result.ok).toBe(false)
+      if (result.ok) throw new Error('expected failure result')
+      expect(result.attempts).toEqual([])
+      expect(generateObjectMock).not.toHaveBeenCalled()
+    })
+
+    it('treats a mixed image+PDF upload as a PDF request (restricted to PDF-capable providers)', async () => {
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      const result = await extractSchedule(
+        { images: ['data:image/png;base64,AAAA', 'data:application/pdf;base64,BBBB'] },
+        { providers: [fakeProvider('groq', false), fakeProvider('google', true)] }
+      )
+
+      expect(result.ok).toBe(true)
+      if (!result.ok) throw new Error('expected ok result')
+      expect(result.provider).toBe('google')
     })
   })
 })
