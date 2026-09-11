@@ -1,66 +1,68 @@
-<h1 align="center">📚 Amellify v2</h1>
+<h1 align="center">📚 Amellify v3</h1>
 <p align="center">
-  <sub><b>GESTIÓN INTELIGENTE DE HORARIOS UNIVERSITARIOS & SEGUIMIENTO ACADÉMICO</b></sub>
+  <sub><b>GESTIÓN INTELIGENTE DE HORARIOS UNIVERSITARIOS & SEGUIMIENTO ACADÉMICO PRIVADO (SELF-HOSTED)</b></sub>
   <br>
-  <sub>Next.js 15 · Supabase PostgreSQL · Tailwind CSS · TypeScript · Vercel</sub>
+  <sub>Next.js 16 · React 19 · PostgreSQL 17 · Drizzle ORM · Better Auth · Tailwind CSS v4 · Serwist PWA · Docker</sub>
 </p>
 
 <p align="center">
-  <a href="https://amellify.vercel.app"><img src="https://img.shields.io/badge/demo-vercel-%23000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Demo en Vercel"></a>
-  <a href="https://github.com/ManuelAmell/Amellify/blob/v2/LICENSE"><img src="https://img.shields.io/badge/license-MIT-%230D9488?style=for-the-badge" alt="Licencia MIT"></a>
-  <img src="https://img.shields.io/badge/status-v2_estable-%2322c55e?style=for-the-badge" alt="Estado: v2 estable">
-  <img src="https://img.shields.io/badge/backend-Supabase_PostgreSQL-%233ECF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase Backend">
-  <img src="https://img.shields.io/badge/frontend-Next.js_15_App_Router-%23000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 15">
+  <a href="https://github.com/ManuelAmell/Amellify/blob/v3/LICENSE"><img src="https://img.shields.io/badge/license-MIT-%230D9488?style=for-the-badge" alt="Licencia MIT"></a>
+  <img src="https://img.shields.io/badge/status-v3_active-%2322c55e?style=for-the-badge" alt="Estado: v3">
+  <img src="https://img.shields.io/badge/framework-Next.js_16_Standalone-%23000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 16">
+  <img src="https://img.shields.io/badge/database-PostgreSQL_17_%2B_Drizzle-%23336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL 17">
+  <img src="https://img.shields.io/badge/pwa-Serwist_Offline-%236B21A8?style=for-the-badge" alt="PWA Serwist">
+  <img src="https://img.shields.io/badge/docker-Multi--stage_Compose-%232496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
 </p>
 
 <p align="center">
-  <b>Organiza tu semestre universitario con sincronización en la nube en tiempo real.</b><br>
-  Horario visual interactivo con línea de tiempo en vivo, calculadora de notas ponderadas con simulador de aprobación, estadísticas de carga horaria y extracción automática de horarios con Inteligencia Artificial (Gemini 2.0 Flash).
+  <b>Organiza tu semestre universitario con soberanía total de datos y sin dependencias de servicios externos cerrados.</b><br>
+  Amellify v3 es una plataforma moderna, auto-alojable (self-hostable) y de código abierto que reúne un horario visual interactivo, cálculo inteligente de promedios ponderados con simulador de aprobación, extracción automatizada de horarios mediante Visión Multimodal por IA y sincronización de calendario.
 </p>
 
 ---
 
-## ✨ Características Principales
+## ✨ Novedades de la Versión 3.0
+
+- 🚀 **Arquitectura 100% Self-Hosted:** Migración completa fuera de BaaS hacia **PostgreSQL 17 nativo**, **Drizzle ORM** y **Better Auth**.
+- 🛡️ **Privacidad y Soberanía:** Tus horarios, calificaciones y notas residen en tu propia base de datos sin telemetría ni intermediarios.
+- 🎨 **Liquid Glass Design System:** Nueva interfaz fluida diseñada con **Tailwind CSS v4**, sombras translúcidas, desenfoque de fondo y soporte nativo para temas Claro, Oscuro y Tokyo Night.
+- 🤖 **Cascada de IA Multimodal (Free Tier):** Escáner de horarios con conmutación por fallo automática entre **Google Gemini 2.5 Flash**, **Groq (Llama 3.2 Vision)**, **OpenRouter**, **Mistral AI** o cualquier gateway compatible con OpenAI (ej. Ollama local).
+- 📱 **Progressive Web App (PWA) de Nueva Generación:** Impulsada por **Serwist** (`@serwist/next`), con caché offline para la interfaz base, fuentes, iconos y assets estáticos.
+- 🚢 **Despliegue en 1 Minuto con Docker Compose:** Incluye proxy inverso **Caddy** con HTTPS automático (compatible con subdominios `sslip.io` gratuitos) y contenedor de respaldo diario con retención de 14 días.
+
+---
+
+## 📸 Características Principales
 
 <table>
   <tr>
     <td width="50%">
-      <h3>📅 Grid Semanal Interactivo</h3>
-      <p>Línea de tiempo con ranuras de 10 min, marcador de hora actual en vivo, clic directo para registrar clases y colores temáticos por materia.</p>
+      <h3>📅 Grid Semanal con Detección de Conflictos</h3>
+      <p>Línea de tiempo con ranuras de 10 min, marcador de hora actual en vivo, algoritmo de empaquetado de carriles (lane-packing) para clases simultáneas y alertas visuales de solapamiento.</p>
     </td>
     <td width="50%">
       <h3>🧮 Calculadora de Notas & Simulador</h3>
-      <p>Promedios ponderados en tiempo real, presets de porcentajes (30/30/40, 50/50, 3x33%), cálculo automático de "¿Qué nota necesito para pasar?" y escalas configurables (0-5, 0-7, 0-10).</p>
+      <p>Promedios ponderados en tiempo real, desglose porcentual personalizable, simulador "¿Qué nota necesito para pasar?" y escalas configurables (0–5.0, 0–7.0, 0–10.0).</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <h3>📊 Estadísticas & Analítica</h3>
-      <p>Créditos inscritos, carga horaria semanal distribuida por día, promedio general acumulado y ranking de rendimiento por materia.</p>
+      <h3>🤖 Extracción de Horarios con IA</h3>
+      <p>Sube una foto o captura de tu horario universitario y la IA extraerá código, asignatura, docente, salón y horarios con previsualización antes de guardar.</p>
     </td>
     <td width="50%">
-      <h3>🤖 Escáner de Horarios con IA</h3>
-      <p>Sube una foto (JPG, PNG, WebP) o captura de tu horario y Gemini 2.0 Flash extraerá automáticamente materias, docentes, salones y horarios con confirmación previa.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3>🔒 Auth & Seguridad con Supabase RLS</h3>
-      <p>Inicio de sesión seguro con Google y GitHub OAuth. Aislamiento total de datos por usuario mediante Row Level Security (RLS) en PostgreSQL.</p>
-    </td>
-    <td width="50%">
-      <h3>🎨 Design System (ui-ux-pro-max)</h3>
-      <p>Paleta moderna Teal + Tokyo Night, soporte completo para Modo Claro / Oscuro / Sistema, glassmorphism sutil y accesibilidad WCAG AA.</p>
+      <h3>📱 Modo Offline & PWA</h3>
+      <p>Instálala en tu teléfono Android, iPhone o escritorio como una app nativa. Funciona sin conexión para consulta de shell y datos cacheados.</p>
     </td>
   </tr>
   <tr>
     <td width="50%">
-      <h3>📤 Exportar a Calendario (.ICS)</h3>
-      <p>Exporta tu horario con reglas de recurrencia semanal (RFC 5545) compatibles con Google Calendar, Apple Calendar y Outlook.</p>
+      <h3>📤 Exportación a Calendario (.ICS)</h3>
+      <p>Exporta tus clases semanales con reglas de recurrencia RFC 5545 compatibles con Google Calendar, Apple Calendar y Microsoft Outlook.</p>
     </td>
     <td width="50%">
-      <h3>📱 100% Responsivo & Mobile First</h3>
-      <p>Navegación adaptativa con barra inferior en celulares y barra lateral en escritorio. Diseñado como Progressive Web App (PWA).</p>
+      <h3>💾 Copias de Seguridad & Portabilidad</h3>
+      <p>Exporta e importa tus datos en formato JSON en cualquier momento o utiliza los volcados automáticos <code>pg_dump</code> comprimidos con gzip.</p>
     </td>
   </tr>
 </table>
@@ -69,113 +71,100 @@
 
 ## 🛠️ Stack Tecnológico
 
-- **Frontend:** Next.js 15 (App Router, Server Components & Server Actions), React 19, TypeScript (Strict).
-- **Estilos & UI:** Tailwind CSS, shadcn/ui (Radix UI primitives), Lucide Icons, `next-themes`.
-- **Backend as a Service:** Supabase (Auth OAuth Google/GitHub, PostgreSQL Database, Row Level Security).
-- **Inteligencia Artificial:** Google Gemini 2.0 Flash / OpenRouter cascade API.
-- **Despliegue:** Vercel (SSR + Edge).
+| Capa | Tecnologías |
+|---|---|
+| **Frontend** | [Next.js 16](https://nextjs.org/) (App Router, Server Components & Actions), [React 19](https://react.dev/), [TypeScript 5.9](https://www.typescriptlang.org/) |
+| **Estilos & UI** | [Tailwind CSS v4](https://tailwindcss.com/), Radix UI Primitives, Lucide Icons, Sonner Toasts, Motion |
+| **Base de Datos & ORM** | [PostgreSQL 17](https://www.postgresql.org/), [Drizzle ORM](https://orm.drizzle.team/), Drizzle Kit |
+| **Autenticación** | [Better Auth](https://www.better-auth.com/) (Email/Password + OAuth opcional con GitHub/Google) |
+| **Inteligencia Artificial** | Vercel AI SDK, Google Gemini 2.5 Flash, Groq, OpenRouter, Mistral, Ollama |
+| **PWA & Offline** | [Serwist](https://serwist.pages.dev/) (`@serwist/next`) con Service Worker personalizado |
+| **Infraestructura & CI** | Docker multi-stage (standalone runner non-root), Docker Compose, Caddy (SSL automático), GitHub Actions |
+| **Testing** | [Vitest](https://vitest.dev/) (Unit Tests), [Playwright](https://playwright.dev/) (E2E Tests) |
 
 ---
 
-## 🚀 Puesta en Marcha Local
+## 🚀 Puesta en Marcha Rápida
 
-### 1. Clonar el repositorio y cambiar a la rama `v2`
+### Opción A: Despliegue en Servidor de Producción (Docker)
+
+La forma recomendada de ejecutar Amellify en cualquier VPS (Ubuntu, Debian, etc.):
 
 ```bash
-git clone https://github.com/ManuelAmell/Amellify.git
+# 1. Clonar el repositorio
+git clone -b v3 https://github.com/ManuelAmell/Amellify.git
 cd Amellify
-git checkout v2
+
+# 2. Configurar el archivo .env
+cp .env.example .env
+nano .env
+
+# 3. Iniciar todos los servicios con SSL automático y backups diarios
+docker compose --profile proxy --profile backup up -d --build
 ```
 
-### 2. Instalar dependencias
+Abre tu navegador en `https://tu-dominio.com` o `https://amellify.<tu-ip>.sslip.io`.
 
-```bash
-npm install
-```
-
-### 3. Configurar variables de entorno
-
-Crea un archivo `.env.local` en la raíz del proyecto:
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-supabase-anon-key
-
-# Inteligencia Artificial (para el escáner de horarios)
-GEMINI_API_KEY=tu-api-key-de-gemini-ai-studio
-OPENROUTER_API_KEY=tu-api-key-de-openrouter # opcional como respaldo
-```
-
-### 4. Ejecutar las migraciones en Supabase
-
-Ejecuta el archivo `supabase/migrations/001_initial_schema.sql` en el SQL Editor de tu Dashboard de Supabase (o mediante `npx supabase db push`).
-
-### 5. Iniciar el servidor de desarrollo
-
-```bash
-npm run dev
-```
-
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+Para una guía detallada paso a paso, consulta la [**Guía Completa de Despliegue (docs/DEPLOY.md)**](docs/DEPLOY.md).
 
 ---
 
-## 🗄️ Esquema de Base de Datos (Supabase PostgreSQL)
+### Opción B: Desarrollo Local
 
-```sql
--- Perfiles de usuario (extiende auth.users)
-CREATE TABLE public.profiles (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  display_name TEXT,
-  university TEXT,
-  faculty TEXT,
-  current_semester TEXT,
-  passing_grade NUMERIC(3,2) DEFAULT 3.00,
-  max_grade NUMERIC(3,2) DEFAULT 5.00,
-  preferences JSONB
-);
+1. **Clonar e instalar dependencias:**
+   ```bash
+   git clone -b v3 https://github.com/ManuelAmell/Amellify.git
+   cd Amellify
+   pnpm install
+   ```
 
--- Materias
-CREATE TABLE public.courses (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  code VARCHAR(8) NOT NULL,
-  name TEXT NOT NULL,
-  professor TEXT,
-  email TEXT,
-  faculty TEXT,
-  semester TEXT,
-  credits INTEGER DEFAULT 3,
-  status TEXT DEFAULT 'active',
-  color TEXT DEFAULT 'blue'
-);
+2. **Configurar variables de entorno:**
+   ```bash
+   cp .env.example .env.local
+   ```
 
--- Bloques de horario
-CREATE TABLE public.schedules (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  day TEXT NOT NULL,
-  start_time TIME NOT NULL,
-  end_time TIME NOT NULL,
-  room TEXT
-);
+3. **Iniciar base de datos PostgreSQL local:**
+   Puedes iniciar una instancia local con Docker:
+   ```bash
+   docker compose up -d db
+   pnpm db:migrate
+   ```
 
--- Notas parciales
-CREATE TABLE public.partials (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  grade NUMERIC(4,2),
-  percent NUMERIC(5,2) NOT NULL,
-  sort_order INTEGER DEFAULT 0
-);
+4. **Iniciar servidor de desarrollo:**
+   ```bash
+   pnpm dev
+   ```
+   Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+
+---
+
+## 🧪 Pruebas y Control de Calidad
+
+```bash
+# Verificación de tipos TypeScript estricto
+pnpm typecheck
+
+# Linter de código
+pnpm lint
+
+# Pruebas unitarias (60 tests)
+pnpm test
+
+# Pruebas E2E completas con Playwright
+pnpm test:e2e
 ```
+
+---
+
+## 📚 Documentación Adicional
+
+- 📖 [**Guía de Despliegue en Servidor Propio (Ubuntu/Debian)**](docs/DEPLOY.md)
+- 🤖 [**Guía de Configuración de Claves de IA Gratuitas**](docs/AI-PROVIDERS.md)
 
 ---
 
 ## 📄 Licencia
 
-MIT License — Creado con ❤️ por [Manuel Francisco Amell Gil](https://github.com/ManuelAmell) · 2026
+Este proyecto está licenciado bajo los términos de la **Licencia MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+
+Creado con ❤️ por [Manuel Francisco Amell Gil](https://github.com/ManuelAmell) · 2026

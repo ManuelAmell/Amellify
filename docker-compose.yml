@@ -9,7 +9,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-amellify}']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-amellify} -d ${POSTGRES_DB:-amellify}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,8 +24,10 @@ services:
       dockerfile: Dockerfile
       target: builder
     command: sh -c "pnpm db:migrate"
+    restart: "no"
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-amellify}:${POSTGRES_PASSWORD:-amellify}@db:5432/${POSTGRES_DB:-amellify}
     depends_on:
@@ -38,9 +40,12 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-amellify}:${POSTGRES_PASSWORD:-amellify}@db:5432/${POSTGRES_DB:-amellify}
+      PORT: 3000
+      NODE_ENV: production
     ports:
       - '3000:3000'
     depends_on:
@@ -65,6 +70,9 @@ services:
     ports:
       - '80:80'
       - '443:443'
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@example.com}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -72,19 +80,20 @@ services:
     depends_on:
       - app
 
-  # Optional daily pg_dump backup. Enable with:
+  # Optional cron pg_dump backup. Enable with:
   #   docker compose --profile backup up -d
   backup:
     image: postgres:17-alpine
     profiles: ['backup']
     restart: unless-stopped
-    entrypoint: ['/scripts/backup.sh']
+    entrypoint: ['/bin/sh', '/scripts/backup.sh', '--daemon']
     environment:
       PGHOST: db
       PGUSER: ${POSTGRES_USER:-amellify}
       PGPASSWORD: ${POSTGRES_PASSWORD:-amellify}
       PGDATABASE: ${POSTGRES_DB:-amellify}
-      BACKUP_RETENTION_DAYS: '14'
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_CRON: ${BACKUP_CRON:-"0 3 * * *"}
     volumes:
       - ./scripts:/scripts:ro
       - ./backups:/backups

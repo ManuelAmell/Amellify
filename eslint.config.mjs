@@ -1,10 +1,5 @@
-import { FlatCompat } from '@eslint/eslintrc'
-import { dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import nextConfig from 'eslint-config-next'
 import tseslint from 'typescript-eslint'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const compat = new FlatCompat({ baseDirectory: __dirname })
 
 export default tseslint.config(
   {
@@ -16,16 +11,30 @@ export default tseslint.config(
       'playwright-report/**',
       'test-results/**',
       'coverage/**',
+      'backups/**',
+      'scripts/**',
+      '*.mjs',
+      '*.config.*',
     ],
   },
-  ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  ...nextConfig,
+  ...tseslint.configs.recommended,
   {
+    settings: {
+      react: {
+        version: '19.0',
+      },
+    },
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'warn',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-empty-object-type': 'off',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react/no-unescaped-entities': 'warn',
     },
   }
 )

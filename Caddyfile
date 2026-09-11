@@ -1,0 +1,33 @@
+{
+    # Global options
+    email {$ACME_EMAIL:admin@example.com}
+}
+
+# Defaults to localhost for local testing, or a real domain/sslip.io hostname
+# e.g.: DOMAIN=amellify.123.45.67.89.sslip.io
+{$DOMAIN:localhost} {
+    # Reverse proxy to the Next.js standalone application container
+    reverse_proxy app:3000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Enable modern HTTP compression
+    encode zstd gzip
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Standard logging
+    log {
+        output stdout
+        format console
+    }
+}

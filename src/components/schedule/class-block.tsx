@@ -2,15 +2,19 @@
 
 import * as React from 'react'
 import type { CourseWithDetails, Schedule } from '@/types/database'
+import type { SubjectColor } from '@/types/domain'
 import { formatDisplayTime } from '@/lib/utils/time'
+import { SUBJECT_COLOR_CLASSES } from '@/config/subject-colors'
 import { MapPin, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface ClassBlockProps {
+export interface ClassBlockProps {
   course: CourseWithDetails
   schedule: Schedule
   topPx: number
   heightPx: number
+  lane?: number
+  laneCount?: number
   timeFormat24h?: boolean
   onClick?: () => void
 }
@@ -20,65 +24,87 @@ export function ClassBlock({
   schedule,
   topPx,
   heightPx,
+  lane = 0,
+  laneCount = 1,
   timeFormat24h = true,
   onClick,
 }: ClassBlockProps) {
-  const colorKey = course.color || 'blue'
+  const colorKey = (course.color || 'blue') as SubjectColor
+  const colorClass = SUBJECT_COLOR_CLASSES[colorKey] || 'subject-blue'
 
-  const colorStyles: Record<string, string> = {
-    blue: 'bg-[var(--sub-blue-bg)] text-[var(--sub-blue-text)] border-[var(--sub-blue-border)]',
-    red: 'bg-[var(--sub-red-bg)] text-[var(--sub-red-text)] border-[var(--sub-red-border)]',
-    green: 'bg-[var(--sub-green-bg)] text-[var(--sub-green-text)] border-[var(--sub-green-border)]',
-    orange: 'bg-[var(--sub-orange-bg)] text-[var(--sub-orange-text)] border-[var(--sub-orange-border)]',
-    purple: 'bg-[var(--sub-purple-bg)] text-[var(--sub-purple-text)] border-[var(--sub-purple-border)]',
-    teal: 'bg-[var(--sub-teal-bg)] text-[var(--sub-teal-text)] border-[var(--sub-teal-border)]',
-  }
+  const startTime = schedule.startTime ?? schedule.start_time ?? ''
+  const endTime = schedule.endTime ?? schedule.end_time ?? ''
+  const startStr = formatDisplayTime(startTime, timeFormat24h)
+  const endStr = formatDisplayTime(endTime, timeFormat24h)
+  const roomStr = schedule.room ? `, Salón ${schedule.room}` : ''
+  const ariaLabel = `${course.name}, ${schedule.day} ${startStr} a ${endStr}${roomStr}`
+
+  const isMultiLane = laneCount > 1
+  const widthPercent = 100 / laneCount
+  const leftPercent = lane * widthPercent
 
   const isCompact = heightPx < 50
+  const isVeryCompact = heightPx < 38
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
+      aria-label={ariaLabel}
       style={{
         top: `${topPx}px`,
         height: `${Math.max(28, heightPx)}px`,
+        left: isMultiLane ? `calc(${leftPercent}% + 2px)` : '4px',
+        width: isMultiLane ? `calc(${widthPercent}% - 4px)` : 'calc(100% - 8px)',
+        background: 'color-mix(in oklch, var(--subject, var(--primary)) 20%, var(--glass-bg, rgba(255, 255, 255, 0.75)))',
+        borderColor: 'color-mix(in oklch, var(--subject, var(--primary)) 45%, transparent)',
+        boxShadow:
+          'inset 0 1px 0 color-mix(in oklch, var(--subject, var(--primary)) 30%, white), 0 2px 8px -2px color-mix(in oklch, var(--subject, var(--primary)) 25%, transparent)',
       }}
       className={cn(
-        'absolute left-1 right-1 z-10 rounded-lg border p-2 overflow-hidden cursor-pointer transition-all duration-150',
-        'shadow-xs hover:shadow-md hover:brightness-105 active:scale-[0.99] select-none',
-        colorStyles[colorKey] || colorStyles.blue
+        'absolute z-10 group text-left rounded-xl border p-2 overflow-hidden transition-all duration-150 select-none cursor-pointer',
+        'backdrop-blur-md hover:brightness-105 active:scale-[0.99]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+        colorClass
       )}
     >
       <div className="flex flex-col h-full justify-between overflow-hidden">
         {/* Header: Code & Time */}
         <div className="flex items-center justify-between gap-1 leading-tight">
-          <span className="font-bold text-[11px] truncate tracking-tight">
+          <span className="font-bold text-[11px] truncate tracking-tight text-foreground">
             {course.code}
           </span>
-          <span className="text-[10px] opacity-80 shrink-0 font-medium font-mono">
-            {formatDisplayTime(schedule.start_time ?? schedule.startTime ?? '', timeFormat24h)}
+          <span className="text-[10px] opacity-80 shrink-0 font-medium font-mono text-foreground">
+            {startStr}
           </span>
         </div>
 
         {/* Title */}
-        {!isCompact && (
-          <p className="font-semibold text-xs leading-snug line-clamp-2 mt-0.5">
+        {!isVeryCompact && (
+          <p
+            className={cn(
+              'font-semibold text-xs leading-snug text-foreground',
+              isCompact ? 'truncate' : 'line-clamp-2 mt-0.5'
+            )}
+          >
             {course.name}
           </p>
         )}
 
         {/* Footer info: Room & Professor */}
-        {!isCompact && heightPx >= 70 && (
-          <div className="flex items-center justify-between gap-1 text-[10px] opacity-85 pt-1 border-t border-current/15 mt-auto">
+        {!isCompact && heightPx >= 68 && (
+          <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground pt-1 border-t border-current/15 mt-auto">
             {schedule.room ? (
-              <span className="flex items-center gap-0.5 truncate font-medium">
-                <MapPin className="h-3 w-3 shrink-0" />
+              <span className="flex items-center gap-0.5 truncate font-medium text-foreground">
+                <MapPin className="h-3 w-3 shrink-0 opacity-80" />
                 {schedule.room}
               </span>
-            ) : <span />}
+            ) : (
+              <span />
+            )}
 
             {course.professor && (
-              <span className="flex items-center gap-0.5 truncate opacity-75">
+              <span className="flex items-center gap-0.5 truncate opacity-85">
                 <User className="h-3 w-3 shrink-0" />
                 {course.professor.split(' ')[0]}
               </span>
@@ -86,6 +112,6 @@ export function ClassBlock({
           </div>
         )}
       </div>
-    </div>
+    </button>
   )
 }

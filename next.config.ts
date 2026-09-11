@@ -1,4 +1,11 @@
 import type { NextConfig } from 'next'
+import withSerwistInit from '@serwist/next'
+
+const withSerwist = withSerwistInit({
+  swSrc: 'src/app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+})
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -11,6 +18,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  turbopack: {},
   reactStrictMode: true,
   output: 'standalone',
   poweredByHeader: false,
@@ -36,4 +44,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig
+export default withSerwist(nextConfig)

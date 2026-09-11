@@ -1,70 +1,86 @@
 'use client'
 
 import * as React from 'react'
-import { SPANISH_DAY_TO_INDEX, JS_DAY_TO_SPANISH } from '@/lib/utils/time'
+import { JS_DAY_TO_SPANISH, DEFAULT_TIMEZONE, getZonedParts } from '@/lib/utils/time'
 import type { DayOfWeek } from '@/types/database'
 
-interface TimeMarkerProps {
-  startHour?: number
-  endHour?: number
-  slotHeightPx?: number
+export interface TimeMarkerProps {
+  startHour: number
+  endHour: number
+  slotHeightPx: number
   activeDays: DayOfWeek[]
+  timezone?: string
 }
 
 export function TimeMarker({
   startHour = 6,
   endHour = 22,
-  slotHeightPx = 48,
+  slotHeightPx = 56,
   activeDays,
+  timezone = DEFAULT_TIMEZONE,
 }: TimeMarkerProps) {
-  const [position, setPosition] = React.useState<{ top: number; dayIndex: number } | null>(null)
+  const [markerState, setMarkerState] = React.useState<{
+    top: number
+    dayColIndex: number
+  } | null>(null)
 
   React.useEffect(() => {
     const update = () => {
       const now = new Date()
-      const currentDay = JS_DAY_TO_SPANISH[now.getDay()]
-      if (!currentDay) {
-        setPosition(null)
+      const { dayIndex, secondsOfDay } = getZonedParts(now, timezone)
+      const currentSpanishDay = JS_DAY_TO_SPANISH[dayIndex]
+
+      if (!currentSpanishDay) {
+        setMarkerState(null)
         return
       }
 
-      const dayColIndex = activeDays.indexOf(currentDay)
+      const dayColIndex = activeDays.indexOf(currentSpanishDay)
       if (dayColIndex === -1) {
-        setPosition(null)
+        setMarkerState(null)
         return
       }
 
-      const hours = now.getHours()
-      const minutes = now.getMinutes()
-      const totalMinutes = hours * 60 + minutes
-      const startMinutes = startHour * 60
-      const endMinutes = endHour * 60
+      const startSeconds = startHour * 3600
+      const endSeconds = endHour * 3600
 
-      if (totalMinutes < startMinutes || totalMinutes > endMinutes) {
-        setPosition(null)
+      if (secondsOfDay < startSeconds || secondsOfDay > endSeconds) {
+        setMarkerState(null)
         return
       }
 
-      const fraction = (totalMinutes - startMinutes) / 60
-      const top = fraction * slotHeightPx
-
-      setPosition({ top, dayIndex: dayColIndex })
+      const top = ((secondsOfDay - startSeconds) / 3600) * slotHeightPx
+      setMarkerState({ top, dayColIndex })
     }
 
     update()
-    const interval = setInterval(update, 60000)
+    const interval = setInterval(update, 30000)
     return () => clearInterval(interval)
-  }, [startHour, endHour, slotHeightPx, activeDays])
+  }, [startHour, endHour, slotHeightPx, activeDays, timezone])
 
-  if (!position) return null
+  if (!markerState || activeDays.length === 0) return null
+
+  const colWidthPercent = 100 / activeDays.length
+  const leftPercent = markerState.dayColIndex * colWidthPercent
 
   return (
     <div
-      style={{ top: `${position.top}px` }}
-      className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+      style={{
+        top: `${markerState.top}px`,
+        left: `${leftPercent}%`,
+        width: `${colWidthPercent}%`,
+      }}
+      className="absolute z-30 pointer-events-none flex items-center transition-all duration-300"
+      aria-hidden="true"
     >
-      <div className="h-2 w-2 rounded-full bg-destructive shadow-sm -ml-1" />
-      <div className="h-[2px] flex-1 bg-destructive/80 shadow-xs" />
+      {/* Glowing Pulsing Origin Dot */}
+      <div className="relative flex items-center justify-center -ml-1.5 shrink-0">
+        <span className="absolute h-3 w-3 rounded-full bg-rose-500/50 animate-ping" />
+        <span className="h-2.5 w-2.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/80" />
+      </div>
+
+      {/* Laser line across the current day column */}
+      <div className="h-[2px] flex-1 bg-gradient-to-r from-rose-500 via-rose-500/90 to-rose-500/40 shadow-xs" />
     </div>
   )
 }

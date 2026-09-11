@@ -14,14 +14,18 @@ export default async function DashboardPage() {
     timeFormat24h: true,
     weekStartsOn: 'monday',
     gridCompact: false,
+    timezone: 'America/Bogota',
   }
+
+  const timezone = preferences.timezone || 'America/Bogota'
 
   return (
     <div className="space-y-6">
-      {/* Top Hero Section: Upcoming Class Countdown */}
+      {/* Top Hero Section: Upcoming Class Countdown (no CLS, timezone aware) */}
       <NextClassHero
         courses={courses}
         timeFormat24h={preferences.timeFormat24h ?? true}
+        timezone={timezone}
       />
 
       {/* Quick Stats: Credits, Hours, Enrolled */}
@@ -37,6 +41,7 @@ export default async function DashboardPage() {
         timeFormat24h={preferences.timeFormat24h ?? true}
         weekStartsOn={preferences.weekStartsOn ?? 'monday'}
         gridCompact={preferences.gridCompact ?? false}
+        timezone={timezone}
       />
     </div>
   )

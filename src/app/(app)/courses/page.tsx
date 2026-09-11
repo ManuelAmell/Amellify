@@ -9,9 +9,11 @@ export default async function CoursesPage() {
   const profile = profileRes.ok ? profileRes.data : null
 
   return (
-    <CoursesView
-      initialCourses={courses}
-      timeFormat24h={profile?.preferences?.timeFormat24h ?? true}
-    />
+    <React.Suspense fallback={null}>
+      <CoursesView
+        initialCourses={courses}
+        timeFormat24h={profile?.preferences?.timeFormat24h ?? true}
+      />
+    </React.Suspense>
   )
 }
