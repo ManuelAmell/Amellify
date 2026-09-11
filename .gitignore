@@ -51,5 +51,14 @@ supabase/.temp
 # self-hosted backups
 /backups
 
+# TDD bridge: visual verification captures, not code (keep the folder via .gitkeep).
+# Git won't apply a negation inside a directory that a wildcard already
+# excluded, so the parent has to be un-ignored explicitly before re-ignoring
+# its contents and re-including just the placeholder file.
+/.artifacts/*
+!/.artifacts/verification/
+/.artifacts/verification/*
+!/.artifacts/verification/.gitkeep
+
 # drizzle
 drizzle/meta/_journal.json.bak
