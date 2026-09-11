@@ -1,0 +1,15 @@
+<!--
+  Maskable-safe-zone variant: the glyph is scaled to fit within the inner
+  ~80% "safe zone" circle that the maskable icon spec requires, so Android's
+  circular/squircle/rounded-square masks never clip the logo. Full-bleed
+  brand-color background fills the rest of the canvas.
+  TODO(fase-3-pulido): replace with a rasterized 512x512 PNG once an image
+  tool is available — some installers only accept raster maskable icons.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+  <rect width="24" height="24" fill="#006e6f"/>
+  <g transform="translate(12 12) scale(0.72) translate(-12 -12)">
+    <path d="M22 10v6M2 10l10-5 10 5-10 5z" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M6 12v5c3 3 9 3 12 0v-5" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

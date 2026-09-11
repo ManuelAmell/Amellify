@@ -213,8 +213,8 @@ export function ScheduleGrid({
 
                       {/* Class Blocks */}
                       {daySchedules.map(({ course, schedule }) => {
-                        const startMinutes = timeToMinutes(schedule.start_time)
-                        const endMinutes = timeToMinutes(schedule.end_time)
+                        const startMinutes = timeToMinutes(schedule.start_time ?? schedule.startTime ?? '')
+                        const endMinutes = timeToMinutes(schedule.end_time ?? schedule.endTime ?? '')
                         const gridStartMinutes = startHour * 60
 
                         const topOffsetMinutes = Math.max(0, startMinutes - gridStartMinutes)

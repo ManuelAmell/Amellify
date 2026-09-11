@@ -6,7 +6,9 @@ import { QuickStats } from '@/components/stats/quick-stats'
 import { ScheduleGrid } from '@/components/schedule/schedule-grid'
 
 export default async function DashboardPage() {
-  const [courses, profile] = await Promise.all([getCourses(), getProfile()])
+  const [coursesRes, profileRes] = await Promise.all([getCourses(), getProfile()])
+  const courses = coursesRes.ok ? coursesRes.data : []
+  const profile = profileRes.ok ? profileRes.data : null
 
   const preferences = profile?.preferences || {
     timeFormat24h: true,
@@ -25,8 +27,8 @@ export default async function DashboardPage() {
       {/* Quick Stats: Credits, Hours, Enrolled */}
       <QuickStats
         courses={courses}
-        passingGrade={profile?.passing_grade ?? 3.0}
-        maxGrade={profile?.max_grade ?? 5.0}
+        passingGrade={profile?.passingGrade ?? 3.0}
+        maxGrade={profile?.maxGrade ?? 5.0}
       />
 
       {/* Main Interactive Grid */}

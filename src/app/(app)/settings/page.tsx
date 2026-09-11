@@ -4,7 +4,9 @@ import { getCourses } from '@/lib/actions/courses'
 import { SettingsView } from '@/components/settings/settings-view'
 
 export default async function SettingsPage() {
-  const [profile, courses] = await Promise.all([getProfile(), getCourses()])
+  const [profileRes, coursesRes] = await Promise.all([getProfile(), getCourses()])
+  const profile = profileRes.ok ? profileRes.data : null
+  const courses = coursesRes.ok ? coursesRes.data : []
 
-  return <SettingsView profile={profile} courses={courses} />
+  return <SettingsView profile={profile as any} courses={courses} />
 }

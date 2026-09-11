@@ -4,84 +4,228 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * NOTE: this is a transitional token set for the v3 foundation (Phase 0).
- * The full Liquid Glass design system (surfaces, glass tiers, subject
- * tokens in oklch, motion tokens) is owned by Design-system agent (Fase 1 · B)
- * and replaces this file's contents per plan section 2.1.
+ * ============================================================================
+ * Amellify v3 — "Liquid Glass" design system
+ * Fase 1 · Agente B (Design system) — plan sección 2.1
+ * ============================================================================
+ * Layer order:
+ *   1. @theme            — exposes CSS vars to Tailwind's utility generator
+ *   2. :root / .dark      — raw token values (oklch), light + dark
+ *   3. @layer base         — element resets
+ *   4. glass utilities      — @utility glass-{chrome,card,float,inset}
+ *   5. subject tokens       — tinted-glass "materia" chips (no dynamic class names, H6 fix)
+ *   6. motion               — keyframes + motion-safe wrappers
+ *   7. misc fixes            — color-scheme, native controls, scrollbars
+ * ============================================================================
  */
+
 @theme {
-  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-sans-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-mono-geist), ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
+  /* --- shadcn-compatible color aliases (existing components target these) --- */
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
 
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
+  /* --- neutral surface scale (cool, brand-independent) --- */
+  --color-surface-0: var(--surface-0);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  /* --- semantics --- */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  /* --- subject / "materia" tokens (oklch with alpha support) --- */
+  --color-subject-blue: var(--subject-blue);
+  --color-subject-red: var(--subject-red);
+  --color-subject-green: var(--subject-green);
+  --color-subject-orange: var(--subject-orange);
+  --color-subject-purple: var(--subject-purple);
+  --color-subject-teal: var(--subject-teal);
+
+  /* --- radius scale --- */
+  --radius-xs: 0.5rem; /* 8px */
+  --radius-sm: 0.75rem; /* 12px */
+  --radius-md: 1rem; /* 16px */
+  --radius-lg: 1.25rem; /* 20px */
+  --radius-xl: 1.5rem; /* 24px */
+  --radius-2xl: 1.75rem; /* 28px */
+  --radius-pill: 999px;
+
+  /* --- motion --- */
+  --ease-fluid: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 400ms;
 }
 
 :root {
-  --background: 168 76% 97%;
-  --foreground: 175 77% 19%;
-  --card: 0 0% 100%;
-  --card-foreground: 175 77% 19%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 175 77% 19%;
-  --primary: 174 86% 32%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 174 80% 40%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 195 24% 93%;
-  --muted-foreground: 175 35% 32%;
-  --accent: 21 89% 48%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 168 40% 85%;
-  --input: 168 40% 85%;
-  --ring: 174 86% 32%;
-  --radius: 0.75rem;
+  /* ---------- Neutral surfaces (cool, slightly blue) ---------- */
+  --surface-0: oklch(0.985 0.006 240); /* page background */
+  --surface-1: oklch(0.97 0.008 240); /* resting card surface */
+  --surface-2: oklch(0.94 0.01 240); /* muted / recessed */
+  --surface-3: oklch(0.9 0.012 240); /* strong divider / border */
+
+  --ink-1: oklch(0.2 0.025 245); /* foreground: 17.3:1 on surface-0 */
+  --ink-2: oklch(0.44 0.02 245); /* muted-foreground: 7.4:1 on surface-0 (AA-safe with margin) */
+
+  /* ---------- Brand ---------- */
+  --brand-primary: oklch(0.48 0.1 195); /* teal */
+  --brand-primary-foreground: oklch(0.985 0 0);
+  --brand-accent: oklch(0.55 0.17 35); /* coral / burnt orange */
+  --brand-accent-foreground: oklch(1 0 0);
+
+  /* ---------- Semantics ---------- */
+  --success: oklch(0.55 0.14 150);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.8 0.16 85);
+  --warning-foreground: oklch(0.2 0.02 85);
+  --danger: oklch(0.58 0.22 25);
+  --danger-foreground: oklch(1 0 0);
+  --info: oklch(0.55 0.15 235);
+  --info-foreground: oklch(1 0 0);
+
+  /* ---------- shadcn-compatible aliases ---------- */
+  --background: var(--surface-0);
+  --foreground: var(--ink-1);
+  --card: var(--surface-1);
+  --card-foreground: var(--ink-1);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--ink-1);
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink-1);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--brand-accent);
+  --accent-foreground: var(--brand-accent-foreground);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
+  --border: var(--surface-3);
+  --input: var(--surface-3);
+  --ring: var(--brand-primary);
+
+  /* ---------- Subject / "materia" base hues (light) ---------- */
+  --subject-blue: oklch(0.55 0.16 255);
+  --subject-red: oklch(0.58 0.19 18);
+  --subject-green: oklch(0.58 0.14 145);
+  --subject-orange: oklch(0.68 0.16 55);
+  --subject-purple: oklch(0.55 0.17 305);
+  --subject-teal: oklch(0.55 0.1 195);
+
+  /* ---------- Glass tiers (light) ---------- */
+  --glass-bg: oklch(1 0 0 / 0.55);
+  --glass-bg-strong: oklch(1 0 0 / 0.72);
+  --glass-bg-fallback: oklch(0.98 0.006 240 / 0.98); /* @supports fallback, opaque */
+  --glass-blur: 24px;
+  --glass-blur-lg: 28px;
+  --glass-saturate: 180%;
+  --glass-border-start: oklch(1 0 0 / 0.65);
+  --glass-border-end: oklch(1 0 0 / 0.08);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.55), inset 0 -1px 0 oklch(0 0 0 / 0.06);
+  --glass-shadow-ambient: 0 1px 2px oklch(0.2 0.02 250 / 0.05), 0 1px 1px oklch(0.2 0.02 250 / 0.04);
+  --glass-shadow-key: 0 16px 40px -12px oklch(0.2 0.03 250 / 0.18);
+  --glass-shadow-tint: 0 12px 28px -10px oklch(0.48 0.1 195 / 0.16);
+
   color-scheme: light;
 }
 
 .dark {
-  --background: 24 10% 4%;
-  --foreground: 168 76% 97%;
-  --card: 24 9% 8%;
-  --card-foreground: 168 76% 97%;
-  --popover: 24 9% 8%;
-  --popover-foreground: 168 76% 97%;
-  --primary: 174 86% 40%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 174 86% 32%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 24 6% 14%;
-  --muted-foreground: 175 20% 72%;
-  --accent: 21 89% 52%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 175 40% 18%;
-  --input: 175 40% 18%;
-  --ring: 174 86% 40%;
+  /* ---------- Neutral surfaces (cool, near-black, not pure black) ---------- */
+  --surface-0: oklch(0.16 0.014 250);
+  --surface-1: oklch(0.2 0.016 250);
+  --surface-2: oklch(0.245 0.018 250);
+  --surface-3: oklch(0.3 0.02 250);
+
+  --ink-1: oklch(0.96 0.006 240); /* 17.3:1 on surface-0 */
+  --ink-2: oklch(0.72 0.02 240); /* 7.3:1 on surface-0/1 */
+
+  /* ---------- Brand (reinterpreted brighter/more luminous in dark) ---------- */
+  --brand-primary: oklch(0.72 0.13 195);
+  --brand-primary-foreground: oklch(0.12 0.02 195);
+  --brand-accent: oklch(0.74 0.16 40);
+  --brand-accent-foreground: oklch(0.12 0.02 35);
+
+  /* ---------- Semantics ---------- */
+  --success: oklch(0.7 0.17 150);
+  --success-foreground: oklch(0.14 0.03 150);
+  --warning: oklch(0.82 0.17 85);
+  --warning-foreground: oklch(0.16 0.02 85);
+  --danger: oklch(0.52 0.185 25);
+  --danger-foreground: oklch(0.97 0 0);
+  --info: oklch(0.75 0.13 235);
+  --info-foreground: oklch(0.14 0.02 235);
+
+  --background: var(--surface-0);
+  --foreground: var(--ink-1);
+  --card: var(--surface-1);
+  --card-foreground: var(--ink-1);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--ink-1);
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--brand-primary-foreground);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink-1);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-2);
+  --accent: var(--brand-accent);
+  --accent-foreground: var(--brand-accent-foreground);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
+  --border: var(--surface-3);
+  --input: var(--surface-3);
+  --ring: var(--brand-primary);
+
+  /* ---------- Subject / "materia" base hues (dark, brighter) ---------- */
+  --subject-blue: oklch(0.7 0.14 255);
+  --subject-red: oklch(0.68 0.17 18);
+  --subject-green: oklch(0.7 0.14 145);
+  --subject-orange: oklch(0.75 0.15 55);
+  --subject-purple: oklch(0.7 0.15 305);
+  --subject-teal: oklch(0.72 0.11 195);
+
+  /* ---------- Glass tiers (dark) ---------- */
+  --glass-bg: oklch(0.22 0.02 250 / 0.35);
+  --glass-bg-strong: oklch(0.2 0.018 250 / 0.55);
+  --glass-bg-fallback: oklch(0.19 0.016 250 / 0.98);
+  --glass-blur: 24px;
+  --glass-blur-lg: 28px;
+  --glass-saturate: 180%;
+  --glass-border-start: oklch(1 0 0 / 0.14);
+  --glass-border-end: oklch(1 0 0 / 0.02);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.08), inset 0 -1px 0 oklch(0 0 0 / 0.35);
+  --glass-shadow-ambient: 0 1px 2px oklch(0 0 0 / 0.3), 0 1px 1px oklch(0 0 0 / 0.24);
+  --glass-shadow-key: 0 20px 48px -14px oklch(0 0 0 / 0.55);
+  --glass-shadow-tint: 0 14px 32px -10px oklch(0.72 0.13 195 / 0.14);
+
   color-scheme: dark;
 }
 
@@ -89,7 +233,322 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+
+  /* Native <input type="date|time"> pickers must render correctly in dark mode. */
+  input[type='date'],
+  input[type='time'] {
+    color-scheme: inherit;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 25%, transparent);
+    color: var(--foreground);
+  }
+}
+
+/* ============================================================================
+ * Glass tiers
+ * ============================================================================
+ * Usage: <div className="glass-card"> ... </div>
+ * Each tier gets a translucent surface, blur+saturate, a 135° gradient border
+ * (via ::before + mask-composite exclude, so it reads as a hairline "edge
+ * catching light" rather than a flat solid border), and an inset highlight
+ * that fakes specular reflection on the top edge.
+ */
+
+@utility glass-chrome {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow:
+    var(--glass-highlight),
+    var(--glass-shadow-ambient),
+    var(--glass-shadow-key);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--glass-border-start), var(--glass-border-end) 45%, var(--glass-border-start) 100%);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+@utility glass-card {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow:
+    var(--glass-highlight),
+    var(--glass-shadow-ambient);
+  transition:
+    box-shadow var(--duration-base) var(--ease-fluid),
+    transform var(--duration-base) var(--ease-fluid),
+    background-color var(--duration-base) var(--ease-fluid);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--glass-border-start), var(--glass-border-end) 60%);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+@utility glass-float {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-lg)) saturate(var(--glass-saturate));
+  box-shadow:
+    var(--glass-highlight),
+    var(--glass-shadow-ambient),
+    var(--glass-shadow-key);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--glass-border-start), var(--glass-border-end) 45%, var(--glass-border-start) 100%);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+/* Recessed / "groove" surface — inputs, wells, track backgrounds. */
+@utility glass-inset {
+  background: color-mix(in oklch, var(--surface-2) 70%, transparent);
+  backdrop-filter: blur(calc(var(--glass-blur) / 2)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) / 2)) saturate(var(--glass-saturate));
+  box-shadow:
+    inset 0 1px 2px oklch(0 0 0 / 0.08),
+    inset 0 0 0 1px color-mix(in oklch, var(--border) 80%, transparent);
+}
+
+/* Brand-tinted glass — for primary actions/highlights that need to sit on top
+ * of glass chrome without becoming a flat solid `bg-primary` block (that was
+ * the old v2 "active nav pill" look; Liquid Glass wants translucency even for
+ * emphasis states). Defined as its own utility (rather than overriding
+ * `--glass-bg` in place) because a custom property cannot validly reference
+ * itself: `--glass-bg: color-mix(..., var(--glass-bg))` would be invalid at
+ * computed-value time and silently fall back to the inherited value. */
+@utility glass-tint-primary {
+  position: relative;
+  isolation: isolate;
+  background: color-mix(in oklch, var(--primary) 20%, var(--glass-bg));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  box-shadow:
+    var(--glass-highlight),
+    var(--glass-shadow-ambient),
+    var(--glass-shadow-tint);
+  transition:
+    background-color var(--duration-base) var(--ease-fluid),
+    box-shadow var(--duration-base) var(--ease-fluid);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--primary) 70%, white),
+      var(--glass-border-end) 60%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-tint-primary {
+    background: color-mix(in oklch, var(--primary) 22%, var(--glass-bg-fallback));
+  }
+}
+
+/* No backdrop-filter support: trade translucency for flat opacity so content
+ * underneath never bleeds through unreadably. */
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-chrome,
+  .glass-card,
+  .glass-float {
+    background: var(--glass-bg-fallback);
+  }
+}
+
+/* ============================================================================
+ * Subject / "materia" tokens — tinted glass, explicit class map (no dynamic
+ * `bg-subject-${color}` strings: those never get generated by Tailwind's
+ * static analysis — plan finding H6).
+ * ============================================================================
+ */
+@layer components {
+  .subject-blue {
+    --subject: var(--subject-blue);
+  }
+  .subject-red {
+    --subject: var(--subject-red);
+  }
+  .subject-green {
+    --subject: var(--subject-green);
+  }
+  .subject-orange {
+    --subject: var(--subject-orange);
+  }
+  .subject-purple {
+    --subject: var(--subject-purple);
+  }
+  .subject-teal {
+    --subject: var(--subject-teal);
+  }
+}
+
+@utility subject-chip {
+  background: color-mix(in oklch, var(--subject, var(--primary)) 28%, transparent);
+  border: 1px solid color-mix(in oklch, var(--subject, var(--primary)) 50%, transparent);
+  color: var(--foreground);
+  box-shadow: inset 0 1px 0 color-mix(in oklch, var(--subject, var(--primary)) 20%, white);
+}
+
+@utility subject-dot {
+  background: var(--subject, var(--primary));
+}
+
+@utility subject-text {
+  color: var(--subject, var(--primary));
+}
+
+/* ============================================================================
+ * Motion — keyframes + motion-safe helpers. Everything decorative/looping is
+ * gated behind prefers-reduced-motion via the `motion-safe:` variant at the
+ * call site, or the media query below for globally-defined animations.
+ * ============================================================================
+ */
+@keyframes glass-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(1.5%, -3%, 0) scale(1.04);
+  }
+}
+
+@keyframes float-slower {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-2%, 2.5%, 0) scale(1.02);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@utility animate-glass-in {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: glass-in var(--duration-slow) var(--ease-fluid) both;
+  }
+}
+
+@utility animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklch, var(--foreground) 8%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  @media (prefers-reduced-motion: no-preference) {
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+}
+
+/* ============================================================================
+ * Misc: scrollbars, focus rings on glass, print
+ * ============================================================================
+ */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-3) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--surface-3);
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
   }
 }

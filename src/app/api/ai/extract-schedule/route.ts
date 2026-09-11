@@ -1,0 +1,139 @@
+import { NextResponse, type NextRequest } from 'next/server'
+import pino from 'pino'
+import { z } from 'zod'
+import { requireUser } from '@/lib/auth/session'
+import { extractSchedule } from '@/lib/ai/cascade'
+import { checkRateLimit } from '@/lib/rate-limit'
+
+/**
+ * POST /api/ai/extract-schedule — rebuilt from scratch (plan C4/H16: the
+ * old `/api/generate-schedule` sent the Gemini API key in the query
+ * string, had no rate limit, no body size limit, let the client pick any
+ * model, and accepted any MIME type including `application/pdf`/`image/svg+xml`).
+ *
+ * Fixes applied here:
+ * - Requires an authenticated session (`requireUser()`).
+ * - 5 requests/minute/user via the in-memory token bucket.
+ * - Body capped at 6 MB (checked both via `Content-Length` and the actual
+ *   decoded payload, since the header can be absent).
+ * - Zod-validated `{ images?: string[], text?: string }` shape; each image
+ *   must be a `data:` URL whose declared MIME type is in an allowlist
+ *   (PNG/JPEG/WebP only).
+ * - No `model` field accepted from the client — the provider/model is
+ *   entirely decided by the server-side cascade (`src/lib/ai/cascade.ts`).
+ * - Structured logging of which provider/model served the request, never
+ *   API keys or raw provider error bodies.
+ */
+
+const logger = pino({ name: 'ai-extract-schedule' })
+
+const MAX_BODY_BYTES = 6 * 1024 * 1024
+const MAX_IMAGES = 5
+const MAX_TEXT_LENGTH = 20_000
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
+const DATA_URL_PATTERN = /^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=]+)$/
+
+const requestSchema = z
+  .object({
+    images: z.array(z.string()).max(MAX_IMAGES).optional(),
+    text: z.string().max(MAX_TEXT_LENGTH).optional(),
+  })
+  .refine(
+    (body) => (body.images && body.images.length > 0) || Boolean(body.text?.trim()),
+    { message: 'Envía al menos una imagen o texto para analizar.' }
+  )
+
+function isAllowedImageDataUrl(dataUrl: string): boolean {
+  const match = DATA_URL_PATTERN.exec(dataUrl)
+  if (!match) return false
+  const mime = match[1]?.toLowerCase()
+  return mime !== undefined && ALLOWED_IMAGE_MIME_TYPES.has(mime)
+}
+
+export async function POST(request: NextRequest) {
+  const user = await requireUser()
+
+  const rateLimit = checkRateLimit(`ai-extract-schedule:${user.id}`, { limit: 5, windowMs: 60_000 })
+  if (!rateLimit.allowed) {
+    const headers: Record<string, string> = {}
+    if (rateLimit.retryAfterMs) {
+      headers['Retry-After'] = Math.ceil(rateLimit.retryAfterMs / 1000).toString()
+    }
+    return NextResponse.json(
+      { error: 'Demasiadas solicitudes. Espera un momento e intenta de nuevo.' },
+      { status: 429, headers }
+    )
+  }
+
+  const contentLength = request.headers.get('content-length')
+  if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'La solicitud supera el límite de 6 MB.' }, { status: 413 })
+  }
+
+  let rawText: string
+  try {
+    rawText = await request.text()
+  } catch {
+    return NextResponse.json({ error: 'No se pudo leer el cuerpo de la solicitud.' }, { status: 400 })
+  }
+
+  if (new TextEncoder().encode(rawText).length > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: 'La solicitud supera el límite de 6 MB.' }, { status: 413 })
+  }
+
+  let rawBody: unknown
+  try {
+    rawBody = JSON.parse(rawText)
+  } catch {
+    return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
+  }
+
+  const parsed = requestSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Datos inválidos.', fieldErrors: z.flattenError(parsed.error).fieldErrors },
+      { status: 400 }
+    )
+  }
+
+  const { images = [], text } = parsed.data
+
+  for (const image of images) {
+    if (!isAllowedImageDataUrl(image)) {
+      return NextResponse.json(
+        { error: 'Formato de imagen no permitido. Usa PNG, JPEG o WebP.' },
+        { status: 415 }
+      )
+    }
+  }
+
+  const result = await extractSchedule({ images, text })
+
+  if (!result.ok) {
+    logger.warn({ userId: user.id, attempts: result.attempts }, 'ai_extract_schedule_exhausted')
+    return NextResponse.json(
+      {
+        error:
+          'No fue posible analizar el horario en este momento (ningún proveedor de IA disponible respondió). Intenta de nuevo más tarde.',
+        attempts: result.attempts,
+      },
+      { status: 503 }
+    )
+  }
+
+  logger.info(
+    {
+      userId: user.id,
+      provider: result.provider,
+      model: result.model,
+      courseCount: result.courses.length,
+    },
+    'ai_extract_schedule_succeeded'
+  )
+
+  return NextResponse.json({
+    courses: result.courses,
+    provider: result.provider,
+    model: result.model,
+  })
+}

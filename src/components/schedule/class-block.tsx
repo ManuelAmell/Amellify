@@ -56,7 +56,7 @@ export function ClassBlock({
             {course.code}
           </span>
           <span className="text-[10px] opacity-80 shrink-0 font-medium font-mono">
-            {formatDisplayTime(schedule.start_time, timeFormat24h)}
+            {formatDisplayTime(schedule.start_time ?? schedule.startTime ?? '', timeFormat24h)}
           </span>
         </div>
 

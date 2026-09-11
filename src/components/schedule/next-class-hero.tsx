@@ -100,8 +100,8 @@ export function NextClassHero({ courses, timeFormat24h = true }: NextClassHeroPr
               <span className="flex items-center gap-1 font-medium text-foreground">
                 <Clock className="h-3.5 w-3.5 text-primary" />
                 {schedule.day}{' '}
-                {formatDisplayTime(schedule.start_time, timeFormat24h)} -{' '}
-                {formatDisplayTime(schedule.end_time, timeFormat24h)}
+                {formatDisplayTime(schedule.startTime, timeFormat24h)} -{' '}
+                {formatDisplayTime(schedule.endTime, timeFormat24h)}
               </span>
 
               {schedule.room && (

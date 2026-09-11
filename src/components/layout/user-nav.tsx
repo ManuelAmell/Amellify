@@ -2,44 +2,42 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { useTheme } from 'next-themes'
+import { toast } from 'sonner'
+import { signOut } from '@/lib/auth/client'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import { User, LogOut, Sun, Moon, Laptop, UserCheck } from 'lucide-react'
-import type { Profile } from '@/types/database'
-import type { User as AuthUser } from '@supabase/supabase-js'
-import { toast } from 'sonner'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { LogOut, Sun, Moon, Laptop } from 'lucide-react'
+import type { UserProfile } from '@/types/domain'
 
 interface UserNavProps {
-  user: AuthUser
-  profile: Profile | null
+  profile: UserProfile | null
 }
 
-export function UserNav({ user, profile }: UserNavProps) {
+export function UserNav({ profile }: UserNavProps) {
   const router = useRouter()
-  const supabase = createClient()
   const { theme, setTheme } = useTheme()
 
-  const displayName =
-    profile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Estudiante'
-  const userEmail = user.email || ''
-  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url
+  const displayName = profile?.displayName || profile?.email?.split('@')[0] || 'Estudiante'
+  const userEmail = profile?.email ?? ''
+  const avatarUrl = profile?.avatarUrl ?? undefined
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut()
+      await signOut()
       toast.success('Sesión cerrada')
       router.push('/login')
       router.refresh()
-    } catch (err: any) {
+    } catch {
       toast.error('Error al cerrar sesión')
     }
   }
@@ -47,69 +45,56 @@ export function UserNav({ user, profile }: UserNavProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="relative h-9 w-9 rounded-full border border-border/60 hover:border-primary/50 overflow-hidden p-0 cursor-pointer"
+        <button
+          type="button"
+          aria-label={`Menú de cuenta de ${displayName}`}
+          className="cursor-pointer rounded-full ring-offset-background transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="h-full w-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-primary/10 text-primary font-bold text-xs">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-          )}
-        </Button>
+          <Avatar>
+            {avatarUrl ? (
+              <AvatarImage
+                src={avatarUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                fallback={<AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>}
+              />
+            ) : (
+              <AvatarFallback>{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+            )}
+          </Avatar>
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent className="w-56" align="end">
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none truncate">{displayName}</p>
-            <p className="text-xs leading-none text-muted-foreground truncate">{userEmail}</p>
+            <p className="truncate text-sm font-medium leading-none">{displayName}</p>
+            {userEmail && <p className="truncate text-xs leading-none text-muted-foreground">{userEmail}</p>}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {/* Theme Switchers */}
-        <DropdownMenuLabel className="text-[11px] text-muted-foreground uppercase font-semibold">
+        <DropdownMenuLabel className="text-[11px] font-semibold uppercase text-muted-foreground">
           Tema
         </DropdownMenuLabel>
-        <DropdownMenuItem
-          onClick={() => setTheme('light')}
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          <Sun className="h-4 w-4" />
-          <span>Claro</span>
-          {theme === 'light' && <span className="ml-auto text-xs text-primary font-bold">✓</span>}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme('dark')}
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          <Moon className="h-4 w-4" />
-          <span>Oscuro</span>
-          {theme === 'dark' && <span className="ml-auto text-xs text-primary font-bold">✓</span>}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => setTheme('system')}
-          className="flex items-center gap-2 cursor-pointer"
-        >
-          <Laptop className="h-4 w-4" />
-          <span>Sistema</span>
-          {theme === 'system' && <span className="ml-auto text-xs text-primary font-bold">✓</span>}
-        </DropdownMenuItem>
+        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+          <DropdownMenuRadioItem value="light">
+            <Sun className="h-4 w-4" />
+            <span className="ml-2">Claro</span>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">
+            <Moon className="h-4 w-4" />
+            <span className="ml-2">Oscuro</span>
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">
+            <Laptop className="h-4 w-4" />
+            <span className="ml-2">Sistema</span>
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
 
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer"
-        >
+        <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
           <LogOut className="h-4 w-4" />
-          <span>Cerrar Sesión</span>
+          <span>Cerrar sesión</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

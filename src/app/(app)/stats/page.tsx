@@ -4,13 +4,15 @@ import { getProfile } from '@/lib/actions/profile'
 import { StatsView } from '@/components/stats/stats-view'
 
 export default async function StatsPage() {
-  const [courses, profile] = await Promise.all([getCourses(), getProfile()])
+  const [coursesRes, profileRes] = await Promise.all([getCourses(), getProfile()])
+  const courses = coursesRes.ok ? coursesRes.data : []
+  const profile = profileRes.ok ? profileRes.data : null
 
   return (
     <StatsView
       courses={courses}
-      passingGrade={profile?.passing_grade ?? 3.0}
-      maxGrade={profile?.max_grade ?? 5.0}
+      passingGrade={profile?.passingGrade ?? 3.0}
+      maxGrade={profile?.maxGrade ?? 5.0}
     />
   )
 }

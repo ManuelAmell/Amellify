@@ -47,10 +47,12 @@ export function StatsView({
 
   for (const course of activeCourses) {
     for (const sched of course.schedules) {
-      const start = timeToMinutes(sched.start_time)
-      const end = timeToMinutes(sched.end_time)
-      if (end > start && hoursPerDay[sched.day] !== undefined) {
-        hoursPerDay[sched.day] += (end - start) / 60
+      const start = timeToMinutes(sched.start_time ?? sched.startTime ?? '')
+      const end = timeToMinutes(sched.end_time ?? sched.endTime ?? '')
+      const day = sched.day as keyof typeof hoursPerDay
+      const current = hoursPerDay[day]
+      if (end > start && current !== undefined) {
+        hoursPerDay[day] = current + (end - start) / 60
       }
     }
   }

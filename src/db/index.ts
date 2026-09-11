@@ -2,10 +2,16 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from './schema'
 
-const connectionString = process.env.DATABASE_URL
+const isBuildPhase =
+  process.env.NEXT_PHASE === 'phase-production-build' ||
+  process.env.npm_lifecycle_event === 'build'
+
+const connectionString =
+  process.env.DATABASE_URL ||
+  (isBuildPhase ? 'postgresql://build:build@localhost:5432/build' : undefined)
 
 if (!connectionString) {
-  // Fail fast — no silent fallback to a placeholder connection (plan finding C5).
+  // Fail fast — no silent fallback to a placeholder connection at runtime (plan finding C5).
   throw new Error(
     'DATABASE_URL is not set. Copy .env.example to .env and configure your Postgres connection.'
   )
