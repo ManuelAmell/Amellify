@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import pino from 'pino'
 import { z } from 'zod'
-import { requireUser } from '@/lib/auth/session'
+import { getApiUser } from '@/lib/auth/session'
 import { extractSchedule } from '@/lib/ai/cascade'
 import { checkRateLimit } from '@/lib/rate-limit'
 
@@ -51,7 +51,10 @@ function isAllowedImageDataUrl(dataUrl: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const user = await requireUser()
+  const user = await getApiUser()
+  if (!user) {
+    return NextResponse.json({ error: 'Sesión expirada. Inicia sesión de nuevo.' }, { status: 401 })
+  }
 
   const rateLimit = checkRateLimit(`ai-extract-schedule:${user.id}`, { limit: 5, windowMs: 60_000 })
   if (!rateLimit.allowed) {

@@ -22,8 +22,15 @@ import type { LanguageModel } from 'ai'
  */
 
 export interface AiProviderEntry {
-  /** Stable id used for cooldown tracking, logging, and the "Analizado con {provider}" UI badge. */
+  /**
+   * Stable id used for cooldown tracking and server logs ONLY. For
+   * OpenRouter this includes the model slug (`openrouter:vendor/model:free`)
+   * because each free model needs its own cooldown — never surface `id`
+   * itself in the UI, use `label` instead.
+   */
   id: string
+  /** Generic, model-slug-free name for the "Analizado con {label}" UI badge. */
+  label: string
   model: LanguageModel
   /** Model id string, kept alongside `model` so callers don't need to introspect the SDK object. */
   modelId: string
@@ -59,7 +66,7 @@ export function getActiveProviders(): AiProviderEntry[] {
       apiKey: gatewayKey,
     })
     const modelId = process.env.AI_GATEWAY_MODEL || 'gpt-4o-mini'
-    providers.push({ id: 'ai-gateway', model: gateway.chatModel(modelId), modelId })
+    providers.push({ id: 'ai-gateway', label: 'tu gateway', model: gateway.chatModel(modelId), modelId })
   }
 
   // 2. Google AI Studio free tier. Default `gemini-2.5-flash`: confirmed
@@ -69,7 +76,7 @@ export function getActiveProviders(): AiProviderEntry[] {
   if (googleKey) {
     const google = createGoogleGenerativeAI({ apiKey: googleKey })
     const modelId = process.env.GOOGLE_MODEL || 'gemini-2.5-flash'
-    providers.push({ id: 'google', model: google(modelId), modelId })
+    providers.push({ id: 'google', label: 'Google AI', model: google(modelId), modelId })
   }
 
   // 3. Groq free tier. Default `qwen/qwen3.6-27b`: Groq deprecated its
@@ -80,7 +87,7 @@ export function getActiveProviders(): AiProviderEntry[] {
   if (groqKey) {
     const groq = createGroq({ apiKey: groqKey })
     const modelId = process.env.GROQ_MODEL || 'qwen/qwen3.6-27b'
-    providers.push({ id: 'groq', model: groq(modelId), modelId })
+    providers.push({ id: 'groq', label: 'Groq', model: groq(modelId), modelId })
   }
 
   // 4. OpenRouter free-tier (":free") models — a LIST, tried in order as
@@ -101,7 +108,7 @@ export function getActiveProviders(): AiProviderEntry[] {
       'qwen/qwen2.5-vl-32b-instruct:free',
     ])
     for (const modelId of modelIds) {
-      providers.push({ id: `openrouter:${modelId}`, model: openrouter.chatModel(modelId), modelId })
+      providers.push({ id: `openrouter:${modelId}`, label: 'OpenRouter', model: openrouter.chatModel(modelId), modelId })
     }
   }
 
@@ -119,7 +126,7 @@ export function getActiveProviders(): AiProviderEntry[] {
       apiKey: mistralKey,
     })
     const modelId = process.env.MISTRAL_MODEL || 'pixtral-12b-2409'
-    providers.push({ id: 'mistral', model: mistral.chatModel(modelId), modelId })
+    providers.push({ id: 'mistral', label: 'Mistral', model: mistral.chatModel(modelId), modelId })
   }
 
   return providers

@@ -45,8 +45,13 @@ export interface CourseWithDetails extends DomainCourseWithDetails {
   sort_order?: number
   created_at?: string
   updated_at?: string
-  schedules: any[]
-  partials: any[]
+  // Overridden (not just widened) to this file's own Schedule/PartialGrade
+  // above, which add the snake_case compat fields — `any[]` here used to
+  // silently erase the strict typing for every component importing
+  // CourseWithDetails from '@/types/database' instead of '@/types/domain'
+  // (found by /code-review).
+  schedules: Schedule[]
+  partials: PartialGrade[]
 }
 
 export interface CourseInsert {

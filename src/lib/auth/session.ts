@@ -26,3 +26,19 @@ export async function requireUser() {
   }
   return session.user
 }
+
+/**
+ * Session check for Route Handlers (`src/app/api/**`), where `requireUser()`
+ * is the wrong tool: its `redirect('/login')` returns a 307 whose body is
+ * the login page's HTML, and a `fetch()`-based caller (e.g. `AIImportDialog`)
+ * gets `response.ok === true` for a redirect it silently followed, then
+ * throws trying to `JSON.parse` that HTML — surfacing a garbled error
+ * instead of "session expired, log in again" (found by /code-review).
+ * Route handlers should check `user` themselves and return a real 401:
+ *   const user = await getApiUser()
+ *   if (!user) return NextResponse.json({ error: '...' }, { status: 401 })
+ */
+export async function getApiUser() {
+  const session = await getCurrentSession()
+  return session?.user ?? null
+}

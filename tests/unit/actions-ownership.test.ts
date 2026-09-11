@@ -72,7 +72,11 @@ describe('server actions — ownership isolation & transaction safety', () => {
       { id: userA, name: 'User A', email: 'a@test.local' },
       { id: userB, name: 'User B', email: 'b@test.local' },
     ])
-  })
+    // Default 5s hook timeout is too tight for a cold PGlite WASM boot +
+    // running the full migration statement-by-statement when the machine
+    // is under load from the rest of the suite running in parallel (this
+    // file passes in isolation well under 5s, but flaked in the full run).
+  }, 30_000)
 
   it('lets a user create and read their own course', async () => {
     const { createCourse } = await import('@/lib/actions/courses')

@@ -91,19 +91,15 @@ jobs:
         run: |
           docker compose up -d db
           docker compose run --rm migrate
-          docker compose up -d app
 
-      - name: Wait for App to be Healthy
-        run: |
-          echo "Waiting for http://localhost:3000/api/health..."
-          for i in {1..30}; do
-            if curl -s http://localhost:3000/api/health | grep -q '"ok":true'; then
-              echo "App is healthy and database is connected!"
-              break
-            fi
-            echo "Waiting for app to start... (attempt $i/30)"
-            sleep 2
-          done
+      - name: Start App and Wait for It to Be Healthy
+        # `--wait` blocks on the container's own healthcheck
+        # (docker-compose.yml: /api/health, 15s interval x 5 retries, 20s
+        # start_period) and FAILS the step if it never turns healthy,
+        # instead of a manual polling loop that fell through silently on
+        # timeout and let a broken app run straight into the e2e suite
+        # (found by /code-review).
+        run: docker compose up -d --wait app
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4

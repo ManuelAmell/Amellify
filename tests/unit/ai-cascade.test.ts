@@ -18,7 +18,7 @@ vi.mock('ai', async (importOriginal) => {
 })
 
 function fakeProvider(id: string): AiProviderEntry {
-  return { id, model: { modelId: id } as unknown as AiProviderEntry['model'], modelId: id }
+  return { id, label: id, model: { modelId: id } as unknown as AiProviderEntry['model'], modelId: id }
 }
 
 function okResult(courses: unknown[] = []) {

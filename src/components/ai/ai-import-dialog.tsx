@@ -113,7 +113,6 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
 
   // AI Response metadata
   const [aiProvider, setAiProvider] = React.useState<string | null>(null)
-  const [aiModel, setAiModel] = React.useState<string | null>(null)
 
   // Fully editable extracted courses list
   const [extractedCourses, setExtractedCourses] = React.useState<EditableCourse[]>([])
@@ -140,7 +139,6 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
       setImageDataUrl(resized)
       setExtractedCourses([])
       setAiProvider(null)
-      setAiModel(null)
     } catch (err: any) {
       toast.error('Error al procesar la imagen: ' + (err.message || 'formato no soportado'))
     }
@@ -202,7 +200,6 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
       setAnalyzing(true)
       setExtractedCourses([])
       setAiProvider(null)
-      setAiModel(null)
 
       const response = await fetch('/api/ai/extract-schedule', {
         method: 'POST',
@@ -219,8 +216,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
       }
 
       if (data.courses && Array.isArray(data.courses)) {
-        setAiProvider(data.provider || 'AI')
-        setAiModel(data.model || 'Cascade')
+        setAiProvider(data.provider || 'IA')
 
         // Transform into editable local state
         const editable: EditableCourse[] = data.courses.map((c: any, index: number) => ({
@@ -340,7 +336,8 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
 
     try {
       setImporting(true)
-      let count = 0
+      const failed: EditableCourse[] = []
+      let successCount = 0
 
       for (const course of extractedCourses) {
         const payloadCourse = {
@@ -363,18 +360,31 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
 
         const res = await createCourse(payloadCourse, payloadSchedules)
         if (res.ok) {
-          count++
+          successCount++
+        } else {
+          // Keep the failed course (with its AI-extracted/user-edited data
+          // intact) in the preview instead of silently discarding it, so
+          // the user can fix and retry rather than losing the work.
+          failed.push(course)
+          toast.error(`"${course.name || course.code}": ${res.error}`)
         }
       }
 
-      toast.success(`¡${count} materias importadas correctamente al horario!`)
-      onOpenChange(false)
-      // Reset state
-      setSelectedFile(null)
-      setImageDataUrl(null)
-      setExtractedCourses([])
-      setAiProvider(null)
-      setAiModel(null)
+      if (successCount > 0) {
+        toast.success(
+          successCount === 1
+            ? '1 materia importada correctamente al horario.'
+            : `${successCount} materias importadas correctamente al horario.`
+        )
+      }
+
+      setExtractedCourses(failed)
+      if (failed.length === 0) {
+        onOpenChange(false)
+        setSelectedFile(null)
+        setImageDataUrl(null)
+        setAiProvider(null)
+      }
     } catch (err: any) {
       toast.error(err.message || 'Error al guardar las materias importadas')
     } finally {
@@ -454,7 +464,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
                 >
                   <Bot className="h-3.5 w-3.5" />
                   <span>
-                    IA: <strong>{aiProvider.toUpperCase()}</strong> ({aiModel})
+                    Analizado con <strong>{aiProvider}</strong>
                   </span>
                 </Badge>
               ) : (

@@ -13,32 +13,35 @@ Para garantizar alta disponibilidad y cero costos operativos para los estudiante
                  │
                  ▼
       ┌─────────────────────┐
-      │ 1. Google Gemini    │ ─── Éxito ───► Horario Estructurado (JSON)
+      │ 1. Gateway Propio   │ ─── Éxito ───► Horario Estructurado (JSON)
+      └─────────────────────┘   (solo si configuraste AI_GATEWAY_URL — va
+                 │ (Fallo)        primero porque elegiste enrutar tú mismo)
+                 ▼
+      ┌─────────────────────┐
+      │ 2. Google Gemini    │ ─── Éxito ───► Horario Estructurado (JSON)
       └─────────────────────┘
                  │ (Fallo / 429 Rate Limit)
                  ▼
       ┌─────────────────────┐
-      │ 2. Groq (Llama 3.2) │ ─── Éxito ───► Horario Estructurado (JSON)
+      │ 3. Groq (Llama/Qwen)│ ─── Éxito ───► Horario Estructurado (JSON)
       └─────────────────────┘
                  │ (Fallo / 429 Rate Limit)
                  ▼
       ┌─────────────────────┐
-      │ 3. OpenRouter       │ ─── Éxito ───► Horario Estructurado (JSON)
-      └─────────────────────┘
+      │ 4. OpenRouter       │ ─── Éxito ───► Horario Estructurado (JSON)
+      └─────────────────────┘   (varios modelos ":free", probados en orden)
                  │ (Fallo / 429 Rate Limit)
                  ▼
       ┌─────────────────────┐
-      │ 4. Mistral AI       │ ─── Éxito ───► Horario Estructurado (JSON)
-      └─────────────────────┘
-                 │ (Fallo)
-                 ▼
-      ┌─────────────────────┐
-      │ 5. Gateway Propio   │ ─── Éxito ───► Horario Estructurado (JSON)
+      │ 5. Mistral AI       │ ─── Éxito ───► Horario Estructurado (JSON)
       └─────────────────────┘
 ```
 
 > [!TIP]
 > Solo necesitas configurar **al menos uno** de los proveedores. No es obligatorio tener todos activos, pero configurar dos o más garantiza tolerancia a fallos.
+
+> [!NOTE]
+> **Latencia en el peor caso:** cada proveedor tiene un timeout de 25s antes de pasar al siguiente (`src/lib/ai/cascade.ts`). Si configuras los 7 saltos posibles (gateway + Google + Groq + 3 modelos de OpenRouter + Mistral) y varios fallan en cadena, una sola petición puede tardar hasta ~3 minutos. Si pones un reverse proxy propio delante de Amellify (fuera del perfil `caddy` incluido, que no impone timeout), asegúrate de que su timeout de lectura sea de al menos 3-4 minutos, o reduce cuántos proveedores configuras.
 
 ---
 
@@ -55,7 +58,9 @@ Google ofrece el nivel gratuito más generoso para tareas de visión multimodal 
   4. Selecciona **"Create API key in new project"** y copia el token generado.
 - **Configuración en `.env`:**
   ```env
-  GEMINI_API_KEY=AIzaSy...
+  GOOGLE_GENERATIVE_AI_API_KEY=AIzaSy...
+  # Opcional: sobrescribe el modelo por defecto (gemini-2.5-flash)
+  # GOOGLE_MODEL=gemini-2.5-flash
   ```
 
 ---
@@ -72,6 +77,9 @@ Groq ejecuta modelos de lenguaje en unidades de procesamiento de lenguaje (LPUs)
 - **Configuración en `.env`:**
   ```env
   GROQ_API_KEY=gsk_...
+  # Opcional: sobrescribe el modelo por defecto (verifica el vigente en
+  # console.groq.com/docs/vision — Groq rota sus modelos de visión gratuitos)
+  # GROQ_MODEL=qwen/qwen3.6-27b
   ```
 
 ---
@@ -80,7 +88,7 @@ Groq ejecuta modelos de lenguaje en unidades de procesamiento de lenguaje (LPUs)
 OpenRouter agrega cientos de modelos de IA tras una API unificada compatible con OpenAI. Cuenta con modelos con el tag `:free`.
 
 - **Costo:** Acceso a modelos gratuitos de la comunidad y modelos premium bajo prepago.
-- **Modelos gratuitos recomendados:** `meta-llama/llama-3.2-11b-vision-instruct:free`, `google/gemini-flash-1.5-exp:free`.
+- **Modelos gratuitos que Amellify intenta por defecto, en orden** (cada uno es un salto independiente de la cascada, con su propio cooldown si falla): `google/gemma-3-27b-it:free`, `meta-llama/llama-3.2-11b-vision-instruct:free`, `qwen/qwen2.5-vl-32b-instruct:free`.
 - **Cómo obtener la clave:**
   1. Entra a [openrouter.ai](https://openrouter.ai/).
   2. Inicia sesión con Google, Discord o MetaMask.
@@ -89,6 +97,9 @@ OpenRouter agrega cientos de modelos de IA tras una API unificada compatible con
 - **Configuración en `.env`:**
   ```env
   OPENROUTER_API_KEY=sk-or-v1-...
+  # Opcional: reemplaza la lista de modelos por defecto (coma-separada, sin
+  # espacios) — la oferta ":free" de OpenRouter cambia con frecuencia.
+  # OPENROUTER_FREE_MODELS=google/gemma-3-27b-it:free,qwen/qwen2.5-vl-32b-instruct:free
   ```
 
 ---
@@ -108,29 +119,33 @@ Mistral dispone del modelo **Pixtral**, especializado en razonamiento visual sob
 
 ---
 
-### 5. Gateway Propio / Endpoint Compatible con OpenAI (Ollama, LiteLLM, vLLM)
-Si prefieres máxima privacidad ejecutando modelos localmente en tu propio servidor (ej. Ollama con `llama3.2-vision`) o mediante un proxy de IA corporativo (LiteLLM):
+### 5. Gateway Propio / Endpoint Compatible con OpenAI (Ollama, LiteLLM, OmniRoute, vLLM)
+Si prefieres máxima privacidad ejecutando modelos localmente en tu propio servidor (ej. Ollama con `llama3.2-vision`) o enrutar tú mismo entre varios proveedores con tu propio gateway (LiteLLM, OmniRoute): este es el **primer** salto de la cascada cuando está configurado (ver diagrama arriba), porque elegiste explícitamente controlar el enrutamiento.
 
 - **Requisitos:** Un endpoint HTTP compatible con el protocolo `/v1/chat/completions` de OpenAI.
 - **Configuración en `.env`:**
   ```env
-  OPENAI_COMPATIBLE_BASE_URL=http://localhost:11434/v1
-  OPENAI_COMPATIBLE_API_KEY=ollama
-  OPENAI_COMPATIBLE_MODEL=llama3.2-vision
+  AI_GATEWAY_URL=http://localhost:11434/v1
+  AI_GATEWAY_KEY=ollama
+  # Opcional: modelo a pedirle al gateway (por defecto gpt-4o-mini, que en
+  # un gateway propio normalmente mapea a lo que tú definas)
+  AI_GATEWAY_MODEL=llama3.2-vision
   ```
 
 ---
 
 ## 📋 Resumen de Variables de Entorno
 
-| Variable | Proveedor | Modelo Principal | Obligatoria |
+| Variable | Proveedor | Modelo por defecto | Obligatoria |
 |---|---|---|---|
-| `GEMINI_API_KEY` | Google AI Studio | Gemini 2.0 / 2.5 Flash | Recomendada |
-| `GROQ_API_KEY` | Groq Console | Llama 3.2 11B/90B Vision | Recomendada |
-| `OPENROUTER_API_KEY` | OpenRouter | Multi-modelos / Free tier | Opcional |
-| `MISTRAL_API_KEY` | Mistral AI | Pixtral 12B | Opcional |
-| `OPENAI_COMPATIBLE_BASE_URL` | Local / Gateway | A definir (ej. Ollama) | Opcional |
-| `OPENAI_COMPATIBLE_API_KEY` | Local / Gateway | A definir | Opcional |
+| `AI_GATEWAY_URL` / `AI_GATEWAY_KEY` | Tu gateway propio (Ollama, LiteLLM, OmniRoute...) | `AI_GATEWAY_MODEL` (def. `gpt-4o-mini`) | Opcional |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Google AI Studio | `GOOGLE_MODEL` (def. `gemini-2.5-flash`) | Recomendada |
+| `GROQ_API_KEY` | Groq Console | `GROQ_MODEL` (def. `qwen/qwen3.6-27b`) | Recomendada |
+| `OPENROUTER_API_KEY` | OpenRouter | `OPENROUTER_FREE_MODELS` (lista, ver arriba) | Opcional |
+| `MISTRAL_API_KEY` | Mistral AI | `MISTRAL_MODEL` (def. `pixtral-12b-2409`) | Opcional |
+
+> [!IMPORTANT]
+> Los nombres de arriba son los que realmente lee `src/lib/ai/providers.ts` — son los mismos que `.env.example`. Los modelos gratuitos cambian con frecuencia por parte de cada proveedor; si un default deja de funcionar, sobrescríbelo con la variable `*_MODEL`/`OPENROUTER_FREE_MODELS` correspondiente sin tocar código.
 
 ---
 

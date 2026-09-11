@@ -36,8 +36,23 @@ function isCoolingDown(id: string, now: number): boolean {
   return cd !== undefined && cd.until > now
 }
 
-function registerFailure(id: string, retryAfterMs: number | undefined, now: number): void {
+const SCHEMA_FAILURE_COOLDOWN_MS = 5_000
+
+function registerFailure(id: string, code: string, retryAfterMs: number | undefined, now: number): void {
   const existing = cooldowns.get(id)
+
+  if (code === 'invalid_schema_output') {
+    // A bad-schema response is very likely this request's input (a blurry
+    // photo, an unreadable table), not the provider being down — the
+    // shared-across-all-users escalating backoff below would let one
+    // user's bad image knock a provider out for up to 15 minutes for
+    // everyone else too (found by /code-review). Give it a short breather
+    // instead, and don't touch `failureCount` so a real outage's backoff
+    // (429/5xx/timeout) isn't diluted by an unrelated bad image.
+    cooldowns.set(id, { until: now + SCHEMA_FAILURE_COOLDOWN_MS, failureCount: existing?.failureCount ?? 0 })
+    return
+  }
+
   const failureCount = (existing?.failureCount ?? 0) + 1
   const backoff = Math.min(MAX_COOLDOWN_MS, BASE_COOLDOWN_MS * 2 ** (failureCount - 1))
   const duration =
@@ -175,11 +190,16 @@ export async function extractSchedule(
     try {
       const courses = await callProvider(provider, input)
       registerSuccess(provider.id)
-      return { ok: true, courses, provider: provider.id, model: provider.modelId, attempts }
+      // Public-facing field: `provider.label`, never `provider.id` — for
+      // OpenRouter, `id` embeds the exact free-model slug for per-model
+      // cooldown tracking, which the UI badge must never show (found by
+      // /code-review: it was leaking things like
+      // "openrouter:google/gemma-3-27b-it:free" straight into the badge).
+      return { ok: true, courses, provider: provider.label, model: provider.modelId, attempts }
     } catch (error) {
       const { code, retryAfterMs } = classifyError(error)
       attempts.push({ provider: provider.id, error: code })
-      registerFailure(provider.id, retryAfterMs, Date.now())
+      registerFailure(provider.id, code, retryAfterMs, Date.now())
     }
   }
 
