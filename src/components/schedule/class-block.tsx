@@ -45,6 +45,11 @@ export function ClassBlock({
 
   const isCompact = heightPx < 50
   const isVeryCompact = heightPx < 38
+  // A lane shared with another overlapping block (plan H2 packing) only
+  // gets ~50%/33%/... of the column's width — room+professor icons and
+  // text sliced down to 1-2 characters there read as broken, not compact,
+  // so drop the footer row entirely rather than truncate it further.
+  const isNarrow = laneCount > 1
 
   return (
     <button
@@ -69,12 +74,19 @@ export function ClassBlock({
       )}
     >
       <div className="flex flex-col h-full justify-between overflow-hidden">
-        {/* Header: Code & Time */}
-        <div className="flex items-center justify-between gap-1 leading-tight">
-          <span className="font-bold text-[11px] truncate tracking-tight text-foreground">
+        {/* Header: Code & Time. Narrow lanes stack instead of sharing one
+            row — "ESTDAT" + "14:00" side by side has nowhere to truncate
+            gracefully at 50%/33% column width. */}
+        <div
+          className={cn(
+            'min-w-0 leading-tight',
+            isNarrow ? 'flex flex-col items-start' : 'flex items-center justify-between gap-1'
+          )}
+        >
+          <span className="w-full font-bold text-[11px] truncate tracking-tight text-foreground">
             {course.code}
           </span>
-          <span className="text-[10px] opacity-80 shrink-0 font-medium font-mono text-foreground">
+          <span className="shrink-0 font-medium font-mono text-[10px] text-foreground opacity-80">
             {startStr}
           </span>
         </div>
@@ -92,7 +104,7 @@ export function ClassBlock({
         )}
 
         {/* Footer info: Room & Professor */}
-        {!isCompact && heightPx >= 68 && (
+        {!isCompact && !isNarrow && heightPx >= 68 && (
           <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground pt-1 border-t border-current/15 mt-auto">
             {schedule.room ? (
               <span className="flex items-center gap-0.5 truncate font-medium text-foreground">
