@@ -44,3 +44,26 @@ export async function registerAndLogin(
 
   return user
 }
+
+/**
+ * Creates a basic course via UI for tests that require existing courses.
+ */
+export async function createTestCourse(
+  page: Page,
+  name: string = 'Cálculo Diferencial',
+  code: string = 'MAT101'
+): Promise<void> {
+  await page.goto('/courses')
+  await page.waitForLoadState('domcontentloaded')
+
+  const createBtn = page.getByRole('button', { name: 'Nueva Materia' })
+  await createBtn.click()
+
+  await page.locator('#code').fill(code)
+  await page.locator('#name').fill(name)
+
+  const submitBtn = page.getByRole('button', { name: 'Crear Materia' })
+  await submitBtn.click()
+
+  await page.getByText(name).first().waitFor({ state: 'visible', timeout: 10_000 })
+}
