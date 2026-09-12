@@ -223,4 +223,4 @@ del resultado.
 
 ## BASE_TESTS
 
-(se llena tras el commit del contrato)
+45b6560
