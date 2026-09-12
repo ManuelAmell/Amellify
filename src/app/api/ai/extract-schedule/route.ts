@@ -25,13 +25,17 @@ import { checkRateLimit } from '@/lib/rate-limit'
  *   API keys or raw provider error bodies.
  */
 
+import {
+  isAllowedFileDataUrl,
+  isPdfDataUrl,
+  maxBodyBytesFor,
+  MAX_PDF_BODY_BYTES,
+} from '@/lib/ai/validation'
+
 const logger = pino({ name: 'ai-extract-schedule' })
 
-const MAX_BODY_BYTES = 6 * 1024 * 1024
 const MAX_IMAGES = 5
 const MAX_TEXT_LENGTH = 20_000
-const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
-const DATA_URL_PATTERN = /^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=]+)$/
 
 const requestSchema = z
   .object({
@@ -42,13 +46,6 @@ const requestSchema = z
     (body) => (body.images && body.images.length > 0) || Boolean(body.text?.trim()),
     { message: 'Envía al menos una imagen o texto para analizar.' }
   )
-
-function isAllowedImageDataUrl(dataUrl: string): boolean {
-  const match = DATA_URL_PATTERN.exec(dataUrl)
-  if (!match) return false
-  const mime = match[1]?.toLowerCase()
-  return mime !== undefined && ALLOWED_IMAGE_MIME_TYPES.has(mime)
-}
 
 export async function POST(request: NextRequest) {
   const user = await getApiUser()
@@ -69,8 +66,8 @@ export async function POST(request: NextRequest) {
   }
 
   const contentLength = request.headers.get('content-length')
-  if (contentLength && Number(contentLength) > MAX_BODY_BYTES) {
-    return NextResponse.json({ error: 'La solicitud supera el límite de 6 MB.' }, { status: 413 })
+  if (contentLength && Number(contentLength) > MAX_PDF_BODY_BYTES) {
+    return NextResponse.json({ error: 'La solicitud supera el límite de 15 MB.' }, { status: 413 })
   }
 
   let rawText: string
@@ -80,8 +77,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No se pudo leer el cuerpo de la solicitud.' }, { status: 400 })
   }
 
-  if (new TextEncoder().encode(rawText).length > MAX_BODY_BYTES) {
-    return NextResponse.json({ error: 'La solicitud supera el límite de 6 MB.' }, { status: 413 })
+  const rawBytes = new TextEncoder().encode(rawText).length
+  if (rawBytes > MAX_PDF_BODY_BYTES) {
+    return NextResponse.json({ error: 'La solicitud supera el límite de 15 MB.' }, { status: 413 })
   }
 
   let rawBody: unknown
@@ -102,22 +100,31 @@ export async function POST(request: NextRequest) {
   const { images = [], text } = parsed.data
 
   for (const image of images) {
-    if (!isAllowedImageDataUrl(image)) {
+    if (!isAllowedFileDataUrl(image)) {
       return NextResponse.json(
-        { error: 'Formato de imagen no permitido. Usa PNG, JPEG o WebP.' },
+        { error: 'Formato de archivo no permitido. Usa PNG, JPEG, WebP o PDF.' },
         { status: 415 }
       )
     }
   }
 
+  const maxAllowedBytes = maxBodyBytesFor(images)
+  if (rawBytes > maxAllowedBytes) {
+    return NextResponse.json({ error: 'La solicitud supera el límite de 6 MB.' }, { status: 413 })
+  }
+
+  const hasPdf = images.some((img) => isPdfDataUrl(img))
   const result = await extractSchedule({ images, text })
 
   if (!result.ok) {
     logger.warn({ userId: user.id, attempts: result.attempts }, 'ai_extract_schedule_exhausted')
+    const errorMessage =
+      hasPdf && result.attempts.length === 0
+        ? 'No hay un proveedor de IA con soporte de PDF configurado en el servidor.'
+        : 'No fue posible analizar el horario en este momento (ningún proveedor de IA disponible respondió). Intenta de nuevo más tarde.'
     return NextResponse.json(
       {
-        error:
-          'No fue posible analizar el horario en este momento (ningún proveedor de IA disponible respondió). Intenta de nuevo más tarde.',
+        error: errorMessage,
         attempts: result.attempts,
       },
       { status: 503 }

@@ -120,10 +120,13 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
 
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
-  // Process a selected or dropped/pasted image file
+  // Process a selected or dropped/pasted image or PDF file
   const processImageFile = async (file: File | Blob) => {
-    if (!file.type.startsWith('image/')) {
-      toast.error('Solo se permiten archivos de imagen (PNG, JPEG, WebP)')
+    const isPdf = file.type === 'application/pdf'
+    const isImage = file.type.startsWith('image/')
+
+    if (!isImage && !isPdf) {
+      toast.error('Solo se permiten archivos de imagen (PNG, JPG, WebP) o documentos PDF')
       return
     }
 
@@ -131,16 +134,37 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
       if (file instanceof File) {
         setSelectedFile(file)
       } else {
-        setSelectedFile(new File([file], 'imagen_pegada.jpg', { type: 'image/jpeg' }))
+        setSelectedFile(
+          new File([file], isPdf ? 'documento.pdf' : 'imagen_pegada.jpg', {
+            type: file.type || 'image/jpeg',
+          })
+        )
       }
 
-      // Resize client-side to max 1600px JPEG 0.85
-      const resized = await resizeImageToJpeg(file, 1600, 0.85)
-      setImageDataUrl(resized)
+      if (isPdf) {
+        // Enforce 8 MB client-side raw size limit for PDFs
+        if ('size' in file && file.size > 8 * 1024 * 1024) {
+          toast.error('El archivo PDF supera el límite de 8 MB')
+          return
+        }
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = () => reject(new Error('No se pudo leer el archivo PDF'))
+          reader.readAsDataURL(file)
+        })
+        setImageDataUrl(dataUrl)
+      } else {
+        // Resize client-side to max 1600px JPEG 0.85
+        const resized = await resizeImageToJpeg(file, 1600, 0.85)
+        setImageDataUrl(resized)
+      }
+
       setExtractedCourses([])
       setAiProvider(null)
-    } catch (err: any) {
-      toast.error('Error al procesar la imagen: ' + (err.message || 'formato no soportado'))
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'formato no soportado'
+      toast.error('Error al procesar el archivo: ' + message)
     }
   }
 
@@ -155,11 +179,15 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
       for (let i = 0; i < items.length; i++) {
         const item = items[i]
         if (!item) continue
-        if (item.type.startsWith('image/')) {
+        if (item.type.startsWith('image/') || item.type === 'application/pdf') {
           const blob = item.getAsFile()
           if (blob) {
             processImageFile(blob)
-            toast.success('Imagen pegada desde el portapapeles')
+            toast.success(
+              item.type === 'application/pdf'
+                ? 'PDF pegado desde el portapapeles'
+                : 'Imagen pegada desde el portapapeles'
+            )
             break
           }
         }
@@ -192,7 +220,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
   // Analyze schedule with server-side AI cascade
   const handleAnalyze = async () => {
     if (!imageDataUrl) {
-      toast.error('Selecciona, arrastra o pega una imagen primero')
+      toast.error('Selecciona, arrastra o pega una imagen o PDF primero')
       return
     }
 
@@ -212,7 +240,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'No fue posible analizar la imagen con IA')
+        throw new Error(data.error || 'No fue posible analizar el archivo con IA')
       }
 
       if (data.courses && Array.isArray(data.courses)) {
@@ -401,7 +429,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
             Importar Horario con Inteligencia Artificial
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
-            Sube, arrastra o pega (Ctrl+V) una captura de tu horario institucional. La IA extraerá
+            Sube, arrastra o pega (Ctrl+V) una captura o PDF de tu horario institucional. La IA extraerá
             materias, salones y horarios para que los revises y edites antes de guardar.
           </DialogDescription>
         </DialogHeader>
@@ -411,7 +439,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
           <div
             role="button"
             tabIndex={0}
-            aria-label="Subir, arrastrar o pegar imagen del horario"
+            aria-label="Subir, arrastrar o pegar imagen o PDF del horario"
             onClick={() => fileInputRef.current?.click()}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -436,7 +464,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
                 const file = e.target.files?.[0]
                 if (file) processImageFile(file)
               }}
-              accept="image/png, image/jpeg, image/webp"
+              accept="image/png, image/jpeg, image/webp, application/pdf"
               className="hidden"
             />
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary mx-auto">
@@ -446,10 +474,10 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
               <p className="text-sm font-semibold text-foreground">
                 {selectedFile
                   ? selectedFile.name
-                  : 'Arrastra tu imagen aquí, pega con Ctrl+V o haz clic'}
+                  : 'Arrastra tu archivo aquí, pega con Ctrl+V o haz clic'}
               </p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Formatos soportados: PNG, JPG, WebP. Se optimiza en tu navegador antes de enviar.
+                Formatos soportados: PNG, JPG, WebP, PDF. Se optimiza en tu navegador antes de enviar.
               </p>
             </div>
           </div>
@@ -487,7 +515,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Analizar Imagen
+                  Analizar Horario
                 </>
               )}
             </Button>

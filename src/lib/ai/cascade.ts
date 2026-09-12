@@ -97,18 +97,12 @@ function classifyError(error: unknown): { code: string; retryAfterMs?: number } 
   return { code: 'unknown_error' }
 }
 
+import { isPdfDataUrl, parseDataUrl } from './validation'
+
 export interface ExtractScheduleInput {
   /** Data URLs (`data:image/png;base64,...`), already MIME-validated by the caller. */
   images?: string[]
   text?: string
-}
-
-const DATA_URL_PATTERN = /^data:([a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+);base64,([a-zA-Z0-9+/=]+)$/
-
-function parseDataUrl(dataUrl: string): { mediaType: string; data: string } | null {
-  const match = DATA_URL_PATTERN.exec(dataUrl.trim())
-  if (!match || !match[1] || !match[2]) return null
-  return { mediaType: match[1], data: match[2] }
 }
 
 function buildUserContent(input: ExtractScheduleInput): UserContent {
@@ -145,6 +139,12 @@ async function callProvider(
     schema: extractedScheduleResponseSchema,
     instructions: SYSTEM_PROMPT,
     messages,
+    providerOptions: {
+      groq: { strictJsonSchema: false },
+      openrouter: { strictJsonSchema: false },
+      mistral: { strictJsonSchema: false },
+      'ai-gateway': { strictJsonSchema: false },
+    },
     abortSignal: AbortSignal.timeout(TIMEOUT_MS),
   })
 
@@ -191,8 +191,16 @@ export async function extractSchedule(
   input: ExtractScheduleInput,
   deps: ExtractScheduleDeps = {}
 ): Promise<ExtractScheduleResult> {
-  const providers = deps.providers ?? getActiveProviders()
+  let providers = deps.providers ?? getActiveProviders()
   const attempts: ExtractScheduleAttempt[] = []
+
+  const hasPdf = (input.images ?? []).some((image) => isPdfDataUrl(image))
+  if (hasPdf) {
+    providers = providers.filter((p) => p.supportsPdf)
+    if (providers.length === 0) {
+      return { ok: false, attempts: [] }
+    }
+  }
 
   for (const provider of providers) {
     const now = Date.now()

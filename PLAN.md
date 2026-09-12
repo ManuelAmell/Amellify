@@ -26,7 +26,7 @@ Permitir subir un PDF (además de fotos/capturas) al escáner de horarios, envi�
 
 - [x] Escribir los tests de `tests/unit/ai-validation.test.ts` (6, no 4 — cobertura más completa de lo mínimo)
 - [x] Escribir los 3 tests nuevos en `tests/unit/ai-cascade.test.ts`
-- [ ] (Antigravity, primer paso) Crear el andamiaje exacto de "Rojo esperado" en `src/lib/ai/validation.ts` y el campo `supportsPdf` en `providers.ts`
+- [x] (Antigravity, primer paso) Crear el andamiaje exacto de "Rojo esperado" en `src/lib/ai/validation.ts` y el campo `supportsPdf` en `providers.ts`
 - [x] Commit del contrato con el SHA en BASE_TESTS (rojo documentado como excepción — ver "Rojo esperado")
 - [x] Delegar a Antigravity vía `/implementar`
 
@@ -186,10 +186,10 @@ sistemáticamente al generar el horario estructurado.
 
 ## Checklist
 
-- [ ] `src/lib/ai/schema.ts`: cambiar el campo `email` según arriba
-- [ ] `src/lib/ai/cascade.ts`: agregar `providerOptions` a la llamada de
+- [x] `src/lib/ai/schema.ts`: cambiar el campo `email` según arriba
+- [x] `src/lib/ai/cascade.ts`: agregar `providerOptions` a la llamada de
       `generateObject` en `callProvider`
-- [ ] `src/lib/ai/providers.ts`: actualizar el default de
+- [x] `src/lib/ai/providers.ts`: actualizar el default de
       `OPENROUTER_FREE_MODELS`
 - [x] Escribir `tests/unit/ai-schema.test.ts` (nuevo)
 - [x] Escribir `tests/unit/ai-providers.test.ts` (nuevo)
@@ -197,7 +197,7 @@ sistemáticamente al generar el horario estructurado.
 - [x] Confirmar rojo válido (falla por aserción, no por import/módulo
       inexistente — no hace falta andamiaje en `src/` para esta tarea)
 - [x] Commit del contrato con el SHA en BASE_TESTS_2
-- [ ] Delegar a Antigravity vía `/implementar`
+- [x] Delegar a Antigravity vía `/implementar`
 
 ## Rojo esperado
 

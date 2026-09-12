@@ -23,7 +23,7 @@ export const extractedCourseSchema = z.object({
   code: z.string().min(1).max(16),
   name: z.string().min(1).max(200),
   professor: z.string().max(200).default(''),
-  email: z.string().email().or(z.literal('')).default(''),
+  email: z.string().email().nullable().optional().transform((v) => v ?? ''),
   faculty: z.string().max(200).default(''),
   semester: z.string().max(20).default(''),
   credits: z.number().int().min(0).max(12).default(3),
