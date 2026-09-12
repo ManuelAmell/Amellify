@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import pino from 'pino'
 import { z } from 'zod'
 import { getApiUser } from '@/lib/auth/session'
-import { extractSchedule } from '@/lib/ai/cascade'
+import { extractSchedule, selectFailureMessage } from '@/lib/ai/cascade'
 import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
@@ -118,10 +118,7 @@ export async function POST(request: NextRequest) {
 
   if (!result.ok) {
     logger.warn({ userId: user.id, attempts: result.attempts }, 'ai_extract_schedule_exhausted')
-    const errorMessage =
-      hasPdf && result.attempts.length === 0
-        ? 'No hay un proveedor de IA con soporte de PDF configurado en el servidor.'
-        : 'No fue posible analizar el horario en este momento (ningún proveedor de IA disponible respondió). Intenta de nuevo más tarde.'
+    const errorMessage = selectFailureMessage(hasPdf, result.attempts)
     return NextResponse.json(
       {
         error: errorMessage,

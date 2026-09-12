@@ -8,5 +8,5 @@ export default async function SettingsPage() {
   const profile = profileRes.ok ? profileRes.data : null
   const courses = coursesRes.ok ? coursesRes.data : []
 
-  return <SettingsView profile={profile as any} courses={courses} />
+  return <SettingsView profile={profile} courses={courses} />
 }

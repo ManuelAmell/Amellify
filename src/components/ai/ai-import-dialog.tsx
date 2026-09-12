@@ -23,9 +23,7 @@ import {
 import {
   Sparkles,
   Upload,
-  Image as ImageIcon,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   Trash2,
   Plus,
@@ -35,6 +33,7 @@ import { createCourse } from '@/lib/actions/courses'
 import { DAYS_OF_WEEK } from '@/lib/utils/time'
 import { SUBJECT_COLOR_CLASSES, SUBJECT_COLORS, SUBJECT_COLOR_LABELS } from '@/config/subject-colors'
 import type { DayOfWeek, SubjectColor } from '@/types/database'
+import type { ExtractedCourse } from '@/lib/ai/schema'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -247,7 +246,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
         setAiProvider(data.provider || 'IA')
 
         // Transform into editable local state
-        const editable: EditableCourse[] = data.courses.map((c: any, index: number) => ({
+        const editable: EditableCourse[] = (data.courses as ExtractedCourse[]).map((c, index: number) => ({
           id: `extracted-${index}-${Date.now()}`,
           code: c.code || `MAT-${index + 1}`,
           name: c.name || 'Materia sin nombre',
@@ -256,10 +255,10 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
           semester: c.semester || '',
           credits: typeof c.credits === 'number' ? c.credits : 3,
           color: (c.color as SubjectColor) || SUBJECT_COLORS[index % SUBJECT_COLORS.length],
-          schedules: (c.schedules || []).map((s: any) => ({
+          schedules: (c.schedules || []).map((s) => ({
             day: (s.day as DayOfWeek) || 'Lunes',
-            start_time: s.startTime || s.start_time || '08:00',
-            end_time: s.endTime || s.end_time || '10:00',
+            start_time: s.startTime || '08:00',
+            end_time: s.endTime || '10:00',
             room: s.room || '',
           })),
         }))
@@ -269,15 +268,20 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
       } else {
         throw new Error('Formato de respuesta inesperado del analizador')
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error durante la extracción')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error durante la extracción'
+      toast.error(message)
     } finally {
       setAnalyzing(false)
     }
   }
 
   // Edit course fields
-  const handleUpdateCourse = (id: string, field: keyof EditableCourse, value: any) => {
+  const handleUpdateCourse = <K extends keyof EditableCourse>(
+    id: string,
+    field: K,
+    value: EditableCourse[K]
+  ) => {
     setExtractedCourses((prev) =>
       prev.map((c) => (c.id === id ? { ...c, [field]: value } : c))
     )
@@ -413,8 +417,9 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
         setImageDataUrl(null)
         setAiProvider(null)
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar las materias importadas')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al guardar las materias importadas'
+      toast.error(message)
     } finally {
       setImporting(false)
     }
@@ -544,7 +549,7 @@ export function AIImportDialog({ open, onOpenChange }: AIImportDialogProps) {
               </div>
 
               <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
-                {extractedCourses.map((c, courseIdx) => {
+                {extractedCourses.map((c) => {
                   const colorCls = SUBJECT_COLOR_CLASSES[c.color] || 'subject-blue'
 
                   return (

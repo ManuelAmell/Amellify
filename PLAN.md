@@ -139,10 +139,10 @@ warnings de lint preexistentes.
       warnings existentes)
 - [x] Confirmar rojo válido en `pnpm run verify` (unit) y documentar el
       estado de los e2e nuevos (no corren dentro de `verify`)
-- [ ] (Antigravity) generar los iconos, ajustar manifest/layout
-- [ ] (Antigravity) separar timeout de PDF + `selectFailureMessage`
-- [ ] (Antigravity) limpiar los 59 warnings preservando comportamiento
-- [ ] (Antigravity) poner en verde `pnpm test:e2e` para los 3 specs nuevos
+- [x] (Antigravity) generar los iconos, ajustar manifest/layout
+- [x] (Antigravity) separar timeout de PDF + `selectFailureMessage`
+- [x] (Antigravity) limpiar los 59 warnings preservando comportamiento
+- [x] (Antigravity) poner en verde `pnpm test:e2e` para los 3 specs nuevos
 - [x] Commit del contrato con el SHA en BASE_TESTS
 - [x] Delegar a Antigravity vía `/implementar`
 

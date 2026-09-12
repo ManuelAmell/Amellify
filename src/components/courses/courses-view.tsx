@@ -30,7 +30,6 @@ import {
   Search,
   BookOpen,
   User,
-  Clock,
   MapPin,
   Copy,
   Edit2,
@@ -70,9 +69,11 @@ export function CoursesView({ initialCourses, timeFormat24h = true }: CoursesVie
   // Highlighted course from deep-link
   const [highlightedId, setHighlightedId] = React.useState<string | null>(null)
 
-  React.useEffect(() => {
+  const [prevInitialCourses, setPrevInitialCourses] = React.useState(initialCourses)
+  if (initialCourses !== prevInitialCourses) {
+    setPrevInitialCourses(initialCourses)
     setCourses(initialCourses)
-  }, [initialCourses])
+  }
 
   // Handle deep link ?course=id on mount / param change
   React.useEffect(() => {
@@ -80,17 +81,18 @@ export function CoursesView({ initialCourses, timeFormat24h = true }: CoursesVie
 
     const matched = courses.find((c) => c.id === deepLinkCourseId)
     if (matched) {
-      setHighlightedId(matched.id)
-      setSelectedCourse(matched)
-      setDialogOpen(true)
+      const timer = setTimeout(() => {
+        setHighlightedId(matched.id)
+        setSelectedCourse(matched)
+        setDialogOpen(true)
 
-      // Smooth scroll to card
-      setTimeout(() => {
+        // Smooth scroll to card
         const el = document.getElementById(`course-card-${matched.id}`)
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }
-      }, 300)
+      }, 0)
+      return () => clearTimeout(timer)
     }
   }, [deepLinkCourseId, courses])
 
@@ -135,8 +137,9 @@ export function CoursesView({ initialCourses, timeFormat24h = true }: CoursesVie
 
       setCourses((prev) => [res.data, ...prev])
       toast.success('Materia duplicada con éxito')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al duplicar la materia')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al duplicar la materia'
+      toast.error(message)
     } finally {
       setIsDuplicating(null)
     }
@@ -168,9 +171,10 @@ export function CoursesView({ initialCourses, timeFormat24h = true }: CoursesVie
         return
       }
       toast.success(`Materia "${targetCourse.name}" eliminada`)
-    } catch (err: any) {
+    } catch (err) {
       setCourses(previousCourses)
-      toast.error(err.message || 'Error al eliminar la materia')
+      const message = err instanceof Error ? err.message : 'Error al eliminar la materia'
+      toast.error(message)
     } finally {
       setIsDeleting(false)
     }

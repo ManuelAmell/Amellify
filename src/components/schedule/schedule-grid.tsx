@@ -41,7 +41,7 @@ export function ScheduleGrid({
     start_time?: string
     end_time?: string
   }>({})
-  const [includeWeekends, setIncludeWeekends] = React.useState(false)
+  const [userIncludeWeekends, setUserIncludeWeekends] = React.useState<boolean | null>(null)
   const [mobileView, setMobileView] = React.useState<'day' | 'week'>('day')
 
   // Detect current day in user timezone
@@ -51,15 +51,14 @@ export function ScheduleGrid({
   }, [timezone])
 
   // Automatically show weekends if active courses exist on Saturday or Sunday
-  React.useEffect(() => {
-    const hasWeekendClasses = courses.some((c) =>
+  const hasWeekendClasses = React.useMemo(() => {
+    return courses.some((c) =>
       c.status === 'active' &&
       c.schedules.some((s) => s.day === 'Sábado' || s.day === 'Domingo')
     )
-    if (hasWeekendClasses) {
-      setIncludeWeekends(true)
-    }
   }, [courses])
+
+  const includeWeekends = userIncludeWeekends ?? hasWeekendClasses
 
   // Determine active visible days
   const activeDays: DayOfWeek[] = React.useMemo(() => {
@@ -282,7 +281,7 @@ export function ScheduleGrid({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIncludeWeekends(!includeWeekends)}
+            onClick={() => setUserIncludeWeekends(!includeWeekends)}
             className="h-8 text-xs cursor-pointer"
           >
             {includeWeekends ? 'Ocultar Fines de Semana' : 'Mostrar Fines de Semana'}

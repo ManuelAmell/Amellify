@@ -2,10 +2,9 @@
 
 import * as React from 'react'
 import type { CourseWithDetails, SubjectColor } from '@/types/database'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -24,7 +23,6 @@ import {
   CheckCircle2,
   Target,
   AlertCircle,
-  Sparkles,
   RotateCcw,
 } from 'lucide-react'
 import {
@@ -99,13 +97,12 @@ export function CalculatorView({
     []
   )
 
+  if (!selectedCourseId && courses.length > 0 && courses[0]) {
+    setSelectedCourseId(courses[0].id)
+  }
+
   // Handle course switching while preserving dirty drafts (Bug H14 fix)
   React.useEffect(() => {
-    if (!selectedCourseId && courses.length > 0 && courses[0]) {
-      setSelectedCourseId(courses[0].id)
-      return
-    }
-
     const prevId = prevCourseIdRef.current
     if (prevId !== selectedCourseId) {
       // No need to save `partials` into `draftsRef.current[prevId]` here:
@@ -260,8 +257,9 @@ export function CalculatorView({
       setIsDirty(false)
       draftsRef.current[selectedCourseId] = partials
       toast.success('Notas guardadas en la nube correctamente')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar notas')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al guardar notas'
+      toast.error(message)
     } finally {
       setSaving(false)
     }

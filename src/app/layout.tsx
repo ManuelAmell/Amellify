@@ -44,12 +44,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: '/icons/icon.svg',
-    // TODO(fase-3-pulido): generar PNG reales 192/512 + apple-touch-icon
-    // (180x180). No hay herramienta de rasterizado disponible en este
-    // entorno sin instalar una dependencia nueva; el SVG cubre `icon`/`any`
-    // y la mayoría de Android/desktop, pero iOS Safari's "Add to Home
-    // Screen" prefiere un PNG explícito en `apple`.
-    apple: '/icons/icon.svg',
+    apple: '/icons/apple-touch-icon.png',
   },
   appleWebApp: {
     capable: true,

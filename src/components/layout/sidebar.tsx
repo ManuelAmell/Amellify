@@ -20,30 +20,41 @@ function isActiveHref(pathname: string, href: string) {
  * panel floating over `<AmbientBackground/>` instead of a flat sidebar with
  * a hard border.
  */
+const storageListeners = new Set<() => void>()
+function subscribeStorage(callback: () => void) {
+  storageListeners.add(callback)
+  window.addEventListener('storage', callback)
+  return () => {
+    storageListeners.delete(callback)
+    window.removeEventListener('storage', callback)
+  }
+}
+function getCollapsedSnapshot(): boolean {
+  try {
+    return window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function getCollapsedServerSnapshot(): boolean {
+  return false
+}
+
+const emptySubscribe = () => () => {}
+
 export function Sidebar() {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = React.useState(false)
-  const [hydrated, setHydrated] = React.useState(false)
-
-  React.useEffect(() => {
-    try {
-      setCollapsed(window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1')
-    } catch {
-      // localStorage unavailable (private mode, etc.) — default to expanded.
-    }
-    setHydrated(true)
-  }, [])
+  const collapsed = React.useSyncExternalStore(subscribeStorage, getCollapsedSnapshot, getCollapsedServerSnapshot)
+  const hydrated = React.useSyncExternalStore(emptySubscribe, () => true, () => false)
 
   const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      const next = !prev
-      try {
-        window.localStorage.setItem(COLLAPSE_STORAGE_KEY, next ? '1' : '0')
-      } catch {
-        // ignore
-      }
-      return next
-    })
+    const next = !collapsed
+    try {
+      window.localStorage.setItem(COLLAPSE_STORAGE_KEY, next ? '1' : '0')
+      storageListeners.forEach((fn) => fn())
+    } catch {
+      // ignore
+    }
   }
 
   return (

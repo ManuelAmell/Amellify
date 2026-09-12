@@ -3,7 +3,7 @@
 import * as React from 'react'
 import type { CourseWithDetails, UserPreferences } from '@/types/database'
 import type { UserProfile } from '@/types/domain'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -58,7 +58,8 @@ interface SettingsViewProps {
   courses: CourseWithDetails[]
 }
 
-export function SettingsView({ profile, courses }: SettingsViewProps) {
+export function SettingsView({ profile, courses: _courses }: SettingsViewProps) {
+  const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [aiDialogOpen, setAiDialogOpen] = React.useState(false)
   const [savingProfile, setSavingProfile] = React.useState(false)
@@ -137,8 +138,9 @@ export function SettingsView({ profile, courses }: SettingsViewProps) {
       }
 
       toast.success('Perfil y configuración académica guardados con éxito')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar el perfil')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al guardar el perfil'
+      toast.error(message)
     } finally {
       setSavingProfile(false)
     }
@@ -160,8 +162,9 @@ export function SettingsView({ profile, courses }: SettingsViewProps) {
       }
 
       toast.success('Preferencias de visualización actualizadas')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar preferencias')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al guardar preferencias'
+      toast.error(message)
     } finally {
       setSavingPrefs(false)
     }
@@ -189,8 +192,9 @@ export function SettingsView({ profile, courses }: SettingsViewProps) {
       URL.revokeObjectURL(url)
 
       toast.success('Copia de seguridad descargada exitosamente en JSON')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al exportar datos')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al exportar datos'
+      toast.error(message)
     } finally {
       setIsExporting(false)
     }
@@ -222,8 +226,9 @@ export function SettingsView({ profile, courses }: SettingsViewProps) {
         toast.success(
           `¡Importación completada! ${res.data.imported} materias añadidas, ${res.data.skipped} omitidas por existir previamente.`
         )
-      } catch (err: any) {
-        toast.error(`Error al procesar el archivo: ${err.message}`)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Error desconocido'
+        toast.error(`Error al procesar el archivo: ${message}`)
       } finally {
         setTimeout(() => {
           setIsImporting(false)
@@ -276,8 +281,9 @@ export function SettingsView({ profile, courses }: SettingsViewProps) {
       setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
-    } catch (err: any) {
-      toast.error(err.message || 'Error al cambiar contraseña')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al cambiar contraseña'
+      toast.error(message)
     } finally {
       setChangingPassword(false)
     }
@@ -299,9 +305,10 @@ export function SettingsView({ profile, courses }: SettingsViewProps) {
       }
 
       toast.success('Cuenta eliminada. Hasta pronto.')
-      window.location.href = '/login'
-    } catch (err: any) {
-      toast.error(err.message || 'Error al eliminar la cuenta')
+      router.push('/login')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al eliminar la cuenta'
+      toast.error(message)
     } finally {
       setIsDeletingAccount(false)
     }
@@ -612,7 +619,7 @@ export function SettingsView({ profile, courses }: SettingsViewProps) {
                 <div className="w-36">
                   <Select
                     value={weekStartsOn}
-                    onValueChange={(val: any) => setWeekStartsOn(val)}
+                    onValueChange={(val) => setWeekStartsOn(val as 'monday' | 'sunday')}
                   >
                     <SelectTrigger className="h-8 text-xs glass-inset">
                       <SelectValue />

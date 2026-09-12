@@ -33,13 +33,14 @@ interface AvatarImageProps extends Omit<ImageProps, 'fill' | 'alt'> {
   fallback?: React.ReactNode
 }
 
-const AvatarImage = ({ className, fallback, onError, ...props }: AvatarImageProps) => {
+const AvatarImage = ({ className, fallback, onError, alt, ...props }: AvatarImageProps) => {
   const [errored, setErrored] = React.useState(false)
 
   if (errored) return <>{fallback}</>
 
   return (
     <Image
+      alt={alt}
       fill
       sizes="36px"
       className={cn('object-cover', className)}

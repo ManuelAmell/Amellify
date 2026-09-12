@@ -27,7 +27,6 @@ import {
   Plus,
   Trash2,
   Clock,
-  MapPin,
   AlertCircle,
   AlertTriangle,
   Check,
@@ -50,7 +49,6 @@ import type {
   CourseWithDetails,
   SubjectColor,
   DayOfWeek,
-  CourseStatus,
 } from '@/types/database'
 import { cn } from '@/lib/utils'
 
@@ -143,10 +141,10 @@ export function CourseDialog({
   defaultStartTime,
   defaultEndTime,
 }: CourseDialogProps) {
+  const [fetchedCourses, setFetchedCourses] = React.useState<CourseWithDetails[]>([])
+  const effectiveCourses = existingCourses ?? fetchedCourses
+
   const [loading, setLoading] = React.useState(false)
-  const [loadedCourses, setLoadedCourses] = React.useState<CourseWithDetails[]>(
-    existingCourses || []
-  )
 
   const form = useForm<CourseFormData>({
     resolver: zodResolver(courseFormSchema),
@@ -189,11 +187,9 @@ export function CourseDialog({
 
   // Load existing courses if not passed as prop
   React.useEffect(() => {
-    if (existingCourses) {
-      setLoadedCourses(existingCourses)
-    } else if (open) {
+    if (!existingCourses && open) {
       getCourses().then((res) => {
-        if (res.ok) setLoadedCourses(res.data)
+        if (res.ok) setFetchedCourses(res.data)
       })
     }
   }, [open, existingCourses])
@@ -277,7 +273,7 @@ export function CourseDialog({
       }
 
       // 2. Check external overlaps with other registered active courses (bug H12)
-      for (const course of loadedCourses) {
+      for (const course of effectiveCourses) {
         if (course.id === initialCourse?.id) continue
         if (course.status !== 'active') continue
         for (const s of course.schedules) {
@@ -296,7 +292,7 @@ export function CourseDialog({
 
       return conflicts
     },
-    [watchedSchedules, loadedCourses, initialCourse]
+    [watchedSchedules, effectiveCourses, initialCourse]
   )
 
   const onSubmit = async (data: CourseFormData) => {
@@ -348,8 +344,9 @@ export function CourseDialog({
       }
 
       onOpenChange(false)
-    } catch (err: any) {
-      toast.error(err.message || 'Error al guardar la materia')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Error al guardar la materia'
+      toast.error(message)
     } finally {
       setLoading(false)
     }
@@ -367,8 +364,9 @@ export function CourseDialog({
         }
         toast.success('Materia eliminada con éxito')
         onOpenChange(false)
-      } catch (err: any) {
-        toast.error(err.message || 'Error al eliminar')
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Error al eliminar'
+        toast.error(message)
       } finally {
         setLoading(false)
       }
