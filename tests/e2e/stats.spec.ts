@@ -1,25 +1,31 @@
 import { test, expect } from '@playwright/test'
-import { registerAndLogin, createTestCourse } from './helpers/auth'
+import { createTestCourse } from './helpers/auth'
+import { EMPTY_USER_STATE, MAIN_USER_STATE } from './global-setup'
 
 test.describe('Vista de Estadísticas', () => {
-  test('carga sin materias registradas sin romperse', async ({ page }) => {
-    await registerAndLogin(page)
+  test.describe('sin materias registradas', () => {
+    test.use({ storageState: EMPTY_USER_STATE })
 
-    await page.goto('/stats')
-    await page.waitForLoadState('domcontentloaded')
+    test('carga sin materias registradas sin romperse', async ({ page }) => {
+      await page.goto('/stats')
+      await page.waitForLoadState('domcontentloaded')
 
-    // No crash / no error boundary shown for the empty-state case.
-    await expect(page.locator('body')).toBeVisible()
-    await expect(page.getByText(/error/i)).not.toBeVisible()
+      // No crash / no error boundary shown for the empty-state case.
+      await expect(page.locator('body')).toBeVisible()
+      await expect(page.getByText(/error/i)).not.toBeVisible()
+    })
   })
 
-  test('muestra estadísticas después de crear una materia', async ({ page }) => {
-    await registerAndLogin(page)
-    await createTestCourse(page, 'Física Mecánica', 'FIS201')
+  test.describe('con materias registradas', () => {
+    test.use({ storageState: MAIN_USER_STATE })
 
-    await page.goto('/stats')
-    await page.waitForLoadState('domcontentloaded')
+    test('muestra estadísticas después de crear una materia', async ({ page }) => {
+      await createTestCourse(page, 'Estadística Aplicada', 'STAT201')
 
-    await expect(page.getByText('Física Mecánica')).toBeVisible()
+      await page.goto('/stats')
+      await page.waitForLoadState('domcontentloaded')
+
+      await expect(page.getByText('Estadística Aplicada')).toBeVisible()
+    })
   })
 })

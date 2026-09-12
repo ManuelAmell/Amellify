@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { test, expect } from '@playwright/test'
-import { registerAndLogin } from './helpers/auth'
+import { MAIN_USER_STATE } from './global-setup'
 
 const MOCK_EXTRACTION_RESPONSE = {
   courses: [
@@ -21,11 +21,11 @@ const MOCK_EXTRACTION_RESPONSE = {
 }
 
 test.describe('Importar Horario con IA', () => {
+  test.use({ storageState: MAIN_USER_STATE })
+
   test('sube una imagen, previsualiza lo extraído (mockeado) y lo guarda como materia', async ({
     page,
   }) => {
-    await registerAndLogin(page)
-
     // The AI cascade itself (Google/Groq/OpenRouter) is covered by
     // tests/unit/ai-cascade.test.ts - hitting a real free-tier provider
     // here would be slow, flaky and rate-limit-prone (confirmed live: it
@@ -68,8 +68,6 @@ test.describe('Importar Horario con IA', () => {
   })
 
   test('muestra un error y no rompe la UI cuando el backend responde 503', async ({ page }) => {
-    await registerAndLogin(page)
-
     await page.route('**/api/ai/extract-schedule', (route) =>
       route.fulfill({
         status: 503,

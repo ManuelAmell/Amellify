@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { registerAndLogin } from './helpers/auth'
+import { MAIN_USER_STATE } from './global-setup'
 
 test.describe('Gestión de Materias y Horarios', () => {
-  test('permite crear una nueva asignatura con bloques de horario', async ({ page }) => {
-    await registerAndLogin(page)
+  test.use({ storageState: MAIN_USER_STATE })
 
+  test('permite crear una nueva asignatura con bloques de horario', async ({ page }) => {
     // Navegar a la página de materias
     await page.goto('/courses')
     await page.waitForLoadState('domcontentloaded')
@@ -42,7 +42,6 @@ test.describe('Gestión de Materias y Horarios', () => {
   })
 
   test('permite buscar y filtrar materias existentes', async ({ page }) => {
-    await registerAndLogin(page)
     await page.goto('/courses')
     await page.waitForLoadState('domcontentloaded')
 

@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { registerAndLogin } from './helpers/auth'
+import { MAIN_USER_STATE } from './global-setup'
 
 test.describe('Exportación y Copias de Seguridad', () => {
-  test('permite exportar el horario a archivo de calendario .ics', async ({ page }) => {
-    await registerAndLogin(page)
+  test.use({ storageState: MAIN_USER_STATE })
 
+  test('permite exportar el horario a archivo de calendario .ics', async ({ page }) => {
     // Navegar a materias
     await page.goto('/courses')
     await page.waitForLoadState('domcontentloaded')
@@ -26,8 +26,6 @@ test.describe('Exportación y Copias de Seguridad', () => {
   })
 
   test('permite descargar copia de seguridad en JSON desde Ajustes', async ({ page }) => {
-    await registerAndLogin(page)
-
     // Navegar a Ajustes
     await page.goto('/settings')
     await page.waitForLoadState('domcontentloaded')

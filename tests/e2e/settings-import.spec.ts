@@ -1,13 +1,13 @@
 import path from 'node:path'
 import { test, expect } from '@playwright/test'
-import { registerAndLogin } from './helpers/auth'
+import { MAIN_USER_STATE } from './global-setup'
 
 test.describe('Restaurar datos desde copia de seguridad JSON', () => {
+  test.use({ storageState: MAIN_USER_STATE })
+
   test('importa una materia desde un backup JSON válido y la muestra en Materias', async ({
     page,
   }) => {
-    await registerAndLogin(page)
-
     await page.goto('/settings')
     await page.waitForLoadState('domcontentloaded')
     await page.getByRole('tab', { name: /Datos/i }).click()
@@ -23,8 +23,6 @@ test.describe('Restaurar datos desde copia de seguridad JSON', () => {
   })
 
   test('muestra un error y no crea nada cuando el JSON no cumple el schema', async ({ page }) => {
-    await registerAndLogin(page)
-
     await page.goto('/settings')
     await page.waitForLoadState('domcontentloaded')
     await page.getByRole('tab', { name: /Datos/i }).click()

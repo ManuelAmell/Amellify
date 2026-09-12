@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { registerAndLogin } from './helpers/auth'
+import { MAIN_USER_STATE } from './global-setup'
 
 test.describe('Ajustes y Cambio de Tema', () => {
-  test('permite cambiar entre tema claro y tema oscuro desde Ajustes', async ({ page }) => {
-    await registerAndLogin(page)
+  test.use({ storageState: MAIN_USER_STATE })
 
+  test('permite cambiar entre tema claro y tema oscuro desde Ajustes', async ({ page }) => {
     // Navegar a Ajustes
     await page.goto('/settings')
     await page.waitForLoadState('domcontentloaded')
