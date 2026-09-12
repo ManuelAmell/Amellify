@@ -20,12 +20,14 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['iPhone 14'] } },
   ],
   // In CI, the compose stack is brought up separately (see ci.yml) and this
-  // is skipped via PLAYWRIGHT_BASE_URL; locally it boots `next start` against
-  // whatever DATABASE_URL is already configured.
+  // is skipped via PLAYWRIGHT_BASE_URL; locally it boots the standalone
+  // server (next.config.ts sets `output: 'standalone'`, and `next start`
+  // doesn't work against that build at all) against whatever DATABASE_URL
+  // is already configured. Requires `pnpm build` to have run first.
   webServer: process.env.PLAYWRIGHT_BASE_URL
     ? undefined
     : {
-        command: 'pnpm start',
+        command: 'pnpm run start:standalone',
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,
