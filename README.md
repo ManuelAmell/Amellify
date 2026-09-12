@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ManuelAmell/Amellify/blob/v3/LICENSE"><img src="https://img.shields.io/badge/license-MIT-%230D9488?style=for-the-badge" alt="Licencia MIT"></a>
+  <a href="https://github.com/ManuelAmell/Amellify/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-%230D9488?style=for-the-badge" alt="Licencia MIT"></a>
   <img src="https://img.shields.io/badge/status-v3_active-%2322c55e?style=for-the-badge" alt="Estado: v3">
   <img src="https://img.shields.io/badge/framework-Next.js_16_Standalone-%23000000?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js 16">
   <img src="https://img.shields.io/badge/database-PostgreSQL_17_%2B_Drizzle-%23336791?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL 17">
@@ -92,7 +92,7 @@ La forma recomendada de ejecutar Amellify en cualquier VPS (Ubuntu, Debian, etc.
 
 ```bash
 # 1. Clonar el repositorio
-git clone -b v3 https://github.com/ManuelAmell/Amellify.git
+git clone https://github.com/ManuelAmell/Amellify.git
 cd Amellify
 
 # 2. Configurar el archivo .env
@@ -113,7 +113,7 @@ Para una guía detallada paso a paso, consulta la [**Guía Completa de Despliegu
 
 1. **Clonar e instalar dependencias:**
    ```bash
-   git clone -b v3 https://github.com/ManuelAmell/Amellify.git
+   git clone https://github.com/ManuelAmell/Amellify.git
    cd Amellify
    pnpm install
    ```
@@ -147,7 +147,7 @@ pnpm typecheck
 # Linter de código
 pnpm lint
 
-# Pruebas unitarias (60 tests)
+# Pruebas unitarias
 pnpm test
 
 # Pruebas E2E completas con Playwright

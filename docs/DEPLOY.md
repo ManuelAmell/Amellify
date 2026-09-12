@@ -50,7 +50,7 @@ sudo ufw enable
 Clona el repositorio oficial de Amellify y cambia al directorio del proyecto:
 
 ```bash
-git clone -b v3 https://github.com/ManuelAmell/Amellify.git
+git clone https://github.com/ManuelAmell/Amellify.git
 cd Amellify
 ```
 
@@ -95,12 +95,18 @@ nano .env
    ```
 
 4. **Credenciales de Base de Datos:**
-   Define una contraseña segura para PostgreSQL:
+   `.env.example` ya trae `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB`
+   con el valor `amellify` para los tres — cámbialos, sobre todo la
+   contraseña, antes de ir a producción:
    ```env
    POSTGRES_USER=amellify
    POSTGRES_PASSWORD=tu_password_super_seguro_aqui
    POSTGRES_DB=amellify
    ```
+   Estas tres variables **no las lee la aplicación** (`DATABASE_URL` sí,
+   pero `docker-compose.yml` la sobrescribe internamente apuntando al
+   servicio `db` con estos mismos valores) — solo las usa Docker Compose
+   para levantar Postgres y para el contenedor `backup`.
 
 5. **Correo para Notificaciones de SSL (`ACME_EMAIL`):**
    ```env
@@ -110,9 +116,14 @@ nano .env
 6. **Proveedores de IA para Extracción de Horarios (Opcional pero recomendado):**
    Consulta [docs/AI-PROVIDERS.md](AI-PROVIDERS.md) para obtener claves gratuitas de **Google AI Studio (Gemini)**, **Groq**, **OpenRouter** o **Mistral**:
    ```env
-   GEMINI_API_KEY=tu_api_key_de_gemini
+   GOOGLE_GENERATIVE_AI_API_KEY=tu_api_key_de_google_ai_studio
    GROQ_API_KEY=tu_api_key_de_groq
    ```
+   > [!IMPORTANT]
+   > La variable es `GOOGLE_GENERATIVE_AI_API_KEY`, no `GEMINI_API_KEY` — es
+   > el nombre exacto que lee `src/lib/ai/providers.ts`; cualquier otro
+   > nombre se ignora silenciosamente y ese proveedor simplemente no se
+   > activa (sin error visible).
 
 ---
 
@@ -209,7 +220,7 @@ Para actualizar Amellify a una nueva versión sin interrumpir tus datos:
 
 ```bash
 # 1. Obtener los últimos cambios de código
-git pull origin v3
+git pull origin main
 
 # 2. Reconstruir imágenes y reiniciar contenedores
 docker compose --profile proxy --profile backup up -d --build
