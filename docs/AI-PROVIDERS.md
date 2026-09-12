@@ -9,7 +9,7 @@ Para garantizar alta disponibilidad y cero costos operativos para los estudiante
 ## 🏗️ Cómo Funciona la Cascada (Cascade Fallback)
 
 ```
-        [ Imagen de Horario ]
+     [ Imagen o PDF de Horario ]
                  │
                  ▼
       ┌─────────────────────┐
@@ -37,11 +37,31 @@ Para garantizar alta disponibilidad y cero costos operativos para los estudiante
       └─────────────────────┘
 ```
 
+> [!IMPORTANT]
+> **Los PDF solo los procesa Google Gemini.** Groq, OpenRouter, Mistral y la
+> mayoría de gateways compatibles con OpenAI usan modelos de solo-visión,
+> no de documentos — si subes un PDF, la cascada salta directo a Google (o
+> a tu gateway propio, si lo configuraste) e ignora por completo al resto,
+> sin ni siquiera intentarlos. Si Google no está configurado, la
+> extracción de PDF falla de inmediato con un mensaje específico en vez de
+> recorrer proveedores que de todos modos no lo soportan. Las imágenes
+> (PNG/JPG/WebP) sí recorren la cascada completa.
+
 > [!TIP]
 > Solo necesitas configurar **al menos uno** de los proveedores. No es obligatorio tener todos activos, pero configurar dos o más garantiza tolerancia a fallos.
 
 > [!NOTE]
-> **Latencia en el peor caso:** cada proveedor tiene un timeout de 25s antes de pasar al siguiente (`src/lib/ai/cascade.ts`). Si configuras los 7 saltos posibles (gateway + Google + Groq + 3 modelos de OpenRouter + Mistral) y varios fallan en cadena, una sola petición puede tardar hasta ~3 minutos. Si pones un reverse proxy propio delante de Amellify (fuera del perfil `caddy` incluido, que no impone timeout), asegúrate de que su timeout de lectura sea de al menos 3-4 minutos, o reduce cuántos proveedores configuras.
+> **Latencia en el peor caso:** cada proveedor tiene un timeout de 25s para
+> imágenes, o 60s cuando el archivo es un PDF (`src/lib/ai/cascade.ts`) —
+> Google puede tardar bastante más en responder (incluso solo para
+> devolver un error de sobrecarga) cuando procesa un documento real de
+> varias páginas. Si configuras los 7 saltos posibles para imágenes
+> (gateway + Google + Groq + 3 modelos de OpenRouter + Mistral) y varios
+> fallan en cadena, una sola petición puede tardar hasta ~3 minutos. Si
+> pones un reverse proxy propio delante de Amellify (fuera del perfil
+> `caddy` incluido, que no impone timeout), asegúrate de que su timeout de
+> lectura sea de al menos 3-4 minutos, o reduce cuántos proveedores
+> configuras.
 
 ---
 
@@ -88,7 +108,7 @@ Groq ejecuta modelos de lenguaje en unidades de procesamiento de lenguaje (LPUs)
 OpenRouter agrega cientos de modelos de IA tras una API unificada compatible con OpenAI. Cuenta con modelos con el tag `:free`.
 
 - **Costo:** Acceso a modelos gratuitos de la comunidad y modelos premium bajo prepago.
-- **Modelos gratuitos que Amellify intenta por defecto, en orden** (cada uno es un salto independiente de la cascada, con su propio cooldown si falla): `google/gemma-3-27b-it:free`, `meta-llama/llama-3.2-11b-vision-instruct:free`, `qwen/qwen2.5-vl-32b-instruct:free`.
+- **Modelos gratuitos que Amellify intenta por defecto, en orden** (cada uno es un salto independiente de la cascada, con su propio cooldown si falla): `google/gemma-4-31b-it:free`, `google/gemma-4-26b-a4b-it:free`.
 - **Cómo obtener la clave:**
   1. Entra a [openrouter.ai](https://openrouter.ai/).
   2. Inicia sesión con Google, Discord o MetaMask.
@@ -98,8 +118,12 @@ OpenRouter agrega cientos de modelos de IA tras una API unificada compatible con
   ```env
   OPENROUTER_API_KEY=sk-or-v1-...
   # Opcional: reemplaza la lista de modelos por defecto (coma-separada, sin
-  # espacios) — la oferta ":free" de OpenRouter cambia con frecuencia.
-  # OPENROUTER_FREE_MODELS=google/gemma-3-27b-it:free,qwen/qwen2.5-vl-32b-instruct:free
+  # espacios) — la oferta ":free" de OpenRouter cambia con MUCHA frecuencia
+  # (varios de los defaults originales de este proyecto ya quedaron
+  # descontinuados una vez); si la extracción falla siempre en este
+  # proveedor, revisa qué modelos ":free" siguen vivos en
+  # openrouter.ai/models antes de asumir que es un bug.
+  # OPENROUTER_FREE_MODELS=google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free
   ```
 
 ---
@@ -151,7 +175,7 @@ Si prefieres máxima privacidad ejecutando modelos localmente en tu propio servi
 
 ## 🧪 Pruebas y Consejos para la Extracción de Horarios
 
-1. **Formatos soportados:** JPG, PNG, WebP y capturas de pantalla de portales universitarios (SIA, Banner, Academusoft, etc.).
+1. **Formatos soportados:** JPG, PNG, WebP y capturas de pantalla de portales universitarios (SIA, Banner, Academusoft, etc.), además de PDF (solo lo procesa Google, ver nota más arriba).
 2. **Recomendaciones para una buena lectura:**
    - Asegúrate de que los textos de horas (ej. `07:00 - 09:00`) y días de la semana sean legibles.
    - En dispositivos móviles, puedes tomar una fotografía directa o subir una captura de pantalla guardada.

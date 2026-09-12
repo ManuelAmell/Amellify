@@ -26,7 +26,7 @@
 - 🚀 **Arquitectura 100% Self-Hosted:** Migración completa fuera de BaaS hacia **PostgreSQL 17 nativo**, **Drizzle ORM** y **Better Auth**.
 - 🛡️ **Privacidad y Soberanía:** Tus horarios, calificaciones y notas residen en tu propia base de datos sin telemetría ni intermediarios.
 - 🎨 **Liquid Glass Design System:** Nueva interfaz fluida diseñada con **Tailwind CSS v4**, sombras translúcidas, desenfoque de fondo y soporte nativo para temas Claro, Oscuro y Tokyo Night.
-- 🤖 **Cascada de IA Multimodal (Free Tier):** Escáner de horarios con conmutación por fallo automática entre **Google Gemini 2.5 Flash**, **Groq (Llama 3.2 Vision)**, **OpenRouter**, **Mistral AI** o cualquier gateway compatible con OpenAI (ej. Ollama local).
+- 🤖 **Cascada de IA Multimodal (Free Tier):** Escáner de horarios (foto, captura o PDF) con conmutación por fallo automática entre **Google Gemini 2.5 Flash**, **Groq**, **OpenRouter**, **Mistral AI** o cualquier gateway compatible con OpenAI (ej. Ollama local) — ver [`docs/AI-PROVIDERS.md`](docs/AI-PROVIDERS.md) para el detalle de qué proveedor procesa qué formato.
 - 📱 **Progressive Web App (PWA) de Nueva Generación:** Impulsada por **Serwist** (`@serwist/next`), con caché offline para la interfaz base, fuentes, iconos y assets estáticos.
 - 🚢 **Despliegue en 1 Minuto con Docker Compose:** Incluye proxy inverso **Caddy** con HTTPS automático (compatible con subdominios `sslip.io` gratuitos) y contenedor de respaldo diario con retención de 14 días.
 
@@ -48,7 +48,7 @@
   <tr>
     <td width="50%">
       <h3>🤖 Extracción de Horarios con IA</h3>
-      <p>Sube una foto o captura de tu horario universitario y la IA extraerá código, asignatura, docente, salón y horarios con previsualización antes de guardar.</p>
+      <p>Sube una foto, captura o PDF de tu horario universitario y la IA extraerá código, asignatura, docente, salón y horarios con previsualización antes de guardar.</p>
     </td>
     <td width="50%">
       <h3>📱 Modo Offline & PWA</h3>
