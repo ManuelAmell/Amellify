@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "courses": [
+    {
+      "course": {
+        "code": "MAT101",
+        "name": "Cálculo Diferencial (restaurado)",
+        "professor": "",
+        "email": "",
+        "faculty": "",
+        "semester": "",
+        "credits": 3,
+        "color": "blue"
+      },
+      "schedules": [
+        {
+          "day": "Martes",
+          "startTime": "08:00",
+          "endTime": "10:00",
+          "room": "B2"
+        }
+      ],
+      "partials": []
+    }
+  ]
+}

@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { APICallError, NoObjectGeneratedError } from 'ai'
-import { extractSchedule, resetCooldowns } from '@/lib/ai/cascade'
+import { extractSchedule, resetCooldowns, selectFailureMessage } from '@/lib/ai/cascade'
 import type { AiProviderEntry } from '@/lib/ai/providers'
 
 const generateObjectMock = vi.fn()
@@ -34,6 +34,10 @@ function okResult(courses: unknown[] = []) {
 beforeEach(() => {
   generateObjectMock.mockReset()
   resetCooldowns()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 describe('extractSchedule', () => {
@@ -301,5 +305,70 @@ describe('extractSchedule', () => {
         'ai-gateway': { strictJsonSchema: false },
       })
     })
+  })
+
+  // Regression coverage for a real bug found by manually testing PDF
+  // extraction against the live Google API: a single attempt (no internal
+  // retries) took anywhere from 26s to 89s+ just to receive a 503 "high
+  // demand" error for this real 2-page document. The 25s timeout tuned for
+  // image extraction doesn't give a PDF a fair chance under normal load.
+  describe('per-request timeout depends on whether the input contains a PDF', () => {
+    it('uses the 25s image timeout when the input has no PDF', async () => {
+      const timeoutSpy = vi.spyOn(AbortSignal, 'timeout')
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      await extractSchedule(
+        { images: ['data:image/png;base64,AAAA'] },
+        { providers: [fakeProvider('a', true)] }
+      )
+
+      expect(timeoutSpy).toHaveBeenCalledWith(25_000)
+    })
+
+    it('uses a 60s timeout when the input contains a PDF', async () => {
+      const timeoutSpy = vi.spyOn(AbortSignal, 'timeout')
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      await extractSchedule(
+        { images: ['data:application/pdf;base64,AAAA'] },
+        { providers: [fakeProvider('google', true)] }
+      )
+
+      expect(timeoutSpy).toHaveBeenCalledWith(60_000)
+    })
+  })
+})
+
+// Regression coverage for the generic "ningún proveedor disponible
+// respondió" message shown even when Google (the sole PDF-capable
+// provider) failed with an explicitly retryable/overload code - confirmed
+// live against Google's API ("This model is currently experiencing high
+// demand", HTTP 503). Users uploading a PDF deserve a more actionable
+// message than the generic one in that specific case.
+describe('selectFailureMessage', () => {
+  const GENERIC_MESSAGE =
+    'No fue posible analizar el horario en este momento (ningún proveedor de IA disponible respondió). Intenta de nuevo más tarde.'
+  const NO_PDF_PROVIDER_MESSAGE =
+    'No hay un proveedor de IA con soporte de PDF configurado en el servidor.'
+  const PDF_OVERLOAD_MESSAGE =
+    'Google AI (el único proveedor con soporte de PDF) está temporalmente saturado. Intenta de nuevo en unos minutos.'
+
+  it('returns the "no PDF provider configured" message when a PDF was sent but nothing supports it', () => {
+    expect(selectFailureMessage(true, [])).toBe(NO_PDF_PROVIDER_MESSAGE)
+  })
+
+  it.each(['timeout', 'api_error_429', 'api_error_503'])(
+    'returns the PDF-overload message when the sole PDF attempt failed with the retryable code %s',
+    (code) => {
+      expect(selectFailureMessage(true, [{ provider: 'google', error: code }])).toBe(PDF_OVERLOAD_MESSAGE)
+    }
+  )
+
+  it('falls back to the generic message for a non-retryable PDF failure', () => {
+    expect(selectFailureMessage(true, [{ provider: 'google', error: 'unknown_error' }])).toBe(GENERIC_MESSAGE)
+  })
+
+  it('falls back to the generic message for any non-PDF failure, regardless of error code', () => {
+    expect(selectFailureMessage(false, [{ provider: 'groq', error: 'api_error_503' }])).toBe(GENERIC_MESSAGE)
   })
 })

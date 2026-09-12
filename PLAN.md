@@ -1,242 +1,226 @@
 ## Objetivo
 
-Permitir subir un PDF (además de fotos/capturas) al escáner de horarios, enviándolo exclusivamente a Google (único proveedor con soporte real de documentos) sin pasar por el resto de la cascada.
+Cerrar los 4 pendientes identificados para considerar el proyecto terminado:
+iconos PWA reales, resiliencia/mensajería del import de PDF, cobertura e2e
+faltante (import con IA, restaurar JSON, stats) y limpieza de los 59
+warnings de lint preexistentes.
 
 ## Decisiones de diseño
 
-- **Solo Google procesa PDF** (decisión del usuario): Groq/OpenRouter/Mistral usan modelos de solo-visión, no de documentos. Se añade `supportsPdf: boolean` a `AiProviderEntry` (`true` únicamente en la entrada de Google) y `cascade.ts` filtra la lista de proveedores ANTES de iterar cuando el input trae un PDF — los que no soportan PDF ni siquiera se intentan (no aparecen en `attempts`).
-- Si tras filtrar no queda ningún proveedor con soporte de PDF (Google no configurado), `extractSchedule` devuelve `{ ok:false, attempts: [] }` de inmediato — `route.ts` distingue este caso (`attempts.length === 0`) para dar un mensaje específico ("no hay un proveedor de IA con soporte de PDF configurado") en vez del genérico de "todos los proveedores fallaron".
-- **Límite de tamaño de 15 MB solo cuando el payload trae un PDF** (decisión del usuario); si es solo imágenes se mantiene el límite actual de 6 MB. Para no rechazar un PDF legítimo antes de poder inspeccionarlo, el primer chequeo de `Content-Length`/body crudo usa el techo alto (15 MB); tras parsear y detectar que NO hay PDF, se re-valida contra el límite de 6 MB.
-- **Extraigo la validación (allowlist de MIME + selección de límite por tipo) a un módulo nuevo y puro** `src/lib/ai/validation.ts`, importado tanto por `route.ts` como por `cascade.ts` — evita duplicar el regex de data-URL una tercera vez (ya hay uno parecido en `route.ts` y otro en `cascade.ts` desde la tarea anterior; con esta se consolida en un solo lugar) y permite testear la lógica sin invocar el Route Handler completo.
-- **NO renombro el campo `images` del contrato de la API** a algo como `files` — seguiría aceptando PDFs dentro del mismo array de data URLs; renombrar tocaría cliente, tests y schema sin beneficio real más allá de lo cosmético.
-- **NO agrego pdf.js ni convierto el PDF a imagen en el cliente** (rechazado explícitamente por el usuario) — el PDF viaja tal cual, como data URL, igual que una imagen.
-- **NO escribo un test de componente para `AIImportDialog`** — el cambio ahí es de UI (aceptar `application/pdf` en el dropzone, saltar el resize por `<canvas>` que no puede leer PDFs, leer el archivo directo con `FileReader`). La lógica de negocio real (qué proveedores se intentan, qué límite aplica) está cubierta en `validation.ts`/`cascade.ts`; lo visual lo verifica Antigravity con capturas en `.artifacts/verification/` porque esta tarea sí toca interfaz.
+**Iconos PWA**
+- `sharp` ya está resuelto transitivamente en `pnpm-lock.yaml` (dependencia
+  de la optimización de imágenes de Next.js) — lo agrego como
+  `devDependency` explícita en vez de depender de una transitiva no
+  declarada (frágil ante un futuro upgrade de Next), y lo uso solo en un
+  script de generación (`scripts/generate-pwa-icons.mjs`), nunca en
+  runtime — no infla el bundle de la app.
+- El script rasteriza `public/icons/icon.svg` → `icon-192.png` (192×192) y
+  `icon-512.png` (512×512), y `public/icons/icon-maskable.svg` →
+  `icon-512-maskable.png` (512×512, `purpose: maskable`) y
+  `apple-touch-icon.png` (180×180, convención de iOS). No agrego padding de
+  safe-zone a mano: el SVG maskable ya existe separado del normal
+  precisamente porque su arte ya está pensado para esa zona segura.
+- `manifest.ts` mantiene las entradas SVG existentes (siguen sirviendo como
+  fallback vectorial de alta calidad) y AGREGA las 3 PNG nuevas — no las
+  reemplazo, para no perder la escalabilidad perfecta del SVG en
+  plataformas que sí lo soportan bien.
+- `layout.tsx`: `icons.apple` pasa de apuntar al SVG a
+  `/icons/apple-touch-icon.png` — iOS/Safari no acepta SVG para el icono de
+  pantalla de inicio, que es exactamente el TODO documentado.
+
+**Resiliencia del import de PDF**
+- NO agrego un segundo proveedor con soporte de PDF: no hay ninguno gratis
+  verificado en vivo (Groq/OpenRouter/Mistral son solo-visión), y convertir
+  el PDF a imagen en el cliente ya fue rechazado explícitamente por el
+  usuario en la tarea anterior. Inventar un proveedor sin probarlo en vivo
+  sería peor que no tocar nada.
+- `cascade.ts` separa `TIMEOUT_MS` (25s, se mantiene para imágenes) de un
+  nuevo `PDF_TIMEOUT_MS` (60s) — encontré en vivo que Google puede tardar
+  26-89s+ solo en RESPONDER un error 503 de sobrecarga con este documento
+  real de 2 páginas; 25s es corto para darle a un PDF una oportunidad justa
+  bajo carga normal. Sigue siendo un límite duro (no espera indefinido) para
+  no colgar la UI.
+- `route.ts` distingue un tercer caso en el mensaje de error: si el único
+  intento (Google, con PDF) falló con un código reintentable
+  (`timeout`, `api_error_429`, `api_error_503`), el mensaje pasa a ser
+  específico ("Google AI está temporalmente saturado, intenta de nuevo en
+  unos minutos") en vez del genérico actual. Extraigo esta decisión a una
+  función pura y testeable, `selectFailureMessage(hasPdf, attempts)` en
+  `cascade.ts`, en vez de dejarla como un ternario inline en el Route
+  Handler (que no tiene test unitario y no lo va a tener en esta tarea).
+
+**Cobertura e2e**
+- Los 3 specs nuevos (`ai-import`, `settings-import`, `stats`) siguen el
+  patrón ya establecido en `tests/e2e/export.spec.ts` y
+  `helpers/auth.ts` (`registerAndLogin`).
+- `ai-import.spec.ts` NO llama a un proveedor de IA real: intercepta
+  `POST /api/ai/extract-schedule` con `page.route(...)` y responde un
+  cuerpo fijo. Depender de un proveedor gratis real en e2e sería lento,
+  flaky (ya lo vimos: Google puede tardar minutos bajo demanda alta) y
+  potencialmente sin cupo — el contrato de la API (`courses`/`provider`/
+  `model`) ya está cubierto por los tests unitarios de `cascade.ts`; lo que
+  este e2e cubre es la UI (subir → analizar → previsualizar → guardar).
+- Fixture nueva `tests/e2e/fixtures/tiny-schedule.png`: un PNG 1×1 real
+  (el mismo que ya usa `ai-cascade.test.ts` para no inventar un formato
+  nuevo) — alcanza porque el backend está mockeado, no hace falta una
+  imagen realista para probar el flujo de UI.
+- `settings-import.spec.ts` reutiliza el backup JSON de
+  `tests/e2e/fixtures/backup-sample.json` (una materia mínima válida contra
+  `importDataSchema`) para probar "Restaurar desde JSON", complementando el
+  test de exportación que ya existe en `export.spec.ts`.
+- `stats.spec.ts` verifica que la vista carga y muestra sus elementos
+  clave sin crashear, con y sin materias registradas (dos casos, ya que
+  `stats-view` recibe `courses`/`profile` que pueden venir vacíos).
+- Como ya documenta `CONTRACT.md`, estos specs NO corren dentro de
+  `pnpm run verify` (esa suite excluye e2e a propósito). El "rojo válido"
+  para esta parte se demuestra con `pnpm test:e2e` contra la app+Postgres
+  reales, no con el comando rápido.
+
+**Limpieza de lint**
+- Subo la vara: `"lint": "eslint ."` → `"lint": "eslint . --max-warnings=0"`
+  en `package.json`. Hoy mismo eso convierte los 59 warnings existentes en
+  rojo real de `pnpm run verify` — es el "rojo" de esta parte de la tarea,
+  ya que no hay una aserción de negocio que escribir para "un import sin
+  usar".
+- Los 6 warnings de `react-hooks/set-state-in-effect` (courses-view.tsx,
+  course-dialog.tsx, sidebar.tsx, schedule-grid.tsx, calculator-view.tsx)
+  SÍ tocan comportamiento (sincronizan estado local a partir de
+  props/mount) — no son solo cosmética. Antigravity debe preservar el
+  comportamiento observable exacto (los tests unitarios y los e2e
+  existentes de `calculator`/`courses`/`theme` no pueden regresar) al
+  aplicar el patrón que sugiere el propio lint (mover el `setState` a un
+  manejador de evento, derivar en render, o resetear con `key` en vez de
+  sincronizar por efecto).
+- NO agrego una regla de lint nueva ni cambio ninguna regla existente más
+  allá de `--max-warnings=0` — el resto es corregir código para cumplir las
+  reglas que YA existen.
 
 ## Archivos (lista cerrada)
 
-- `src/lib/ai/validation.ts` (nuevo): `ALLOWED_IMAGE_MIME_TYPES`, `ALLOWED_DOCUMENT_MIME_TYPES`, `isAllowedFileDataUrl(dataUrl)`, `isPdfDataUrl(dataUrl)`, `maxBodyBytesFor(images)`.
-- `src/app/api/ai/extract-schedule/route.ts`: usa `validation.ts` en vez de su allowlist/regex local; two-tier de tamaño (15 MB inicial, re-chequeo a 6 MB si no hay PDF); mensaje de error distinto cuando `attempts.length === 0` y había un PDF.
-- `src/lib/ai/providers.ts`: añade `supportsPdf: boolean` a `AiProviderEntry`; `true` solo en la entrada de Google.
-- `src/lib/ai/cascade.ts`: filtra `providers` por `supportsPdf` cuando `input.images` contiene un PDF (usa `isPdfDataUrl` de `validation.ts`, reemplazando el `DATA_URL_PATTERN` propio que quedó de la tarea anterior).
-- `src/components/ai/ai-import-dialog.tsx`: acepta `application/pdf` en el `<input type="file">` y el dropzone; `processImageFile` (o su reemplazo) detecta PDF y usa `FileReader.readAsDataURL` en vez de `resizeImageToJpeg`; guarda de tamaño en cliente para PDF (~8 MB crudo, deja margen bajo el límite de 15 MB codificado en base64); copys actualizados ("PNG, JPG, WebP, PDF").
-- `tests/unit/ai-validation.test.ts` (nuevo): 4 tests.
-- `tests/unit/ai-cascade.test.ts`: +3 tests de filtrado por `supportsPdf`.
+- `package.json`: `sharp` como devDependency; `lint` con `--max-warnings=0`.
+- `scripts/generate-pwa-icons.mjs` (nuevo): genera las 4 PNG desde los SVG.
+- `public/icons/icon-192.png`, `icon-512.png`, `icon-512-maskable.png`,
+  `apple-touch-icon.png` (nuevos, generados por el script).
+- `src/app/manifest.ts`: agrega las 3 entradas PNG al array `icons`.
+- `src/app/layout.tsx`: `icons.apple` → `/icons/apple-touch-icon.png`;
+  quita los comentarios TODO ya resueltos.
+- `src/lib/ai/cascade.ts`: `PDF_TIMEOUT_MS` (60s) separado de `TIMEOUT_MS`
+  (25s); `callProvider` elige el timeout según `hasPdf`; nueva función
+  pura exportada `selectFailureMessage(hasPdf, attempts)`.
+- `src/app/api/ai/extract-schedule/route.ts`: usa `selectFailureMessage`
+  en vez del ternario inline.
+- Solo warnings de lint, sin API pública nueva: `src/app/(app)/settings/page.tsx`,
+  `src/components/ai/ai-import-dialog.tsx`,
+  `src/components/calculator/calculator-view.tsx`,
+  `src/components/courses/course-dialog.tsx`,
+  `src/components/courses/courses-view.tsx`,
+  `src/components/layout/sidebar.tsx`,
+  `src/components/schedule/schedule-grid.tsx`,
+  `src/components/settings/settings-view.tsx`,
+  `src/components/ui/avatar.tsx`.
+- `tests/unit/pwa-icons.test.ts` (nuevo): 3 tests.
+- `tests/unit/ai-cascade.test.ts`: +4 tests (`PDF_TIMEOUT_MS` vs
+  `TIMEOUT_MS` vía spy de `AbortSignal.timeout`, + `selectFailureMessage`).
+- `tests/e2e/ai-import.spec.ts` (nuevo).
+- `tests/e2e/settings-import.spec.ts` (nuevo).
+- `tests/e2e/stats.spec.ts` (nuevo).
+- `tests/e2e/fixtures/tiny-schedule.png` (nuevo, binario).
+- `tests/e2e/fixtures/backup-sample.json` (nuevo).
+- `PLAN.md`.
 
 ## Checklist
 
-- [x] Escribir los tests de `tests/unit/ai-validation.test.ts` (6, no 4 — cobertura más completa de lo mínimo)
-- [x] Escribir los 3 tests nuevos en `tests/unit/ai-cascade.test.ts`
-- [x] (Antigravity, primer paso) Crear el andamiaje exacto de "Rojo esperado" en `src/lib/ai/validation.ts` y el campo `supportsPdf` en `providers.ts`
-- [x] Commit del contrato con el SHA en BASE_TESTS (rojo documentado como excepción — ver "Rojo esperado")
+- [x] Escribir `tests/unit/pwa-icons.test.ts`
+- [x] Escribir los 4 tests nuevos en `tests/unit/ai-cascade.test.ts`
+- [x] Escribir `tests/e2e/ai-import.spec.ts` + fixture PNG
+- [x] Escribir `tests/e2e/settings-import.spec.ts` + fixture JSON
+- [x] Escribir `tests/e2e/stats.spec.ts`
+- [x] Subir `package.json` lint a `--max-warnings=0` (rojo real de los 59
+      warnings existentes)
+- [x] Confirmar rojo válido en `pnpm run verify` (unit) y documentar el
+      estado de los e2e nuevos (no corren dentro de `verify`)
+- [ ] (Antigravity) generar los iconos, ajustar manifest/layout
+- [ ] (Antigravity) separar timeout de PDF + `selectFailureMessage`
+- [ ] (Antigravity) limpiar los 59 warnings preservando comportamiento
+- [ ] (Antigravity) poner en verde `pnpm test:e2e` para los 3 specs nuevos
+- [x] Commit del contrato con el SHA en BASE_TESTS
 - [x] Delegar a Antigravity vía `/implementar`
 
 ## Rojo esperado
 
-**Excepción documentada al protocolo**: mi propia regla `deny` en `.claude/settings.json`
-(`Edit(src/**)`, `Write(src/**)`) me impide crear incluso el andamiaje mínimo que el
-paso 6 de `/plan` me autoriza a escribir en `src/`. El usuario decidió resolverlo así:
-Antigravity crea PRIMERO, textual, el andamiaje de abajo (sin ninguna lógica real
-todavía) como el primerísimo paso de `/implementar`, antes de tocar nada más. Recién
-en ese punto `pnpm run verify` produce rojo válido por aserción; hasta entonces falla
-en `tsc` (import inexistente / propiedad desconocida), que por sí solo NO cuenta como
-rojo válido según CONTRACT.md.
+**Excepción documentada al protocolo** (misma que en la tarea anterior): mi
+regla `deny` en `.claude/settings.json` (`Edit(src/**)`, `Write(src/**)`) me
+impide crear el andamiaje mínimo que el paso 6 de `/plan` me autoriza a
+escribir en `src/`. Antigravity debe crear PRIMERO, textual, el siguiente
+andamiaje (sin lógica real) como primer paso de `/implementar`:
 
-**Andamiaje exacto a crear primero (`src/lib/ai/validation.ts`, archivo nuevo):**
+**Andamiaje exacto a añadir en `src/lib/ai/cascade.ts`** (nueva función
+exportada; no toca nada más del archivo en este primer paso):
 ```ts
-export const ALLOWED_IMAGE_MIME_TYPES = new Set<string>()
-export const ALLOWED_DOCUMENT_MIME_TYPES = new Set<string>()
-
-export function isAllowedFileDataUrl(_dataUrl: string): boolean {
-  throw new Error('NotImplemented')
-}
-
-export function isPdfDataUrl(_dataUrl: string): boolean {
-  throw new Error('NotImplemented')
-}
-
-export function maxBodyBytesFor(_images: string[]): number {
+export function selectFailureMessage(
+  _hasPdf: boolean,
+  _attempts: ExtractScheduleAttempt[]
+): string {
   throw new Error('NotImplemented')
 }
 ```
 
-**Andamiaje exacto a añadir en `src/lib/ai/providers.ts`** (un campo nuevo en la
-interfaz existente, sin tocar nada más de ese archivo en este primer paso):
-```ts
-export interface AiProviderEntry {
-  id: string
-  label: string
-  model: LanguageModel
-  modelId: string
-  supportsPdf: boolean // <- añadir esta línea
-}
+Salida real de `pnpm run typecheck` ANTES de este andamiaje (falla en
+`tsc`, no en tests — documentado a propósito, no es el rojo válido final):
 ```
-(y en cada `providers.push({...})` existente, añadir `supportsPdf: false`, salvo en
-la entrada de Google donde va `supportsPdf: true` — esto último ya es parte de la
-implementación real del checklist, no del andamiaje, pero como toca la misma
-interfaz puede hacerse en el mismo paso).
-
-Salida real de `pnpm run verify` ANTES de este andamiaje (falla en typecheck, no en
-tests — documentado a propósito, no es el rojo válido final):
-```
-> tsc --noEmit
-tests/unit/ai-cascade.test.ts(26,5): error TS2353: Object literal may only specify known properties, and 'supportsPdf' does not exist in type 'AiProviderEntry'.
-tests/unit/ai-validation.test.ts(2,69): error TS2307: Cannot find module '@/lib/ai/validation' or its corresponding type declarations.
+tests/unit/ai-cascade.test.ts(3,43): error TS2305: Module '"@/lib/ai/cascade"'
+has no exported member 'selectFailureMessage'.
  ELIFECYCLE  Command failed with exit code 2.
 ```
 
-Una vez creado el andamiaje de arriba, `pnpm run verify` debe fallar en los 10 tests
-nuevos (6 en `ai-validation.test.ts`, 3 en `ai-cascade.test.ts`, más 1 ajuste al
-helper `fakeProvider`) por aserción (`toBe`/`toEqual` con el valor real vs. el
-esperado, o el `throw new Error('NotImplemented')` del stub) — eso sí es rojo válido,
-y es lo que Antigravity debe poner en verde con la implementación real.
+Una vez creado ese andamiaje, `pnpm run verify` debe fallar así (rojo válido
+por aserción, no por import/módulo inexistente):
+
+1. **`eslint . --max-warnings=0`** — falla de inmediato con los 43 warnings
+   reales que ya existían (subí la vara desde `eslint .` sin límite). Salida
+   real ya confirmada en esta sesión:
+   ```
+   ✖ 43 problems (0 errors, 43 warnings)
+   ```
+   en exactamente estos 9 archivos:
+   `src/app/(app)/settings/page.tsx`, `src/components/ai/ai-import-dialog.tsx`,
+   `src/components/calculator/calculator-view.tsx`,
+   `src/components/courses/course-dialog.tsx`,
+   `src/components/courses/courses-view.tsx`,
+   `src/components/layout/sidebar.tsx`,
+   `src/components/schedule/schedule-grid.tsx`,
+   `src/components/settings/settings-view.tsx`,
+   `src/components/ui/avatar.tsx`.
+
+2. **`tsc --noEmit`** — limpio una vez creado el andamiaje de arriba (ya
+   confirmado: el único error de tipos hoy es justamente la ausencia de
+   `selectFailureMessage`, resuelta por el stub).
+
+3. **`vitest run`** — nuevos tests en rojo por aserción:
+   - `tests/unit/pwa-icons.test.ts` (3 tests): fallan en
+     `expect(fs.existsSync(filePath)).toBe(true)` — los PNG no existen
+     todavía. Confirmado real en esta sesión (los archivos no existen en
+     `public/icons/`).
+   - `tests/unit/ai-cascade.test.ts`, describe `per-request timeout...`:
+     el test de 25s ya pasa hoy (el código actual siempre usa 25s); el de
+     PDF (60s) falla — confirmado real:
+     `expect(timeoutSpy).toHaveBeenCalledWith(60_000)` recibe `25_000`.
+   - `tests/unit/ai-cascade.test.ts`, describe `selectFailureMessage` (6
+     tests): confirmado real en esta sesión que hoy fallan con
+     `TypeError: selectFailureMessage is not a function` (vitest transpila
+     sin type-check completo, así que el import roto no frena la suite
+     como si frena a `tsc`) — eso NO es rojo válido por sí solo. Una vez
+     creado el stub de arriba, las 6 pasan a fallar limpio con
+     `Error: NotImplemented`, que junto con el `tsc` ya limpio sí es rojo
+     válido según `CONTRACT.md`.
+
+`tests/e2e/*.spec.ts` (3 specs nuevos) no corren dentro de `pnpm run
+verify` — así lo definió `CONTRACT.md` desde el principio (necesitan la app
+y Postgres reales). Confirmé que compilan (`tsc --noEmit` los incluye y ya
+está limpio) pero NO ejecuté `pnpm test:e2e` en esta sesión de planeación;
+Antigravity debe correrlo como parte de `/implementar` y dejar evidencia
+del resultado.
 
 ## BASE_TESTS
 
-e3d071e325b1f8b013781c24ee52adbf19208c43
-
----
-
-# Tarea 2: Compatibilidad de esquema en la cascada de IA (misma rama)
-
-## Objetivo
-
-Corregir tres bugs reales de incompatibilidad de esquema/proveedor —encontrados
-probando en vivo la cascada de IA con el PDF y la imagen reales de
-`.artifacts/verification/`— que hacen que Google, Groq y OpenRouter fallen
-sistemáticamente al generar el horario estructurado.
-
-## Decisiones de diseño
-
-- **`email` pasa de `.or(z.literal(''))` a `.nullable()`**: el patrón actual
-  (`z.string().email().or(z.literal(''))`) se traduce, en el JSON Schema que
-  `generateObject` manda a Google, en `enum: [""]`. La API de Gemini
-  responde 400 (`response_schema...email.any_of[1].enum[0]: cannot be
-  empty`) — verificado en vivo contra `generativelanguage.googleapis.com`.
-  Cambiar a `.nullable()` (+ `.optional()` + `.transform(v => v ?? '')` para
-  no tocar el contrato externo `ExtractedCourse.email: string`) elimina el
-  enum vacío. Verificado en vivo: con este único cambio, Google/Gemini
-  extrae correctamente las 8 materias del PDF real de la Universidad de
-  Cartagena (código, profesor, horario y salón correctos).
-- **NO toco los demás campos con `.default(...)`** (`room`, `professor`,
-  `faculty`, `semester`, `credits`, `color`, `schedules`): Gemini no exige
-  que absolutamente todos los campos estén en `required` (ese defecto es
-  únicamente de los proveedores en modo `strict` estilo OpenAI), así que
-  tocarlos aquí no resuelve nada.
-- **`cascade.ts` pasa `providerOptions` con `strictJsonSchema: false`** para
-  los proveedores OpenAI-compatibles (`groq`, `openrouter`, `mistral`,
-  `ai-gateway`) en la llamada a `generateObject`. Groq (y por diseño
-  cualquier proveedor vía `@ai-sdk/openai-compatible`) exige en modo
-  `strict` que TODAS las propiedades estén en `required` del JSON Schema;
-  nuestro schema tiene campos con `.default(...)` que quedan fuera de
-  `required`, y eso produce el 400 real que vi contra Groq (`invalid JSON
-  schema for response_format: ... must be listed in required: room`).
-  Verificado en vivo: pasar `strictJsonSchema: false` elimina ese 400.
-  Se pasa el mismo `providerOptions` estático en cada llamada,
-  independientemente del proveedor activo — cada SDK sólo lee su propio
-  namespace, así que es inofensivo para Google.
-- **NO intento arreglar el límite de cuota de Groq** (el modelo por defecto
-  `qwen/qwen3.6-27b` tiene un tope de 1000 tokens de salida por minuto en el
-  tier gratis, y nuestro schema puede pedir más para un horario con varias
-  materias — confirmado en vivo, error `rate_limit_exceeded` con detalle
-  "Requested 1098 > Limit 1000"). Es una limitación real de cuota del
-  proveedor, no un bug de código: la cascada YA la maneja como fallo
-  reintentable con cooldown (`classifyError`/`registerFailure` existentes).
-  Cambiar de modelo por defecto o ajustar `max_tokens` es una decisión de
-  producto que no se pidió.
-- **`providers.ts`: reemplazo de los 3 slugs `:free` muertos de
-  `OPENROUTER_FREE_MODELS`** (`google/gemma-3-27b-it:free`,
-  `meta-llama/llama-3.2-11b-vision-instruct:free`,
-  `qwen/qwen2.5-vl-32b-instruct:free` — los 3 responden 404 "unavailable for
-  free", confirmado contra la API real de OpenRouter) por 2 slugs
-  confirmados vivos por consulta directa a `openrouter.ai/api/v1/models` en
-  esta sesión: `google/gemma-4-31b-it:free` y `google/gemma-4-26b-a4b-it:free`
-  (ambos responden 429 "temporarily rate-limited upstream" al probarlos con
-  el schema real — es decir SÍ existen y son de verdad modelos de visión
-  gratis, sólo saturados en ese momento; 429 ya es tratado como reintentable
-  por la cascada). Se deja la lista en 2 en vez de inventar un tercero sin
-  verificar — el catálogo gratis de OpenRouter es conocidamente volátil (ya
-  documentado en el comentario existente de `providers.ts`).
-- **El contrato externo no cambia**: `ExtractedCourse.email` sigue siendo
-  `string` (nunca `string | null`) de cara a quien consuma `extractSchedule`
-  — hoy `ai-import-dialog.tsx` ni siquiera lee `email`, así que esto no
-  toca UI, pero preserva el tipo por si algún consumidor futuro lo usa.
-
-## Archivos (lista cerrada)
-
-- `src/lib/ai/schema.ts`: campo `email` de `extractedCourseSchema` cambia a
-  `z.string().email().nullable().optional().transform((v) => v ?? '')`.
-- `src/lib/ai/cascade.ts`: `callProvider` agrega `providerOptions: { groq:
-  { strictJsonSchema: false }, openrouter: { strictJsonSchema: false },
-  mistral: { strictJsonSchema: false }, 'ai-gateway': { strictJsonSchema:
-  false } }` a la llamada de `generateObject`.
-- `src/lib/ai/providers.ts`: el fallback por defecto de
-  `OPENROUTER_FREE_MODELS` pasa de 3 a los 2 slugs vivos verificados.
-- `tests/unit/ai-schema.test.ts` (nuevo): cubre la normalización de `email`
-  y una regresión concreta que verifica que el JSON Schema generado por
-  `extractedScheduleResponseSchema` (vía `zod/v4/core`'s `toJSONSchema`,
-  el mismo mecanismo que usa `@ai-sdk/provider-utils` internamente) nunca
-  contiene un enum con un string vacío.
-- `tests/unit/ai-cascade.test.ts`: +1 test que verifica que `generateObject`
-  se llama con `providerOptions.{groq,openrouter,mistral,'ai-gateway'}.strictJsonSchema
-  === false`.
-- `tests/unit/ai-providers.test.ts` (nuevo): verifica que
-  `getActiveProviders()` usa los 2 slugs vivos como default de
-  `OPENROUTER_FREE_MODELS` cuando la env var no está definida.
-- `PLAN.md`: esta sección.
-
-## Checklist
-
-- [x] `src/lib/ai/schema.ts`: cambiar el campo `email` según arriba
-- [x] `src/lib/ai/cascade.ts`: agregar `providerOptions` a la llamada de
-      `generateObject` en `callProvider`
-- [x] `src/lib/ai/providers.ts`: actualizar el default de
-      `OPENROUTER_FREE_MODELS`
-- [x] Escribir `tests/unit/ai-schema.test.ts` (nuevo)
-- [x] Escribir `tests/unit/ai-providers.test.ts` (nuevo)
-- [x] Sumar el test de `providerOptions` a `tests/unit/ai-cascade.test.ts`
-- [x] Confirmar rojo válido (falla por aserción, no por import/módulo
-      inexistente — no hace falta andamiaje en `src/` para esta tarea)
-- [x] Commit del contrato con el SHA en BASE_TESTS_2
-- [x] Delegar a Antigravity vía `/implementar`
-
-## Rojo esperado
-
-`pnpm run verify` (lint 0 errores/59 warnings preexistentes → typecheck OK →
-vitest): 4 tests nuevos fallan, los 90 preexistentes pasan. Los 4 fallan por
-ASERCIÓN (comparación esperado vs. recibido), no por import/módulo
-inexistente — no hace falta andamiaje en `src/` para esta tarea.
-
-```
-FAIL  tests/unit/ai-cascade.test.ts > extractSchedule > strict JSON schema
-validation is disabled for OpenAI-compatible providers > calls
-generateObject with strictJsonSchema:false for groq, openrouter, mistral
-and ai-gateway
-AssertionError: expected undefined to match object { …(4) }
-- Expected: { "ai-gateway": {...}, "groq": {...}, "mistral": {...},
-  "openrouter": {...} }
-+ Received: undefined
-
-FAIL  tests/unit/ai-providers.test.ts > getActiveProviders OpenRouter
-default free models > falls back to live free vision model slugs when
-OPENROUTER_FREE_MODELS is not set
-AssertionError: expected [ 'google/gemma-3-27b-it:free', …(2) ] to deeply
-equal [ 'google/gemma-4-31b-it:free', …(1) ]
-
-FAIL  tests/unit/ai-providers.test.ts > getActiveProviders OpenRouter
-default free models > none of the default slugs are the dead ones
-previously confirmed 404 on OpenRouter
-AssertionError: expected [ 'google/gemma-3-27b-it:free', …(2) ] to not
-include 'google/gemma-3-27b-it:free'
-
-FAIL  tests/unit/ai-schema.test.ts > extractedCourseSchema email field >
-normalizes a null email (what Gemini actually returns for an absent email)
-into an empty string
-AssertionError: expected false to be true // Object.is equality
-
-Test Files  3 failed | 9 passed (12)
-     Tests  4 failed | 90 passed (94)
-```
-
-## BASE_TESTS_2
-
-9ce3311
+(se llena tras el commit del contrato)
