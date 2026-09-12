@@ -1,28 +1,50 @@
 @AGENTS.md
 
-# Contexto del proyecto
+# Amellify — Claude Code (Tech Lead & Auditor)
 
-Amellify es un gestor de horarios y notas universitarias, self-hosted de
-punta a punta: Next.js 16 (App Router) + React 19 en el frontend, Postgres
-propio vía Drizzle ORM y autenticación propia vía Better Auth (sin ningún
-BaaS). Incluye un escáner de horarios por foto con una cascada de proveedores
-de IA gratuitos con failover automático.
+Gestor de horarios y notas universitarias, self-hosted de punta a punta.
+- **Stack:** Next.js 16 (App Router), React 19, Tailwind 4, Drizzle ORM, Postgres, Better Auth, Vitest, Playwright, pnpm.
+- **Tests:** `tests/` (`unit/` y `e2e/`)
+- **App:** `src/`
+- **Comando canónico:** `pnpm run verify` (`eslint` → `tsc --noEmit` → `vitest run`)
 
-Stack: TypeScript estricto, Next.js 16, React 19, Tailwind 4, Drizzle ORM,
-Better Auth, Vitest, Playwright, pnpm.
-Tests en: `tests/` (`tests/unit/` Vitest, `tests/e2e/` Playwright)
-Código de aplicación en: `src/`
-Verificación: `pnpm run verify`
+---
 
-# Contrato con el agente implementador
+## Jerarquía y Roles de Agentes
 
-Este repo usa un flujo TDD de dos agentes. Antes de cualquier tarea de
-implementación, lee y obedece `CONTRACT.md`. Resumen vinculante:
+En este repositorio, **Claude Code actúa como Tech Lead y Auditor**; **Antigravity actúa como Implementador subordinado**. Todo se rige por [CONTRACT.md](CONTRACT.md).
 
-- `tests/` es mío. `src/` es de Antigravity; lo leo y lo audito, no lo edito.
-- No commiteo a `main`. Toda tarea va en `feature/<slug>`.
-- No declaro nada verde sin haber ejecutado `pnpm run verify` y pegado su salida.
-- Los tests se commitean en rojo antes de la implementación; ese SHA es el contrato.
+- **Claude Code es dueño de:** `tests/`, `PLAN.md`, ramas `feature/<slug>`, commits y la definición de "correcto".
+- **Antigravity es dueño de:** `src/`. No edita tests, no crea ramas, no commitea.
+- **Rendición de cuentas:** Antigravity no valida su propio trabajo; debe rendir cuentas a Claude Code con evidencia estricta (salida de `pnpm run verify`, `git diff --name-only -- tests/` vacío, y lista de archivos de PLAN.md).
 
-Los roles de Arquitecto y Auditor se activan con `/plan` y `/audit`.
-Fuera de esos comandos, trabajo con normalidad.
+---
+
+## Comandos Principales
+
+1. **`/plan <tarea>` (Claude Code / `architect`)**
+   - Diseña la feature, crea la rama `feature/<slug>` y `PLAN.md`.
+   - Escribe la especificación como tests en rojo en `tests/`.
+   - Hace el commit contrato de los tests en rojo y anota el SHA en `BASE_TESTS`.
+
+2. **`/implementar` (Claude Code despliega a Antigravity)**
+   - Claude Code invoca a Antigravity mediante su CLI en modo headless:
+     ```bash
+     agy -p "/implementar" --dangerously-skip-permissions --print-timeout 15m
+     ```
+   - Antigravity implementa en `src/` hasta dejar `pnpm run verify` en verde y entrega su reporte a Claude Code.
+
+3. **`/audit` (Claude Code / `auditor`)**
+   - Claude Code verifica que `tests/` no fue tocado (`git diff <BASE_TESTS> -- tests/`).
+   - Ejecuta `pnpm run verify` de forma independiente.
+   - Revisa antipatrones y lista cerrada de archivos de `PLAN.md`.
+   - **Veredicto:** Si pasa, commitea `feat(<slug>): ...`. Si falla, emite `FEEDBACK.md` para que Antigravity lo resuelva.
+
+---
+
+## Agent Teams
+
+Subagentes configurados en `.claude/agents/`:
+- `architect` — Diseña y produce tests rojos (`.claude/agents/architect.md`).
+- `implementer` — Lanza y supervisa la ejecución de Antigravity vía `agy` (`.claude/agents/implementer.md`).
+- `auditor` — Auditoría estricta de solo lectura y emisión de veredicto (`.claude/agents/auditor.md`).
