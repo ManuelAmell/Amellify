@@ -276,4 +276,30 @@ describe('extractSchedule', () => {
       expect(result.provider).toBe('google')
     })
   })
+
+  // Regression coverage for a real bug found by manually testing the AI
+  // extraction cascade against the live Groq API: our schema has fields
+  // with `.default(...)` (e.g. `room`), which are omitted from the
+  // generated JSON Schema's `required` array. Groq's `strict` response-
+  // format mode (the OpenAI-compatible default) rejects that with a 400
+  // ("required is required to be supplied and to be an array including
+  // every key in properties"). Disabling strict mode via `providerOptions`
+  // fixed it end-to-end against the real API.
+  describe('strict JSON schema validation is disabled for OpenAI-compatible providers', () => {
+    it('calls generateObject with strictJsonSchema:false for groq, openrouter, mistral and ai-gateway', async () => {
+      generateObjectMock.mockResolvedValueOnce(okResult())
+
+      await extractSchedule({ text: 'x' }, { providers: [fakeProvider('a')] })
+
+      const callArgs = generateObjectMock.mock.calls[0]?.[0] as {
+        providerOptions?: Record<string, { strictJsonSchema?: boolean }>
+      }
+      expect(callArgs.providerOptions).toMatchObject({
+        groq: { strictJsonSchema: false },
+        openrouter: { strictJsonSchema: false },
+        mistral: { strictJsonSchema: false },
+        'ai-gateway': { strictJsonSchema: false },
+      })
+    })
+  })
 })

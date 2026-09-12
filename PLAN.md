@@ -92,4 +92,151 @@ y es lo que Antigravity debe poner en verde con la implementación real.
 
 ## BASE_TESTS
 
-(se llena en el paso 7)
+e3d071e325b1f8b013781c24ee52adbf19208c43
+
+---
+
+# Tarea 2: Compatibilidad de esquema en la cascada de IA (misma rama)
+
+## Objetivo
+
+Corregir tres bugs reales de incompatibilidad de esquema/proveedor —encontrados
+probando en vivo la cascada de IA con el PDF y la imagen reales de
+`.artifacts/verification/`— que hacen que Google, Groq y OpenRouter fallen
+sistemáticamente al generar el horario estructurado.
+
+## Decisiones de diseño
+
+- **`email` pasa de `.or(z.literal(''))` a `.nullable()`**: el patrón actual
+  (`z.string().email().or(z.literal(''))`) se traduce, en el JSON Schema que
+  `generateObject` manda a Google, en `enum: [""]`. La API de Gemini
+  responde 400 (`response_schema...email.any_of[1].enum[0]: cannot be
+  empty`) — verificado en vivo contra `generativelanguage.googleapis.com`.
+  Cambiar a `.nullable()` (+ `.optional()` + `.transform(v => v ?? '')` para
+  no tocar el contrato externo `ExtractedCourse.email: string`) elimina el
+  enum vacío. Verificado en vivo: con este único cambio, Google/Gemini
+  extrae correctamente las 8 materias del PDF real de la Universidad de
+  Cartagena (código, profesor, horario y salón correctos).
+- **NO toco los demás campos con `.default(...)`** (`room`, `professor`,
+  `faculty`, `semester`, `credits`, `color`, `schedules`): Gemini no exige
+  que absolutamente todos los campos estén en `required` (ese defecto es
+  únicamente de los proveedores en modo `strict` estilo OpenAI), así que
+  tocarlos aquí no resuelve nada.
+- **`cascade.ts` pasa `providerOptions` con `strictJsonSchema: false`** para
+  los proveedores OpenAI-compatibles (`groq`, `openrouter`, `mistral`,
+  `ai-gateway`) en la llamada a `generateObject`. Groq (y por diseño
+  cualquier proveedor vía `@ai-sdk/openai-compatible`) exige en modo
+  `strict` que TODAS las propiedades estén en `required` del JSON Schema;
+  nuestro schema tiene campos con `.default(...)` que quedan fuera de
+  `required`, y eso produce el 400 real que vi contra Groq (`invalid JSON
+  schema for response_format: ... must be listed in required: room`).
+  Verificado en vivo: pasar `strictJsonSchema: false` elimina ese 400.
+  Se pasa el mismo `providerOptions` estático en cada llamada,
+  independientemente del proveedor activo — cada SDK sólo lee su propio
+  namespace, así que es inofensivo para Google.
+- **NO intento arreglar el límite de cuota de Groq** (el modelo por defecto
+  `qwen/qwen3.6-27b` tiene un tope de 1000 tokens de salida por minuto en el
+  tier gratis, y nuestro schema puede pedir más para un horario con varias
+  materias — confirmado en vivo, error `rate_limit_exceeded` con detalle
+  "Requested 1098 > Limit 1000"). Es una limitación real de cuota del
+  proveedor, no un bug de código: la cascada YA la maneja como fallo
+  reintentable con cooldown (`classifyError`/`registerFailure` existentes).
+  Cambiar de modelo por defecto o ajustar `max_tokens` es una decisión de
+  producto que no se pidió.
+- **`providers.ts`: reemplazo de los 3 slugs `:free` muertos de
+  `OPENROUTER_FREE_MODELS`** (`google/gemma-3-27b-it:free`,
+  `meta-llama/llama-3.2-11b-vision-instruct:free`,
+  `qwen/qwen2.5-vl-32b-instruct:free` — los 3 responden 404 "unavailable for
+  free", confirmado contra la API real de OpenRouter) por 2 slugs
+  confirmados vivos por consulta directa a `openrouter.ai/api/v1/models` en
+  esta sesión: `google/gemma-4-31b-it:free` y `google/gemma-4-26b-a4b-it:free`
+  (ambos responden 429 "temporarily rate-limited upstream" al probarlos con
+  el schema real — es decir SÍ existen y son de verdad modelos de visión
+  gratis, sólo saturados en ese momento; 429 ya es tratado como reintentable
+  por la cascada). Se deja la lista en 2 en vez de inventar un tercero sin
+  verificar — el catálogo gratis de OpenRouter es conocidamente volátil (ya
+  documentado en el comentario existente de `providers.ts`).
+- **El contrato externo no cambia**: `ExtractedCourse.email` sigue siendo
+  `string` (nunca `string | null`) de cara a quien consuma `extractSchedule`
+  — hoy `ai-import-dialog.tsx` ni siquiera lee `email`, así que esto no
+  toca UI, pero preserva el tipo por si algún consumidor futuro lo usa.
+
+## Archivos (lista cerrada)
+
+- `src/lib/ai/schema.ts`: campo `email` de `extractedCourseSchema` cambia a
+  `z.string().email().nullable().optional().transform((v) => v ?? '')`.
+- `src/lib/ai/cascade.ts`: `callProvider` agrega `providerOptions: { groq:
+  { strictJsonSchema: false }, openrouter: { strictJsonSchema: false },
+  mistral: { strictJsonSchema: false }, 'ai-gateway': { strictJsonSchema:
+  false } }` a la llamada de `generateObject`.
+- `src/lib/ai/providers.ts`: el fallback por defecto de
+  `OPENROUTER_FREE_MODELS` pasa de 3 a los 2 slugs vivos verificados.
+- `tests/unit/ai-schema.test.ts` (nuevo): cubre la normalización de `email`
+  y una regresión concreta que verifica que el JSON Schema generado por
+  `extractedScheduleResponseSchema` (vía `zod/v4/core`'s `toJSONSchema`,
+  el mismo mecanismo que usa `@ai-sdk/provider-utils` internamente) nunca
+  contiene un enum con un string vacío.
+- `tests/unit/ai-cascade.test.ts`: +1 test que verifica que `generateObject`
+  se llama con `providerOptions.{groq,openrouter,mistral,'ai-gateway'}.strictJsonSchema
+  === false`.
+- `tests/unit/ai-providers.test.ts` (nuevo): verifica que
+  `getActiveProviders()` usa los 2 slugs vivos como default de
+  `OPENROUTER_FREE_MODELS` cuando la env var no está definida.
+- `PLAN.md`: esta sección.
+
+## Checklist
+
+- [ ] `src/lib/ai/schema.ts`: cambiar el campo `email` según arriba
+- [ ] `src/lib/ai/cascade.ts`: agregar `providerOptions` a la llamada de
+      `generateObject` en `callProvider`
+- [ ] `src/lib/ai/providers.ts`: actualizar el default de
+      `OPENROUTER_FREE_MODELS`
+- [x] Escribir `tests/unit/ai-schema.test.ts` (nuevo)
+- [x] Escribir `tests/unit/ai-providers.test.ts` (nuevo)
+- [x] Sumar el test de `providerOptions` a `tests/unit/ai-cascade.test.ts`
+- [x] Confirmar rojo válido (falla por aserción, no por import/módulo
+      inexistente — no hace falta andamiaje en `src/` para esta tarea)
+- [x] Commit del contrato con el SHA en BASE_TESTS_2
+- [ ] Delegar a Antigravity vía `/implementar`
+
+## Rojo esperado
+
+`pnpm run verify` (lint 0 errores/59 warnings preexistentes → typecheck OK →
+vitest): 4 tests nuevos fallan, los 90 preexistentes pasan. Los 4 fallan por
+ASERCIÓN (comparación esperado vs. recibido), no por import/módulo
+inexistente — no hace falta andamiaje en `src/` para esta tarea.
+
+```
+FAIL  tests/unit/ai-cascade.test.ts > extractSchedule > strict JSON schema
+validation is disabled for OpenAI-compatible providers > calls
+generateObject with strictJsonSchema:false for groq, openrouter, mistral
+and ai-gateway
+AssertionError: expected undefined to match object { …(4) }
+- Expected: { "ai-gateway": {...}, "groq": {...}, "mistral": {...},
+  "openrouter": {...} }
++ Received: undefined
+
+FAIL  tests/unit/ai-providers.test.ts > getActiveProviders OpenRouter
+default free models > falls back to live free vision model slugs when
+OPENROUTER_FREE_MODELS is not set
+AssertionError: expected [ 'google/gemma-3-27b-it:free', …(2) ] to deeply
+equal [ 'google/gemma-4-31b-it:free', …(1) ]
+
+FAIL  tests/unit/ai-providers.test.ts > getActiveProviders OpenRouter
+default free models > none of the default slugs are the dead ones
+previously confirmed 404 on OpenRouter
+AssertionError: expected [ 'google/gemma-3-27b-it:free', …(2) ] to not
+include 'google/gemma-3-27b-it:free'
+
+FAIL  tests/unit/ai-schema.test.ts > extractedCourseSchema email field >
+normalizes a null email (what Gemini actually returns for an absent email)
+into an empty string
+AssertionError: expected false to be true // Object.is equality
+
+Test Files  3 failed | 9 passed (12)
+     Tests  4 failed | 90 passed (94)
+```
+
+## BASE_TESTS_2
+
+(se llena tras el commit del contrato)
