@@ -58,6 +58,7 @@ Herramientas y reglas del repo:
 ## Entorno y configuración
 
 - Toda variable nueva se documenta en `.env.example`. No se commitean `.env` ni secretos (`.gitignore`).
+- `.env.example` deja `BETTER_AUTH_SECRET` vacío a propósito. Sin valor, el e2e falla; ver `.claude/skills/amellify-agentes/SKILL.md`.
 - Ninguna credencial, token o ruta absoluta de la máquina en el código (`CONTRACT.md`).
 - Las variables de Compose (`POSTGRES_*`, `DOMAIN`, `ACME_EMAIL`, `BACKUP_*`) son para Docker y no para la app.
 
@@ -85,3 +86,5 @@ Detalle en `DESIGN.md`.
 - No mockear el propio sujeto bajo prueba.
 - No tocar archivos fuera de la lista cerrada de `PLAN.md`.
 - No ejecutar `pnpm format` sobre el repo entero, ni `pkill -f` desde una shell de agente.
+- Que Claude Code edite archivos en vez de delegar (regla de `docs/AGENT-WORKFLOW.md`). Los agentes: `command-code`, `opencode`, y Haiku para docs.
+- No dejar `opencode.json` (modelo local de OpenCode) ni logs de workers en el diff. Comprobar con `git status`.

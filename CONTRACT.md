@@ -1,7 +1,8 @@
 # Contrato de trabajo entre agentes
 
-Este archivo es la fuente única de verdad. Claude Code y Antigravity lo leen
-al empezar cualquier tarea. Si algo aquí contradice a otro archivo, manda este.
+Este archivo es la fuente única de verdad. Claude Code y los agentes que delega
+(`command-code`, `opencode` y, de forma opcional, Antigravity) lo leen al empezar
+cualquier tarea. Si algo aquí contradice a otro archivo, manda este.
 
 ## Comando canónico de verificación
 
@@ -19,12 +20,15 @@ la salida real del comando en la conversación.
 
 ## Reglas de oro (ningún agente las incumple por ningún motivo)
 
-1. `tests/` pertenece a Claude Code. Antigravity no lo edita, ni lo borra,
-   ni lo renombra, ni "arregla" un test que le parezca mal escrito.
-2. `src/` pertenece a Antigravity. Claude Code lo lee y lo critica, no lo edita.
-3. PLAN.md y FEEDBACK.md pertenecen a Claude Code, salvo que FEEDBACK.md se
-   borra por parte de Antigravity cuando termina de resolverlo.
-4. Las ramas y los commits pertenecen a Claude Code. Antigravity nunca commitea.
+1. `tests/` pertenece a Claude Code (es la especificación) y lo escribe
+   `command-code` por su encargo. Quien implementa `src/` no lo edita, ni lo
+   borra, ni lo renombra, ni "arregla" un test que le parezca mal escrito.
+2. `src/` pertenece al implementador (`opencode` por defecto; Antigravity si la
+   persona lo elige). Claude Code lo lee y lo critica, no lo edita.
+3. PLAN.md y FEEDBACK.md pertenecen a Claude Code y los escribe `command-code`
+   por su encargo. El implementador lee FEEDBACK.md y lo borra al resolverlo.
+4. Las ramas y los commits los decide Claude Code, que commitea solo con permiso
+   de la persona. Ningún worker commitea ni cambia de rama.
 5. Nunca se trabaja ni se commitea directamente en `main`. Toda tarea vive en
    una rama `feature/<slug>`.
 
@@ -51,14 +55,15 @@ es un test roto, y no sirve como contrato.
 
 ## Ciclo de una tarea
 
-1. Claude Code: `/plan <tarea>` → rama, PLAN.md, tests en rojo válido,
-   COMMIT CONTRATO (los tests se commitean rojos; su SHA queda en PLAN.md).
-2. Antigravity: `/implementar` → escribe solo en `src/` hasta que
-   `pnpm run verify` esté verde. Deja evidencia visual en
-   `.artifacts/verification/` si hay UI.
-3. Claude Code: `/audit` → comprueba que los tests no se tocaron, que el alcance
-   coincide con PLAN.md, ejecuta `pnpm run verify` él mismo, y commitea o
-   escribe FEEDBACK.md.
+1. Claude Code: `/plan <tarea>` → encarga a `command-code` la rama, PLAN.md y
+   los tests en rojo válido. COMMIT CONTRATO (los tests se commitean rojos; su
+   SHA queda en PLAN.md), solo con permiso de la persona.
+2. Implementador (`opencode`; Antigravity opcional): `/implementar` → escribe
+   solo en `src/` hasta que `pnpm run verify` esté verde. Deja evidencia visual
+   en `.artifacts/verification/` si hay UI.
+3. Claude Code: `/audit` → comprueba (solo lectura) que los tests no se tocaron,
+   que el alcance coincide con PLAN.md y ejecuta `pnpm run verify` él mismo.
+   Si pasa, propone el commit; si falla, encarga a `command-code` FEEDBACK.md.
 
 Máximo 2 rondas de FEEDBACK.md por tarea. En la tercera, el ciclo se detiene
 y se escala a la persona.

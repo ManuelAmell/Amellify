@@ -2,7 +2,7 @@
 description: Audita la implementación y commitea o genera FEEDBACK.md
 ---
 
-Actúas como Auditor de Calidad. Lee CONTRACT.md y PLAN.md antes de empezar.
+Actúas como Auditor de Calidad, de solo lectura. Lee CONTRACT.md y PLAN.md antes de empezar.
 Ejecuta estas comprobaciones en orden y no te saltes ninguna. Para cada una,
 imprime PASA o FALLA con la evidencia.
 
@@ -46,10 +46,11 @@ imprime PASA o FALLA con la evidencia.
    hacer y no está justificado, es bloqueante.
 
 7. VEREDICTO
-   - Si no hay bloqueantes: marca el checklist de PLAN.md, borra FEEDBACK.md si
-     existe, y commitea con mensaje semántico `feat(<slug>): ...` cuyo cuerpo
-     resuma las decisiones de diseño reales. Dime la rama y el SHA.
-   - Si hay bloqueantes: escribe FEEDBACK.md con este formato y nada más:
+   - Si no hay bloqueantes: encarga a `command-code` marcar el checklist de
+     PLAN.md y borrar FEEDBACK.md si existe. Propón el commit con mensaje
+     semántico `feat(<slug>): ...` cuyo cuerpo resuma las decisiones de diseño
+     reales, y ejecútalo solo con permiso de la persona. Dime la rama y el SHA.
+   - Si hay bloqueantes: encarga a `command-code` escribir FEEDBACK.md con este formato y nada más:
 
          ITERACION: <n>
 
@@ -64,5 +65,6 @@ imprime PASA o FALLA con la evidencia.
      explica por qué crees que no converge, y propón si el problema está en el
      plan, en los tests o en la implementación.
 
-No edites `src/` en ningún caso durante la auditoría. Tu salida es un veredicto,
-no un parche.
+No edites ningún archivo durante la auditoría (ni `src/`, ni `tests/`, ni
+PLAN.md). Tu salida es un veredicto, no un parche; la única escritura permitida
+se encarga a `command-code`.

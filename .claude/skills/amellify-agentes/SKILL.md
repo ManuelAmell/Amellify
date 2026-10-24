@@ -7,10 +7,48 @@ description: Preferencias de trabajo con agentes en Amellify. Usar al planificar
 
 Fuente única de verdad: `CONTRACT.md`. Si esta skill contradice a `CONTRACT.md`, manda `CONTRACT.md`.
 
+## Regla de oro: Claude Code solo orquesta
+
+Regla fijada por el dueño del repo. Tiene prioridad sobre el resto de esta skill cuando haya duda.
+
+- **Claude Code solo orquesta y revisa.** No edita archivos: ni `src/`, ni `tests/`, ni config, ni CI, ni docs. Ni siquiera correcciones mínimas: todo cambio se delega.
+- **Siempre se mandan agentes:**
+  - `command-code`: testing, CI, config, housekeeping y tests.
+  - `opencode`: implementación y tests de UI. Modelo GLM-5.3-Flash Free con esfuerzo `max`, fijado por el `opencode.json` local no commiteado (ver "OpenCode: modelo y esfuerzo").
+  - Haiku (subagente de Claude Code con `model: haiku`): documentación.
+- **Un agente a la vez**, sin excepciones (ver "Preferencias del usuario sobre agentes").
+- **Esperar sin polling:** `orca orchestration check --run <run_id> --wait` en vez de consultar en bucle. Al terminar, `worker-release`.
+- **Lo que hace Claude Code:** crear el run y los workers en Orca, leer los reportes, verificar de forma independiente con `pnpm run verify` (solo lectura), revisar `git status` y el diff de cada worktree. Commitea o abre PR solo cuando la persona lo autoriza. **Nunca fusiona a `main` sin permiso explícito.**
+- **Cada spec a un agente debe decir:** no commitear; no `pnpm format` global; alcance con lista cerrada de archivos; y que el shell de `command-code` corta a los 30 s, así que las tareas largas van en segundo plano con log en disco que se consulta después.
+- **Evidencia en disco.** El mensaje `worker_done` de Orca no es legible tras leerlo. Pedir a cada agente que deje su evidencia (salida de comandos, resultado) en un log dentro del worktree, fuera de git, y leer ese log.
+
+## Preferencias del usuario sobre agentes
+
+Reglas fijadas por la persona. Complementan la "Regla de oro" y las reglas de seguridad; si hay duda, mandan estas.
+
+1. **Claude Code no edita archivos.** Solo orquesta y revisa cambios pequeños. Las ediciones, incluidas las correcciones mínimas, se delegan.
+2. **Un solo agente a la vez.** El PC es lento. Antes de lanzar un worker, comprobar con `orca orchestration worker-list --run <run_id>` que no hay otro en curso, y repartir las tareas para que no se solapen.
+3. **Asignación por tipo de tarea:**
+   - `command-code`: testing, CI, config, housekeeping y tests.
+   - `opencode`: implementación y tests de UI.
+   - Haiku: toda la documentación.
+   - `agy` (Antigravity) con Claude Opus 4.6 (`agy --model`): tareas complejas pero cortas.
+   - `codex`: tareas fáciles y muy cortas.
+4. **command-code: modelo y modo headless.**
+   - Modelo gratuito que funciona: `-m reflection/beam:free`. Modelos disponibles con `command-code --list-models`. Si un modelo agota la cuota diaria o semanal, probar otro.
+   - En modo `-p` necesita `--yolo -t` para ejecutar comandos de shell.
+   - Su shell corta a los 30 s (ver "Regla de oro") y hereda `NODE_ENV=production` (ver "Testing").
+5. **OpenCode:** modelo y esfuerzo como en "OpenCode: modelo y esfuerzo". Orca no acepta `--model`, así que el modelo va en el `opencode.json` local.
+6. **Specs:** alcance cerrado, no commitear, no `pnpm format` global y evidencia en un log en disco (ver "Reglas de seguridad al delegar" y "Evidencia en disco").
+7. **Commits, push, PR y merge** solo con permiso explícito de la persona, en cada caso. Nunca en `main`.
+8. **Procesos:** no usar `pkill -f` (ver "Procesos").
+
 ## Roles
 
-- **Claude Code = Tech Lead y Auditor.** Dueño de `tests/`, `PLAN.md`, las ramas `feature/<slug>`, los commits y la definición de "correcto".
-- **Antigravity (`agy`) = Implementador.** Dueño de `src/`. No edita `tests/`, no crea ramas, no commitea.
+- **Claude Code = Orquestador y Auditor de solo lectura.** Define la tarea, delega, lee reportes, verifica con `pnpm run verify` y revisa diffs. Dueño de la definición de "correcto", `tests/`, `PLAN.md`, `FEEDBACK.md` y las ramas `feature/<slug>`, pero no los edita: los encarga. Commitea solo con permiso de la persona.
+- **`command-code` = Escritor de tests y housekeeping.** Escribe `tests/`, `PLAN.md` y `FEEDBACK.md` por encargo de Claude Code, además de CI, config y housekeeping. No edita `src/`.
+- **`opencode` = Implementador por defecto.** Dueño de `src/`. No edita `tests/`, no crea ramas, no commitea.
+- **Antigravity (`agy`) = Implementador alternativo y opcional.** Mismas reglas que `opencode`; solo si la persona lo elige.
 - **Nunca se trabaja ni se commitea en `main`.** Cada tarea vive en `feature/<slug>` (kebab-case, tres palabras o menos).
 - Ciclo: `/plan` → `/implementar` → `/audit`. Detalle en `docs/AGENT-WORKFLOW.md`.
 
@@ -63,7 +101,7 @@ Los worktrees creados por Orca viven bajo `/home/amell/orca/workspaces/Amellify/
 En cada spec que se envía a un worker, escribir explícitamente:
 
 - **NO commitear.** Los commits los hace Claude Code.
-- **NO tocar `src/`** si la tarea no es de implementación. **NO tocar `tests/`** nunca (salvo que el agente sea el Tech Lead).
+- **NO tocar `src/`** si la tarea no es de implementación. **NO tocar `tests/`** nunca (salvo `command-code`, que los escribe por encargo del Tech Lead).
 - **NO ejecutar `pnpm format` ni `prettier --write .`** sobre el repo. Un agente reformateó ~100 archivos y hubo que revertir. Formatear solo los archivos del alcance, si hace falta.
 - Lista cerrada de archivos (la de `PLAN.md`). Lo que esté fuera, no se toca.
 - Sin `sleep` ni reintentos ciegos para esquivar flakiness. La causa se investiga.
@@ -84,6 +122,10 @@ git -C <worktree> diff --name-only -- tests/   # debe estar vacío
 - Se manda a `command-code` a testear (`pnpm run verify`, y e2e si aplica) **después** de que los implementadores terminen, no en paralelo con ellos.
 - `pnpm run verify` es el único "verde" válido. Se pega la salida real; ningún agente declara verde de palabra.
 - La suite e2e (`pnpm test:e2e`) no entra en `verify`. Ver `docs/TESTING.md`.
+- Lecciones del proyecto para los agentes de testing:
+  - El shell de `command-code` trae `NODE_ENV=production`. Vitest ya fija `NODE_ENV=test`, pero cualquier otro comando hereda el valor (p. ej. el rate-limit de Better Auth se activa en producción, ver `docs/TESTING.md`).
+  - El e2e falló en CI por un heredoc indentado en `.github/workflows/ci.yml`. No usar heredocs indentados en los pasos de CI.
+  - `.env.example` deja `BETTER_AUTH_SECRET` vacío. Para e2e local o en CI hay que darle valor (ver `.github/workflows/ci.yml`).
 
 ## Procesos
 
