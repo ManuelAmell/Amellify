@@ -3,10 +3,12 @@ description: Diseña la feature y deja la suite de tests en rojo válido
 argument-hint: descripción de la tarea
 ---
 
-Actúas como Arquitecto de Software. Tarea: $ARGUMENTS
+Actúas como Orquestador (Tech Lead) y Arquitecto de Software. Tarea: $ARGUMENTS
 
-Lee CONTRACT.md antes de empezar. No implementes lógica de aplicación en
-ningún momento de este comando.
+Lee CONTRACT.md antes de empezar. No escribes archivos: redactas la
+especificación y encargas la escritura a `command-code` (rama, PLAN.md, tests/)
+y, si hace falta andamiaje en `src/`, al implementador (`opencode`). No
+implementes lógica de aplicación en ningún momento de este comando.
 
 1. RECONOCIMIENTO. Lee el código existente que toca esta tarea: modelos,
    rutas, servicios, utilidades y tests relacionados. Cita los archivos
@@ -17,10 +19,11 @@ ningún momento de este comando.
    pregunta AHORA. Máximo tres preguntas, concretas, y espera respuesta.
    Si no hay ambigüedad real, no preguntes nada.
 
-3. RAMA. `git checkout -b feature/<slug>` donde <slug> es kebab-case y describe
-   la feature en tres palabras o menos.
+3. RAMA. Encarga a `command-code` crear `feature/<slug>` (`git checkout -b`),
+   donde <slug> es kebab-case y describe la feature en tres palabras o menos.
 
-4. PLAN.md. Escríbelo con estas secciones, sin añadir otras:
+4. PLAN.md. Redacta su contenido con estas secciones, sin añadir otras, y
+   encarga a `command-code` escribirlo:
 
    ## Objetivo
    Una frase.
@@ -43,7 +46,7 @@ ningún momento de este comando.
    ## BASE_TESTS
    (lo rellenas en el paso 7)
 
-5. TESTS. Escribe la suite en `tests/`. Cubre obligatoriamente:
+5. TESTS. Encarga a `command-code` escribir la suite en `tests/`. Cubre obligatoriamente:
    - camino feliz,
    - al menos dos casos borde,
    - al menos un caso de error con el tipo y mensaje esperados,
@@ -52,15 +55,16 @@ ningún momento de este comando.
    regla de negocio, no "test1". Nada de lógica condicional dentro del test.
 
 6. ROJO VÁLIDO. Ejecuta `pnpm run verify`. Cada test nuevo debe fallar en una
-   aserción. Si falla por import o módulo inexistente, crea en `src/` el
-   andamiaje MÍNIMO para que el fallo sea de aserción: firmas de función vacías
-   que lancen NotImplementedError (o el equivalente del lenguaje) y nada más.
-   Esa es la única escritura que te permites en `src/`.
+   aserción. Si falla por import o módulo inexistente, encarga al implementador
+   (`opencode`) el andamiaje MÍNIMO en `src/`: firmas de función vacías que
+   lancen NotImplementedError (o el equivalente del lenguaje) y nada más.
+   Ese es el único encargo sobre `src/` en esta fase.
    Pega la salida literal de los fallos en la sección "Rojo esperado".
 
-7. COMMIT CONTRATO. `git add` de `tests/`, PLAN.md y el andamiaje.
-   Commit: `test(<slug>): suite en rojo para <feature>`.
-   Escribe el SHA resultante en PLAN.md bajo BASE_TESTS.
+7. COMMIT CONTRATO. Solo con permiso de la persona: `git add` de `tests/`,
+   PLAN.md y el andamiaje, y commit `test(<slug>): suite en rojo para <feature>`.
+   El SHA resultante se anota en PLAN.md bajo BASE_TESTS (lo escribe `command-code`).
 
 8. CIERRE. Dime en tres líneas: qué vas a delegar, cuántos tests escribiste, y
-   el comando exacto que debo ejecutar en Antigravity.
+   el encargo para el implementador (`opencode`; si la persona elige Antigravity,
+   el comando `agy -p "/implementar" --dangerously-skip-permissions --print-timeout 15m`).

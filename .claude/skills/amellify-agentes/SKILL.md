@@ -24,8 +24,10 @@ Regla fijada por el dueño del repo. Tiene prioridad sobre el resto de esta skil
 
 ## Roles
 
-- **Claude Code = Tech Lead y Auditor.** Dueño de `tests/`, `PLAN.md`, las ramas `feature/<slug>`, los commits y la definición de "correcto".
-- **Antigravity (`agy`) = Implementador.** Dueño de `src/`. No edita `tests/`, no crea ramas, no commitea.
+- **Claude Code = Orquestador y Auditor de solo lectura.** Define la tarea, delega, lee reportes, verifica con `pnpm run verify` y revisa diffs. Dueño de la definición de "correcto", `tests/`, `PLAN.md`, `FEEDBACK.md` y las ramas `feature/<slug>`, pero no los edita: los encarga. Commitea solo con permiso de la persona.
+- **`command-code` = Escritor de tests y housekeeping.** Escribe `tests/`, `PLAN.md` y `FEEDBACK.md` por encargo de Claude Code, además de CI, config y housekeeping. No edita `src/`.
+- **`opencode` = Implementador por defecto.** Dueño de `src/`. No edita `tests/`, no crea ramas, no commitea.
+- **Antigravity (`agy`) = Implementador alternativo y opcional.** Mismas reglas que `opencode`; solo si la persona lo elige.
 - **Nunca se trabaja ni se commitea en `main`.** Cada tarea vive en `feature/<slug>` (kebab-case, tres palabras o menos).
 - Ciclo: `/plan` → `/implementar` → `/audit`. Detalle en `docs/AGENT-WORKFLOW.md`.
 

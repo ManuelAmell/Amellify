@@ -12,11 +12,11 @@ Gestor de horarios y notas universitarias, self-hosted de punta a punta.
 
 ## Jerarquía y Roles de Agentes
 
-En este repositorio, **Claude Code actúa como Tech Lead y Auditor**; **Antigravity actúa como Implementador subordinado**. Todo se rige por [CONTRACT.md](CONTRACT.md).
+En este repositorio, **Claude Code actúa como Orquestador y Auditor de solo lectura**; el **implementador** (**`opencode`** por defecto; **Antigravity** como alternativa opcional) actúa como subordinado. Todo se rige por [CONTRACT.md](CONTRACT.md).
 
-- **Claude Code es dueño de:** `tests/`, `PLAN.md`, ramas `feature/<slug>`, commits y la definición de "correcto".
-- **Antigravity es dueño de:** `src/`. No edita tests, no crea ramas, no commitea.
-- **Rendición de cuentas:** Antigravity no valida su propio trabajo; debe rendir cuentas a Claude Code con evidencia estricta (salida de `pnpm run verify`, `git diff --name-only -- tests/` vacío, y lista de archivos de PLAN.md).
+- **Claude Code es dueño de:** la definición de "correcto", `tests/`, `PLAN.md`, `FEEDBACK.md`, ramas `feature/<slug>` y commits. No los edita: los encarga a `command-code`, y los commits solo con permiso de la persona.
+- **El implementador es dueño de:** `src/`. No edita tests, no crea ramas, no commitea.
+- **Rendición de cuentas:** el implementador no valida su propio trabajo; debe rendir cuentas a Claude Code con evidencia estricta (salida de `pnpm run verify`, `git diff --name-only -- tests/` vacío, y lista de archivos de PLAN.md).
 
 ### Regla de trabajo (fijada por el dueño del repo)
 
@@ -30,29 +30,30 @@ En este repositorio, **Claude Code actúa como Tech Lead y Auditor**; **Antigrav
 
 ## Comandos Principales
 
-1. **`/plan <tarea>` (Claude Code / `architect`)**
-   - Diseña la feature, crea la rama `feature/<slug>` y `PLAN.md`.
-   - Escribe la especificación como tests en rojo en `tests/`.
-   - Hace el commit contrato de los tests en rojo y anota el SHA en `BASE_TESTS`.
+1. **`/plan <tarea>` (Claude Code define; `architect` orquesta; `command-code` escribe)**
+   - Claude Code define la feature y encarga a `command-code` crear la rama `feature/<slug>` y `PLAN.md`.
+   - Encarga a `command-code` escribir la especificación como tests en rojo en `tests/`.
+   - El commit contrato de los tests en rojo, con su SHA anotado en `BASE_TESTS`, se hace solo con permiso de la persona.
 
-2. **`/implementar` (Claude Code despliega a Antigravity)**
-   - Claude Code invoca a Antigravity mediante su CLI en modo headless:
+2. **`/implementar` (Claude Code despliega al implementador)**
+   - Claude Code lanza al implementador `opencode` como worker de Orca (`--agent opencode`, sin `--model`; ver `docs/AGENT-WORKFLOW.md`).
+   - Alternativa opcional, si la persona elige Antigravity, vía su CLI en modo headless:
      ```bash
      agy -p "/implementar" --dangerously-skip-permissions --print-timeout 15m
      ```
-   - Antigravity implementa en `src/` hasta dejar `pnpm run verify` en verde y entrega su reporte a Claude Code.
+   - El implementador trabaja en `src/` hasta dejar `pnpm run verify` en verde y entrega su reporte a Claude Code.
 
-3. **`/audit` (Claude Code / `auditor`)**
+3. **`/audit` (Claude Code / `auditor`, solo lectura)**
    - Claude Code verifica que `tests/` no fue tocado (`git diff <BASE_TESTS> -- tests/`).
    - Ejecuta `pnpm run verify` de forma independiente.
    - Revisa antipatrones y lista cerrada de archivos de `PLAN.md`.
-   - **Veredicto:** Si pasa, commitea `feat(<slug>): ...`. Si falla, emite `FEEDBACK.md` para que Antigravity lo resuelva.
+   - **Veredicto:** Si pasa, propone el commit `feat(<slug>): ...` y lo hace solo con permiso de la persona. Si falla, encarga a `command-code` escribir `FEEDBACK.md` para que el implementador lo resuelva.
 
 ---
 
 ## Agent Teams
 
 Subagentes configurados en `.claude/agents/`:
-- `architect` — Diseña y produce tests rojos (`.claude/agents/architect.md`).
-- `implementer` — Lanza y supervisa la ejecución de Antigravity vía `agy` (`.claude/agents/implementer.md`).
+- `architect` — Define la especificación y encarga a `command-code` los tests rojos; no escribe archivos (`.claude/agents/architect.md`).
+- `implementer` — Lanza y supervisa al implementador (`opencode` por defecto; Antigravity vía `agy` como opción) (`.claude/agents/implementer.md`).
 - `auditor` — Auditoría estricta de solo lectura y emisión de veredicto (`.claude/agents/auditor.md`).

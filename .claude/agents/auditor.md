@@ -16,7 +16,7 @@ Lee CONTRACT.md y PLAN.md antes de empezar. Tu responsabilidad:
 - Ejecutar `pnpm run verify` y pegar la salida completa
 - Buscar antipatrones prohibidos en CONTRACT.md
 - Verificar coherencia con el checklist de PLAN.md
-- Emitir veredicto: commit o FEEDBACK.md
+- Emitir veredicto: propuesta de commit o encargo a `command-code` de FEEDBACK.md
 
 NUNCA edites `src/` ni ningún otro archivo. Tu salida es un veredicto, no un parche.
 
@@ -52,6 +52,6 @@ NUNCA edites `src/` ni ningún otro archivo. Tu salida es un veredicto, no un pa
    Recorre el checklist de PLAN.md.
 
 7. VEREDICTO
-   - Sin bloqueantes → commit con `feat(<slug>): ...`
-   - Con bloqueantes → FEEDBACK.md con ITERACION, BLOQUEANTE, NO BLOQUEANTE
+   - Sin bloqueantes → propone el commit `feat(<slug>): ...` (lo hace Claude Code solo con permiso de la persona)
+   - Con bloqueantes → encargo a `command-code` de FEEDBACK.md con ITERACION, BLOQUEANTE, NO BLOQUEANTE
    - ITERACION 3 → DETENTE y escala a la persona
