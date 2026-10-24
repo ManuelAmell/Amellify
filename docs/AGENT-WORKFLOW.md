@@ -15,9 +15,9 @@ Claude Code tiene denegadas las escrituras en `src/` (`.claude/settings.json`: `
 
 Regla fijada por el dueño del repo. Detalle y specs en `.claude/skills/amellify-agentes/SKILL.md` (sección "Regla de oro").
 
-- Claude Code no edita archivos (ni `src/`, `tests/`, config, CI o docs). Solo hace correcciones mínimas de revisión; todo cambio real se delega.
-- Agentes: `command-code` para testing, CI, config, housekeeping y tests; `opencode` para implementación y tests de UI (GLM-5.3-Flash Free, esfuerzo `max`); Haiku, subagente de Claude Code, para documentación.
-- Un agente a la vez (dos como máximo, en worktrees distintos). Esperar con `orca orchestration check --wait`, no con polling. Liberar con `worker-release`.
+- Claude Code no edita archivos (ni `src/`, `tests/`, config, CI o docs), ni siquiera correcciones mínimas; todo cambio se delega.
+- Agentes: `command-code` para testing, CI, config, housekeeping y tests; `opencode` para implementación y tests de UI (GLM-5.3-Flash Free, esfuerzo `max`); Haiku, subagente de Claude Code, para documentación; `agy` con Claude Opus 4.6 para tareas complejas pero cortas; `codex` para tareas fáciles y muy cortas.
+- Un agente a la vez. Esperar con `orca orchestration check --wait`, no con polling. Liberar con `worker-release`.
 - Claude Code crea el run y los workers, lee los reportes, verifica con `pnpm run verify` (solo lectura), revisa `git status` y el diff de cada worktree, y commitea o abre PR solo con permiso de la persona. Nunca fusiona a `main` sin permiso explícito.
 
 ## Piezas del repo
@@ -31,6 +31,14 @@ Regla fijada por el dueño del repo. Detalle y specs en `.claude/skills/amellify
 | Reglas de Antigravity (alternativa opcional) | `.agents/rules/executor.md`, `.agents/workflows/implementar.md` | Qué puede tocar y cómo informa |
 | Skill del proyecto | `.claude/skills/amellify-agentes/SKILL.md` | Preferencias de delegación, Orca y OpenCode |
 | Evidencia visual | `.artifacts/verification/` | Capturas y `VERIFICATION.md` |
+
+## Preferencias del usuario sobre agentes
+
+Resumen de la sección homónima de `.claude/skills/amellify-agentes/SKILL.md`, que es la versión completa.
+
+- **command-code:** modelo gratuito `-m reflection/beam:free` (lista con `command-code --list-models`; si un modelo agota la cuota, probar otro). En modo `-p` necesita `--yolo -t` para ejecutar shell. Su shell corta a los 30 s: lanzar en segundo plano y consultar el log.
+- **Commits, push, PR y merge:** solo con permiso explícito de la persona, en cada caso. Nunca en `main`.
+- **Procesos:** no usar `pkill -f` desde una shell de agente.
 
 ## Ciclo básico
 
@@ -109,5 +117,5 @@ Límite: máximo dos rondas de `FEEDBACK.md` por tarea. En la tercera, el ciclo 
 - Dejar que un agente corra `pnpm format` sobre el repo entero (reformateó ~100 archivos en una ocasión).
 - Dar "verde" sin pegar la salida de `pnpm run verify`.
 - Matar procesos con `pkill -f <patrón>` desde una shell de agente: el patrón coincide con la propia línea de comando. Usar pid o `pgrep -x`.
-- Que Claude Code edite archivos directamente en vez de delegar. Solo cabe una corrección mínima de revisión.
+- Que Claude Code edite archivos directamente en vez de delegar, ni siquiera una corrección mínima.
 - Añadir `sleep` o reintentos para esquivar flakiness. Se investiga la causa (por ejemplo, el rate-limit de Better Auth en `docs/TESTING.md`).

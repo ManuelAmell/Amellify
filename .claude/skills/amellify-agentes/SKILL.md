@@ -11,16 +11,37 @@ Fuente única de verdad: `CONTRACT.md`. Si esta skill contradice a `CONTRACT.md`
 
 Regla fijada por el dueño del repo. Tiene prioridad sobre el resto de esta skill cuando haya duda.
 
-- **Claude Code solo orquesta y revisa.** No edita archivos: ni `src/`, ni `tests/`, ni config, ni CI, ni docs. Como mucho hace correcciones mínimas de revisión; todo cambio real se delega.
+- **Claude Code solo orquesta y revisa.** No edita archivos: ni `src/`, ni `tests/`, ni config, ni CI, ni docs. Ni siquiera correcciones mínimas: todo cambio se delega.
 - **Siempre se mandan agentes:**
   - `command-code`: testing, CI, config, housekeeping y tests.
   - `opencode`: implementación y tests de UI. Modelo GLM-5.3-Flash Free con esfuerzo `max`, fijado por el `opencode.json` local no commiteado (ver "OpenCode: modelo y esfuerzo").
   - Haiku (subagente de Claude Code con `model: haiku`): documentación.
-- **Un agente a la vez** como regla general. Como máximo dos, y solo en worktrees distintos, para no saturar el PC.
+- **Un agente a la vez**, sin excepciones (ver "Preferencias del usuario sobre agentes").
 - **Esperar sin polling:** `orca orchestration check --run <run_id> --wait` en vez de consultar en bucle. Al terminar, `worker-release`.
 - **Lo que hace Claude Code:** crear el run y los workers en Orca, leer los reportes, verificar de forma independiente con `pnpm run verify` (solo lectura), revisar `git status` y el diff de cada worktree. Commitea o abre PR solo cuando la persona lo autoriza. **Nunca fusiona a `main` sin permiso explícito.**
 - **Cada spec a un agente debe decir:** no commitear; no `pnpm format` global; alcance con lista cerrada de archivos; y que el shell de `command-code` corta a los 30 s, así que las tareas largas van en segundo plano con log en disco que se consulta después.
 - **Evidencia en disco.** El mensaje `worker_done` de Orca no es legible tras leerlo. Pedir a cada agente que deje su evidencia (salida de comandos, resultado) en un log dentro del worktree, fuera de git, y leer ese log.
+
+## Preferencias del usuario sobre agentes
+
+Reglas fijadas por la persona. Complementan la "Regla de oro" y las reglas de seguridad; si hay duda, mandan estas.
+
+1. **Claude Code no edita archivos.** Solo orquesta y revisa cambios pequeños. Las ediciones, incluidas las correcciones mínimas, se delegan.
+2. **Un solo agente a la vez.** El PC es lento. Antes de lanzar un worker, comprobar con `orca orchestration worker-list --run <run_id>` que no hay otro en curso, y repartir las tareas para que no se solapen.
+3. **Asignación por tipo de tarea:**
+   - `command-code`: testing, CI, config, housekeeping y tests.
+   - `opencode`: implementación y tests de UI.
+   - Haiku: toda la documentación.
+   - `agy` (Antigravity) con Claude Opus 4.6 (`agy --model`): tareas complejas pero cortas.
+   - `codex`: tareas fáciles y muy cortas.
+4. **command-code: modelo y modo headless.**
+   - Modelo gratuito que funciona: `-m reflection/beam:free`. Modelos disponibles con `command-code --list-models`. Si un modelo agota la cuota diaria o semanal, probar otro.
+   - En modo `-p` necesita `--yolo -t` para ejecutar comandos de shell.
+   - Su shell corta a los 30 s (ver "Regla de oro") y hereda `NODE_ENV=production` (ver "Testing").
+5. **OpenCode:** modelo y esfuerzo como en "OpenCode: modelo y esfuerzo". Orca no acepta `--model`, así que el modelo va en el `opencode.json` local.
+6. **Specs:** alcance cerrado, no commitear, no `pnpm format` global y evidencia en un log en disco (ver "Reglas de seguridad al delegar" y "Evidencia en disco").
+7. **Commits, push, PR y merge** solo con permiso explícito de la persona, en cada caso. Nunca en `main`.
+8. **Procesos:** no usar `pkill -f` (ver "Procesos").
 
 ## Roles
 
