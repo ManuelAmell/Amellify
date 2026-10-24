@@ -50,6 +50,14 @@ describe('ScheduleGrid', () => {
   })
 
   it('renders class blocks for active courses only', () => {
+    // Pin the clock to a fixed Wednesday mid-morning (09:00 America/Bogota
+    // = UTC-5, no DST). Without this, the mobile agenda picks the real
+    // current day: on Lunes / weekends it resolves to 'Lunes' and renders a
+    // second 'Cálculo I, Lunes 08:00 a 10:00' block next to the desktop
+    // grid's, breaking the exact-count assertions below.
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-21T14:00:00Z'))
+
     const paused = makeCourse({
       id: 'course-3',
       code: 'PAU1',
@@ -57,14 +65,19 @@ describe('ScheduleGrid', () => {
       status: 'paused',
       schedules: [makeSchedule({ id: 'sched-4', day: 'Jueves', startTime: '08:00', endTime: '10:00' })],
     })
-    render(<ScheduleGrid courses={[...DEFAULT_COURSES, paused]} />)
 
-    // Both Cálculo I classes are on the grid…
-    expect(screen.getAllByRole('button', { name: /Cálculo I, Lunes 08:00 a 10:00/ }).length).toBe(1)
-    expect(screen.getAllByRole('button', { name: /Estadística, Martes 11:00 a 13:00/ }).length).toBe(1)
-    // …but the paused course is never rendered.
-    expect(screen.queryByText(/Curso Pausado/)).toBeNull()
-    expect(screen.queryAllByRole('button', { name: /PAU1/ }).length).toBe(0)
+    try {
+      render(<ScheduleGrid courses={[...DEFAULT_COURSES, paused]} />)
+
+      // Both Cálculo I classes are on the grid…
+      expect(screen.getAllByRole('button', { name: /Cálculo I, Lunes 08:00 a 10:00/ }).length).toBe(1)
+      expect(screen.getAllByRole('button', { name: /Estadística, Martes 11:00 a 13:00/ }).length).toBe(1)
+      // …but the paused course is never rendered.
+      expect(screen.queryByText(/Curso Pausado/)).toBeNull()
+      expect(screen.queryAllByRole('button', { name: /PAU1/ }).length).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('clicking a class block opens the edit dialog for that course', () => {
