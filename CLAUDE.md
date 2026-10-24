@@ -20,9 +20,9 @@ En este repositorio, **Claude Code actúa como Orquestador y Auditor de solo lec
 
 ### Regla de trabajo (fijada por el dueño del repo)
 
-- **Claude Code solo orquesta y revisa.** No edita archivos (ni `src/`, `tests/`, config, CI ni docs). Solo hace correcciones mínimas de revisión; todo cambio real se delega.
-- **Agentes:** `command-code` (testing, CI, config, housekeeping, tests), `opencode` (implementación y tests de UI, GLM-5.3-Flash Free, esfuerzo `max`) y Haiku para documentación.
-- **Un agente a la vez** (dos como máximo, en worktrees distintos). Se espera con `orca orchestration check --wait`, sin polling.
+- **Claude Code solo orquesta y revisa.** No edita archivos (ni `src/`, `tests/`, config, CI ni docs). Ni siquiera correcciones mínimas: todo cambio se delega.
+- **Agentes:** `command-code` (testing, CI, config, housekeeping, tests), `opencode` (implementación y tests de UI, GLM-5.3-Flash Free, esfuerzo `max`) y Haiku para documentación, `agy` (Antigravity) con Claude Opus 4.6 (`agy --model`) para tareas complejas pero cortas, y `codex` para tareas fáciles y muy cortas.
+- **Un agente a la vez** (en worktrees distintos). Se espera con `orca orchestration check --wait`, sin polling.
 - **Nunca se fusiona a `main` sin permiso explícito** de la persona.
 - Detalle y specs de delegación: `.claude/skills/amellify-agentes/SKILL.md` (sección "Regla de oro").
 
