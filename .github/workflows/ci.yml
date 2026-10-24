@@ -75,14 +75,13 @@ jobs:
           if [ -f .env.example ]; then
             cp .env.example .env
           else
-            cat << 'EOF' > .env
-            BETTER_AUTH_SECRET=ci-e2e-secret-key-must-be-at-least-32-chars-long
-            BETTER_AUTH_URL=http://localhost:3000
-            POSTGRES_USER=amellify
-            POSTGRES_PASSWORD=amellify
-            POSTGRES_DB=amellify
-            DATABASE_URL=postgresql://amellify:amellify@localhost:5432/amellify
-            EOF
+            printf '%s\n' \
+              'BETTER_AUTH_SECRET=ci-e2e-secret-key-must-be-at-least-32-chars-long' \
+              'BETTER_AUTH_URL=http://localhost:3000' \
+              'POSTGRES_USER=amellify' \
+              'POSTGRES_PASSWORD=amellify' \
+              'POSTGRES_DB=amellify' \
+              'DATABASE_URL=postgresql://amellify:amellify@localhost:5432/amellify' > .env
           fi
 
       - name: Start Database and Run Migrations
