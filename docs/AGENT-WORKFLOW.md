@@ -10,6 +10,17 @@ Guía paso a paso para sacar una feature adelante con el ciclo `/plan` → `/imp
 
 Claude Code tiene denegadas las escrituras en `src/` (`.claude/settings.json`: `Edit(src/**)` y `Write(src/**)`). Si necesita tocar `src/`, lo hace Antigravity.
 
+### Regla de trabajo: Claude Code solo orquesta
+
+Regla fijada por el dueño del repo. Detalle y specs en `.claude/skills/amellify-agentes/SKILL.md` (sección "Regla de oro").
+
+- Claude Code no edita archivos (ni `src/`, `tests/`, config, CI o docs). Solo hace correcciones mínimas de revisión; todo cambio real se delega.
+- Agentes: `command-code` para testing, CI, config, housekeeping y tests; `opencode` para implementación y tests de UI (GLM-5.3-Flash Free, esfuerzo `max`); Haiku, subagente de Claude Code, para documentación.
+- Un agente a la vez (dos como máximo, en worktrees distintos). Esperar con `orca orchestration check --wait`, no con polling. Liberar con `worker-release`.
+- Claude Code crea el run y los workers, lee los reportes, verifica con `pnpm run verify` (solo lectura), revisa `git status` y el diff de cada worktree, y commitea o abre PR solo con permiso de la persona. Nunca fusiona a `main` sin permiso explícito.
+
+> **Pendiente de confirmar por la persona:** los pasos de `/plan` y `/audit` de abajo asignan a Claude Code la escritura de `tests/` y `PLAN.md` y los commits. Con la regla anterior, esos pasos no se ejecutan tal cual hasta que se decida cómo encajan. Antigravity tampoco aparece en la lista de agentes de la regla.
+
 ## Piezas del repo
 
 | Pieza | Ruta | Para qué |
@@ -99,4 +110,5 @@ Límite: máximo dos rondas de `FEEDBACK.md` por tarea. En la tercera, el ciclo 
 - Dejar que un agente corra `pnpm format` sobre el repo entero (reformateó ~100 archivos en una ocasión).
 - Dar "verde" sin pegar la salida de `pnpm run verify`.
 - Matar procesos con `pkill -f <patrón>` desde una shell de agente: el patrón coincide con la propia línea de comando. Usar pid o `pgrep -x`.
+- Que Claude Code edite archivos directamente en vez de delegar. Solo cabe una corrección mínima de revisión.
 - Añadir `sleep` o reintentos para esquivar flakiness. Se investiga la causa (por ejemplo, el rate-limit de Better Auth en `docs/TESTING.md`).

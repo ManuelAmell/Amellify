@@ -7,6 +7,21 @@ description: Preferencias de trabajo con agentes en Amellify. Usar al planificar
 
 Fuente única de verdad: `CONTRACT.md`. Si esta skill contradice a `CONTRACT.md`, manda `CONTRACT.md`.
 
+## Regla de oro: Claude Code solo orquesta
+
+Regla fijada por el dueño del repo. Tiene prioridad sobre el resto de esta skill cuando haya duda.
+
+- **Claude Code solo orquesta y revisa.** No edita archivos: ni `src/`, ni `tests/`, ni config, ni CI, ni docs. Como mucho hace correcciones mínimas de revisión; todo cambio real se delega.
+- **Siempre se mandan agentes:**
+  - `command-code`: testing, CI, config, housekeeping y tests.
+  - `opencode`: implementación y tests de UI. Modelo GLM-5.3-Flash Free con esfuerzo `max`, fijado por el `opencode.json` local no commiteado (ver "OpenCode: modelo y esfuerzo").
+  - Haiku (subagente de Claude Code con `model: haiku`): documentación.
+- **Un agente a la vez** como regla general. Como máximo dos, y solo en worktrees distintos, para no saturar el PC.
+- **Esperar sin polling:** `orca orchestration check --run <run_id> --wait` en vez de consultar en bucle. Al terminar, `worker-release`.
+- **Lo que hace Claude Code:** crear el run y los workers en Orca, leer los reportes, verificar de forma independiente con `pnpm run verify` (solo lectura), revisar `git status` y el diff de cada worktree. Commitea o abre PR solo cuando la persona lo autoriza. **Nunca fusiona a `main` sin permiso explícito.**
+- **Cada spec a un agente debe decir:** no commitear; no `pnpm format` global; alcance con lista cerrada de archivos; y que el shell de `command-code` corta a los 30 s, así que las tareas largas van en segundo plano con log en disco que se consulta después.
+- **Evidencia en disco.** El mensaje `worker_done` de Orca no es legible tras leerlo. Pedir a cada agente que deje su evidencia (salida de comandos, resultado) en un log dentro del worktree, fuera de git, y leer ese log.
+
 ## Roles
 
 - **Claude Code = Tech Lead y Auditor.** Dueño de `tests/`, `PLAN.md`, las ramas `feature/<slug>`, los commits y la definición de "correcto".
@@ -84,6 +99,10 @@ git -C <worktree> diff --name-only -- tests/   # debe estar vacío
 - Se manda a `command-code` a testear (`pnpm run verify`, y e2e si aplica) **después** de que los implementadores terminen, no en paralelo con ellos.
 - `pnpm run verify` es el único "verde" válido. Se pega la salida real; ningún agente declara verde de palabra.
 - La suite e2e (`pnpm test:e2e`) no entra en `verify`. Ver `docs/TESTING.md`.
+- Lecciones del proyecto para los agentes de testing:
+  - El shell de `command-code` trae `NODE_ENV=production`. Vitest ya fija `NODE_ENV=test`, pero cualquier otro comando hereda el valor (p. ej. el rate-limit de Better Auth se activa en producción, ver `docs/TESTING.md`).
+  - El e2e falló en CI por un heredoc indentado en `.github/workflows/ci.yml`. No usar heredocs indentados en los pasos de CI.
+  - `.env.example` deja `BETTER_AUTH_SECRET` vacío. Para e2e local o en CI hay que darle valor (ver `.github/workflows/ci.yml`).
 
 ## Procesos
 

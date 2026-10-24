@@ -18,6 +18,14 @@ En este repositorio, **Claude Code actúa como Tech Lead y Auditor**; **Antigrav
 - **Antigravity es dueño de:** `src/`. No edita tests, no crea ramas, no commitea.
 - **Rendición de cuentas:** Antigravity no valida su propio trabajo; debe rendir cuentas a Claude Code con evidencia estricta (salida de `pnpm run verify`, `git diff --name-only -- tests/` vacío, y lista de archivos de PLAN.md).
 
+### Regla de trabajo (fijada por el dueño del repo)
+
+- **Claude Code solo orquesta y revisa.** No edita archivos (ni `src/`, `tests/`, config, CI ni docs). Solo hace correcciones mínimas de revisión; todo cambio real se delega.
+- **Agentes:** `command-code` (testing, CI, config, housekeeping, tests), `opencode` (implementación y tests de UI, GLM-5.3-Flash Free, esfuerzo `max`) y Haiku para documentación.
+- **Un agente a la vez** (dos como máximo, en worktrees distintos). Se espera con `orca orchestration check --wait`, sin polling.
+- **Nunca se fusiona a `main` sin permiso explícito** de la persona.
+- Detalle y specs de delegación: `.claude/skills/amellify-agentes/SKILL.md` (sección "Regla de oro").
+
 ---
 
 ## Comandos Principales
