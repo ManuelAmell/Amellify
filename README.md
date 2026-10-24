@@ -156,6 +156,15 @@ pnpm test:e2e
 
 ---
 
+## 🗺️ Roadmap
+
+- 🔔 Notificaciones y recordatorios de clases y evaluaciones.
+- 🗓️ Soporte multi-semestre e historial académico.
+- 🔄 Sincronización en tiempo real entre dispositivos (rama `feature/websocket-sync`).
+- ♿ Auditoría de accesibilidad automatizada con axe en Playwright.
+
+---
+
 ## 📚 Documentación Adicional
 
 - 📖 [**Guía de Despliegue en Servidor Propio (Ubuntu/Debian)**](docs/DEPLOY.md)

@@ -72,18 +72,10 @@ jobs:
 
       - name: Create .env from template
         run: |
-          if [ -f .env.example ]; then
-            cp .env.example .env
-          else
-            cat << 'EOF' > .env
-            BETTER_AUTH_SECRET=ci-e2e-secret-key-must-be-at-least-32-chars-long
-            BETTER_AUTH_URL=http://localhost:3000
-            POSTGRES_USER=amellify
-            POSTGRES_PASSWORD=amellify
-            POSTGRES_DB=amellify
-            DATABASE_URL=postgresql://amellify:amellify@localhost:5432/amellify
-            EOF
-          fi
+          cp .env.example .env
+          # .env.example deja BETTER_AUTH_SECRET vacío y Better Auth rechaza el secreto por defecto en producción.
+          sed -i '/^BETTER_AUTH_SECRET=/d' .env
+          echo 'BETTER_AUTH_SECRET=ci-e2e-secret-key-must-be-at-least-32-chars-long' >> .env
 
       - name: Start Database and Run Migrations
         run: |
@@ -129,6 +121,10 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+      - name: Dump app logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=150 app
 
       - name: Teardown Docker Compose
         if: always()
