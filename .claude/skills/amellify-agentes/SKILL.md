@@ -80,7 +80,7 @@ Los worktrees creados por Orca viven bajo `/home/amell/orca/workspaces/Amellify/
 En cada spec que se envía a un worker, escribir explícitamente:
 
 - **NO commitear.** Los commits los hace Claude Code.
-- **NO tocar `src/`** si la tarea no es de implementación. **NO tocar `tests/`** nunca (salvo que el agente sea el Tech Lead).
+- **NO tocar `src/`** si la tarea no es de implementación. **NO tocar `tests/`** nunca (salvo `command-code`, que los escribe por encargo del Tech Lead).
 - **NO ejecutar `pnpm format` ni `prettier --write .`** sobre el repo. Un agente reformateó ~100 archivos y hubo que revertir. Formatear solo los archivos del alcance, si hace falta.
 - Lista cerrada de archivos (la de `PLAN.md`). Lo que esté fuera, no se toca.
 - Sin `sleep` ni reintentos ciegos para esquivar flakiness. La causa se investiga.

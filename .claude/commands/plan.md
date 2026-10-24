@@ -65,6 +65,6 @@ implementes lógica de aplicación en ningún momento de este comando.
    PLAN.md y el andamiaje, y commit `test(<slug>): suite en rojo para <feature>`.
    El SHA resultante se anota en PLAN.md bajo BASE_TESTS (lo escribe `command-code`).
 
-8. CIERRE. Dime en tres líneas: qué vas a delegar, cuántos tests escribiste, y
+8. CIERRE. Dime en tres líneas: qué vas a delegar, cuántos tests encargaste, y
    el encargo para el implementador (`opencode`; si la persona elige Antigravity,
    el comando `agy -p "/implementar" --dangerously-skip-permissions --print-timeout 15m`).
