@@ -7,6 +7,10 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Los tests de componentes montan jsdom por archivo; en máquinas cargadas 5s se queda corto.
+    testTimeout: 15_000,
+    // React.act no existe en el build de producción: un NODE_ENV=production heredado del shell rompe los tests.
+    env: { NODE_ENV: 'test' },
     include: ['tests/unit/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
