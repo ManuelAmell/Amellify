@@ -2,7 +2,15 @@
   "permissions": {
     "deny": [
       "Edit(src/**)",
-      "Write(src/**)"
+      "Write(src/**)",
+      "Edit(tests/**)",
+      "Write(tests/**)",
+      "Edit(PLAN.md)",
+      "Write(PLAN.md)",
+      "Edit(FEEDBACK.md)",
+      "Write(FEEDBACK.md)",
+      "Edit(docs/**)",
+      "Write(docs/**)"
     ]
   },
   "env": {
