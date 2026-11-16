@@ -63,3 +63,6 @@ supabase/.temp
 
 # drizzle
 drizzle/meta/_journal.json.bak
+
+# Datos locales de Command Code
+.commandcode/
